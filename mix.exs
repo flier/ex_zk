@@ -70,7 +70,8 @@ defmodule ExZk.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.35", only: [:dev, :doc]},
       {:excoveralls, "~> 0.18", only: :test},
-      {:mock, "~> 0.3", only: :test}
+      {:mock, "~> 0.3", only: :test},
+      {:nimble_parsec, "~> 1.4", only: [:dev, :doc, :test]}
     ]
   end
 end
