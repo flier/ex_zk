@@ -5,7 +5,7 @@ defmodule ExZk.MixProject do
   @version "0.1.0"
   @repo_url "https://github.com/flier/ex_zk"
 
-  @elixir_requirement "~> 1.11"
+  @elixir_requirement "~> 1.14"
 
   def project do
     [
@@ -43,7 +43,7 @@ defmodule ExZk.MixProject do
   def application do
     [
       mod: {ExZk, []},
-      extra_applications: [:logger, :ssl],
+      extra_applications: [:logger, :ssl, :runtime_tools],
       env: [
         logger: true
       ]
@@ -61,13 +61,16 @@ defmodule ExZk.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:castore, "~> 1.0", optional: true},
+      {:nimble_options, "~> 1.0"},
       {:telemetry, "~> 1.3"},
 
       # Dev and test dependencies
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.35", only: [:dev, :doc]},
-      {:excoveralls, "~> 0.18", only: :test}
+      {:excoveralls, "~> 0.18", only: :test},
+      {:mock, "~> 0.3", only: :test}
     ]
   end
 end
