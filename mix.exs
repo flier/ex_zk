@@ -43,7 +43,7 @@ defmodule ExZk.MixProject do
   def application do
     [
       mod: {ExZk, []},
-      extra_applications: [:logger, :ssl, :runtime_tools],
+      extra_applications: [:logger, :eex, :ssl, :runtime_tools],
       env: [
         logger: true
       ]

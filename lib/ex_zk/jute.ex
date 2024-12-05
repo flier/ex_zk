@@ -1,4 +1,6 @@
 defmodule ExZk.Jute do
+  @moduledoc false
+
   defmodule Module do
     alias ExZk.Jute.Class
 
@@ -426,12 +428,81 @@ defmodule ExZk.Jute do
     def to_vector(["vector", {:type, type}]), do: {:vector, type}
   end
 
+  defmodule Binding do
+    require EEx
+
+    @type option() :: {:namespaces, %{String.t() => String.t()}} | {:skip, [String.t()]}
+
+    EEx.function_from_file(
+      :defp,
+      :module_template,
+      Path.expand("./templates/module.eex", :code.priv_dir(:ex_zk)),
+      [:assigns]
+    )
+
+    @spec generate([Module.t()], [option()]) :: String.t()
+    def generate(modules, opts) do
+      skipped_module = Keyword.get(opts, :skip, [])
+
+      modules
+      |> Enum.filter(fn %Module{name: name} ->
+        !Enum.any?(skipped_module, &String.starts_with?(to_string(name), &1))
+      end)
+      |> Enum.map(&generate_module(&1, opts))
+      |> Enum.join("\n\n")
+    end
+
+    defp generate_module(%Module{name: name, classes: classes}, opts) do
+      module_template(
+        module_name: module_name(name, opts),
+        classes: classes,
+        opts: opts
+      )
+      |> Code.format_string!()
+    end
+
+    defp module_name(fullname, opts) do
+      [name | rest] =
+        fullname
+        |> to_string()
+        |> String.split(".", trim: true)
+        |> Enum.reverse()
+
+      name = name |> Macro.camelize()
+      namespace = rest |> Enum.reverse() |> Enum.join(".")
+
+      case opts |> Keyword.get(:namespaces, %{}) |> Map.get(namespace) do
+        nil -> name
+        ns -> ns <> "." <> name
+      end
+    end
+
+    def typespec(:boolean, _), do: "boolean()"
+    def typespec(:byte, _), do: "integer()"
+    def typespec(:int, _), do: "integer()"
+    def typespec(:long, _), do: "integer()"
+    def typespec(:float, _), do: "float()"
+    def typespec(:double, _), do: "float()"
+    def typespec(:ustring, _), do: "String.t()"
+    def typespec(:buffer, _), do: "binary()"
+    def typespec({:vector, type}, opts), do: "list(" <> typespec(type, opts) <> ")"
+    def typespec(type, opts), do: module_name(type, opts)
+  end
+
   @spec parse_file(Path.t()) :: {:ok, list(Module.t()), String.t()} | {:error, reason :: term()}
   def parse_file(path) do
     with {:ok, f} <- File.open(path, [:read, :utf8]),
          data <- IO.read(f, :eof),
          {:ok, modules, rest, _, _, _} <- ExZk.Jute.Parser.parse_file(data) do
       {:ok, modules, rest}
+    end
+  end
+
+  @spec bindgen(Path.t()) :: String.t()
+  def bindgen(path) do
+    with {:ok, modules, _} <- parse_file(path),
+         generated <- Binding.generate(modules, []) do
+      generated
     end
   end
 end

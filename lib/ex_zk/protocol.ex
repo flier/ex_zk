@@ -1,54 +1,145 @@
-defmodule ExZk.Protocol do
-  @type session_id() :: integer()
+defmodule ExZk.Data do
+  defmodule Id do
+    defstruct [
+      :scheme,
+      :id
+    ]
 
-  defmodule Connect do
-    defmodule Request do
-      alias ExZk.Data
-      alias ExZk.Protocol
+    @type t() :: %__MODULE__{
+            scheme: String.t(),
+            id: String.t()
+          }
+  end
 
-      defstruct [
-        :protocol_version,
-        :last_zxid_seen,
-        :timeout,
-        :session_id,
-        :password,
-        :read_only
-      ]
+  defmodule ACL do
+    defstruct [
+      :perms,
+      :id
+    ]
 
-      @type t :: %__MODULE__{
-              protocol_version: integer(),
-              last_zxid_seen: Data.zxid(),
-              timeout: integer(),
-              session_id: Protocol.session_id(),
-              password: binary(),
-              read_only: boolean()
-            }
-    end
+    @type t() :: %__MODULE__{
+            perms: integer(),
+            id: Id
+          }
+  end
 
-    defmodule Response do
-      alias ExZk.Protocol
+  defmodule Stat do
+    @moduledoc """
+    information shared with the client
+    """
 
-      defstruct [
-        :protocol_version,
-        :timeout,
-        :session_id,
-        :password,
-        :read_only
-      ]
+    defstruct [
+      :czxid,
+      :mzxid,
+      :ctime,
+      :mtime,
+      :version,
+      :cversion,
+      :aversion,
+      :ephemeral_owner,
+      :data_length,
+      :num_children,
+      :pzxid
+    ]
 
-      @type t() :: %__MODULE__{
-              protocol_version: integer(),
-              timeout: integer(),
-              session_id: Protocol.session_id(),
-              password: binary(),
-              read_only: boolean()
-            }
-    end
+    @type t() :: %__MODULE__{
+            czxid: integer(),
+            mzxid: integer(),
+            ctime: integer(),
+            mtime: integer(),
+            version: integer(),
+            cversion: integer(),
+            aversion: integer(),
+            ephemeral_owner: integer(),
+            data_length: integer(),
+            num_children: integer(),
+            pzxid: integer()
+          }
+  end
+
+  defmodule StatPersisted do
+    @moduledoc """
+    information explicitly stored by the server persistently
+    """
+
+    defstruct [
+      :czxid,
+      :mzxid,
+      :ctime,
+      :mtime,
+      :version,
+      :cversion,
+      :aversion,
+      :ephemeral_owner,
+      :pzxid
+    ]
+
+    @type t() :: %__MODULE__{
+            czxid: integer(),
+            mzxid: integer(),
+            ctime: integer(),
+            mtime: integer(),
+            version: integer(),
+            cversion: integer(),
+            aversion: integer(),
+            ephemeral_owner: integer(),
+            pzxid: integer()
+          }
+  end
+
+  defmodule ClientInfo do
+    defstruct [
+      :auth_scheme,
+      :user
+    ]
+
+    @type t() :: %__MODULE__{
+            auth_scheme: String.t(),
+            user: String.t()
+          }
+  end
+end
+
+defmodule ExZk.Proto do
+  defmodule ConnectRequest do
+    defstruct [
+      :protocol_version,
+      :last_zxid_seen,
+      :time_out,
+      :session_id,
+      :passwd,
+      :read_only
+    ]
+
+    @type t() :: %__MODULE__{
+            protocol_version: integer(),
+            last_zxid_seen: integer(),
+            time_out: integer(),
+            session_id: integer(),
+            passwd: binary(),
+            read_only: boolean()
+          }
+  end
+
+  defmodule ConnectResponse do
+    defstruct [
+      :protocol_version,
+      :time_out,
+      :session_id,
+      :passwd,
+      :read_only
+    ]
+
+    @type t() :: %__MODULE__{
+            protocol_version: integer(),
+            time_out: integer(),
+            session_id: integer(),
+            passwd: binary(),
+            read_only: boolean()
+          }
   end
 
   defmodule SetWatches do
-    alias ExZk.Data
-
     defstruct [
       :relative_zxid,
       :data_watches,
@@ -56,17 +147,15 @@ defmodule ExZk.Protocol do
       :child_watches
     ]
 
-    @type t :: %__MODULE__{
-            relative_zxid: Data.zxid(),
-            data_watches: [Path.t()],
-            exist_watches: [Path.t()],
-            child_watches: [Path.t()]
+    @type t() :: %__MODULE__{
+            relative_zxid: integer(),
+            data_watches: list(String.t()),
+            exist_watches: list(String.t()),
+            child_watches: list(String.t())
           }
   end
 
   defmodule SetWatches2 do
-    alias ExZk.Data
-
     defstruct [
       :relative_zxid,
       :data_watches,
@@ -76,13 +165,13 @@ defmodule ExZk.Protocol do
       :persistent_recursive_watches
     ]
 
-    @type t :: %__MODULE__{
-            relative_zxid: Data.zxid(),
-            data_watches: [Path.t()],
-            exist_watches: [Path.t()],
-            child_watches: [Path.t()],
-            persistent_watches: [Path.t()],
-            persistent_recursive_watches: [Path.t()]
+    @type t() :: %__MODULE__{
+            relative_zxid: integer(),
+            data_watches: list(String.t()),
+            exist_watches: list(String.t()),
+            child_watches: list(String.t()),
+            persistent_watches: list(String.t()),
+            persistent_recursive_watches: list(String.t())
           }
   end
 
@@ -127,8 +216,6 @@ defmodule ExZk.Protocol do
   end
 
   defmodule ReplyHeader do
-    alias ExZk.Data
-
     defstruct [
       :xid,
       :zxid,
@@ -137,352 +224,281 @@ defmodule ExZk.Protocol do
 
     @type t() :: %__MODULE__{
             xid: integer(),
-            zxid: Data.zxid(),
+            zxid: integer(),
             err: integer()
           }
   end
 
-  defmodule GetData do
-    defmodule Request do
-      defstruct [
-        :path,
-        :watch
-      ]
+  defmodule GetDataRequest do
+    defstruct [
+      :path,
+      :watch
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              watch: boolean()
-            }
-    end
-
-    defmodule Response do
-      alias ExZk.Data.Stat
-
-      defstruct [:data, :stat]
-
-      @type t() :: %__MODULE__{
-              data: binary(),
-              stat: Stat.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            watch: boolean()
+          }
   end
 
-  defmodule SetData do
-    defmodule Request do
-      alias ExZk.Data
+  defmodule SetDataRequest do
+    defstruct [
+      :path,
+      :data,
+      :version
+    ]
 
-      defstruct [
-        :path,
-        :data,
-        :version
-      ]
-
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              data: binary(),
-              version: Data.version()
-            }
-    end
-
-    defmodule Resonse do
-      alias ExZk.Data.Stat
-
-      defstruct [:stat]
-
-      @type t() :: %__MODULE__{
-              stat: Stat.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            data: binary(),
+            version: integer()
+          }
   end
 
-  defmodule GetSASL do
-    defmodule Request do
-      defstruct [:token]
+  defmodule ReconfigRequest do
+    defstruct [
+      :joining_servers,
+      :leaving_servers,
+      :new_members,
+      :cur_config_id
+    ]
 
-      @type t() :: %__MODULE__{
-              token: binary()
-            }
-    end
+    @type t() :: %__MODULE__{
+            joining_servers: String.t(),
+            leaving_servers: String.t(),
+            new_members: String.t(),
+            cur_config_id: integer()
+          }
   end
 
-  defmodule SetSASL do
-    defmodule Request do
-      defstruct [:token]
+  defmodule SetDataResponse do
+    defstruct [
+      :stat
+    ]
 
-      @type t() :: %__MODULE__{
-              token: binary()
-            }
-    end
-
-    defmodule Response do
-      defstruct [:token]
-
-      @type t() :: %__MODULE__{
-              token: binary()
-            }
-    end
+    @type t() :: %__MODULE__{
+            stat: Stat
+          }
   end
 
-  defmodule Create do
-    defmodule Request do
-      alias ExZk.Data.ACL
+  defmodule GetSASLRequest do
+    defstruct [
+      :token
+    ]
 
-      defstruct [
-        :path,
-        :data,
-        :acl,
-        :flags
-      ]
-
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              data: binary(),
-              acl: [ACL.t()],
-              flags: integer()
-            }
-    end
-
-    defmodule Response do
-      defstruct [:path]
-
-      @type t() :: %__MODULE__{
-              path: Path.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            token: binary()
+          }
   end
 
-  defmodule CreateTTL do
-    defmodule Request do
-      alias ExZk.Data.ACL
+  defmodule SetSASLRequest do
+    defstruct [
+      :token
+    ]
 
-      defstruct [
-        :path,
-        :data,
-        :acl,
-        :flags,
-        :ttl
-      ]
-
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              data: binary(),
-              acl: [ACL.t()],
-              flags: integer(),
-              ttl: integer() | nil
-            }
-    end
-
-    defmodule Response do
-      defstruct [:path]
-
-      @type t() :: %__MODULE__{
-              path: Path.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            token: binary()
+          }
   end
 
-  defmodule Create2 do
-    defmodule Response do
-      alias ExZk.Data.Stat
+  defmodule SetSASLResponse do
+    defstruct [
+      :token
+    ]
 
-      defstruct [:path, :stat]
-
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              stat: Stat.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            token: binary()
+          }
   end
 
-  defmodule Delete do
-    defmodule Request do
-      alias ExZk.Data
+  defmodule CreateRequest do
+    defstruct [
+      :path,
+      :data,
+      :acl,
+      :flags
+    ]
 
-      defstruct [
-        :path,
-        :version
-      ]
-
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              version: Data.version()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            data: binary(),
+            acl: list(ACL),
+            flags: integer()
+          }
   end
 
-  defmodule GetChildren do
-    defmodule Request do
-      defstruct [:path, :watch]
+  defmodule CreateTTLRequest do
+    defstruct [
+      :path,
+      :data,
+      :acl,
+      :flags,
+      :ttl
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              watch: boolean()
-            }
-    end
-
-    defmodule Response do
-      defstruct [:children]
-
-      @type t() :: %__MODULE__{
-              children: [Path.t()]
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            data: binary(),
+            acl: list(ACL),
+            flags: integer(),
+            ttl: integer()
+          }
   end
 
-  defmodule GetAllChildrenNumber do
-    defmodule Request do
-      defstruct [:path]
+  defmodule DeleteRequest do
+    defstruct [
+      :path,
+      :version
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t()
-            }
-    end
-
-    defmodule Response do
-      defstruct [:total_number]
-
-      @type t() :: %__MODULE__{
-              total_number: integer()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            version: integer()
+          }
   end
 
-  defmodule GetChildren2 do
-    defmodule Request do
-      defstruct [:path, :watch]
+  defmodule GetChildrenRequest do
+    defstruct [
+      :path,
+      :watch
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              watch: boolean()
-            }
-    end
-
-    defmodule Response do
-      alias ExZk.Data.Stat
-
-      defstruct [:children, :stat]
-
-      @type t() :: %__MODULE__{
-              children: [Path.t()],
-              stat: Stat.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            watch: boolean()
+          }
   end
 
-  defmodule CheckVersion do
-    defmodule Request do
-      alias ExZk.Data
+  defmodule GetAllChildrenNumberRequest do
+    defstruct [
+      :path
+    ]
 
-      defstruct [:path, :version]
-
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              version: Data.version()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t()
+          }
   end
 
-  defmodule GetMaxChildren do
-    defmodule Request do
-      defstruct [:path]
+  defmodule GetChildren2Request do
+    defstruct [
+      :path,
+      :watch
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t()
-            }
-    end
-
-    defmodule Response do
-      defstruct [:max]
-
-      @type t() :: %__MODULE__{
-              max: integer()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            watch: boolean()
+          }
   end
 
-  defmodule SetMaxChildren do
-    defmodule Request do
-      defstruct [:path, :max]
+  defmodule CheckVersionRequest do
+    defstruct [
+      :path,
+      :version
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              max: integer()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            version: integer()
+          }
   end
 
-  defmodule Sync do
-    defmodule Request do
-      defstruct [:path]
+  defmodule GetMaxChildrenRequest do
+    defstruct [
+      :path
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t()
-            }
-    end
-
-    defmodule Response do
-      defstruct [:path]
-
-      @type t() :: %__MODULE__{
-              path: Path.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t()
+          }
   end
 
-  defmodule GetACL do
-    defmodule Request do
-      defstruct [:path]
+  defmodule GetMaxChildrenResponse do
+    defstruct [
+      :max
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t()
-            }
-    end
-
-    defmodule Response do
-      alias ExZk.Data.{ACL, Stat}
-
-      defstruct [:acl, :stat]
-
-      @type t() :: %__MODULE__{
-              acl: [ACL.t()],
-              stat: Stat.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            max: integer()
+          }
   end
 
-  defmodule SetACL do
-    defmodule Request do
-      alias ExZk.Data.ACL
+  defmodule SetMaxChildrenRequest do
+    defstruct [
+      :path,
+      :max
+    ]
 
-      defstruct [:path, :acl, :version]
-
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              acl: [ACL.t()],
-              version: ExZk.Data.version()
-            }
-    end
-
-    defmodule Response do
-      alias ExZk.Data.Stat
-
-      defstruct [:stat]
-
-      @type t() :: %__MODULE__{
-              stat: Stat.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            max: integer()
+          }
   end
 
-  defmodule AddWatch do
-    defmodule Request do
-      defstruct [:path, :mode]
+  defmodule SyncRequest do
+    defstruct [
+      :path
+    ]
 
-      @type t() :: %__MODULE__{
-              path: String.t(),
-              mode: integer()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t()
+          }
+  end
+
+  defmodule SyncResponse do
+    defstruct [
+      :path
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t()
+          }
+  end
+
+  defmodule GetACLRequest do
+    defstruct [
+      :path
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t()
+          }
+  end
+
+  defmodule SetACLRequest do
+    defstruct [
+      :path,
+      :acl,
+      :version
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            acl: list(ACL),
+            version: integer()
+          }
+  end
+
+  defmodule SetACLResponse do
+    defstruct [
+      :stat
+    ]
+
+    @type t() :: %__MODULE__{
+            stat: Stat
+          }
+  end
+
+  defmodule AddWatchRequest do
+    defstruct [
+      :path,
+      :mode
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            mode: integer()
+          }
   end
 
   defmodule WatcherEvent do
@@ -492,93 +508,388 @@ defmodule ExZk.Protocol do
       :path
     ]
 
-    @type t :: %__MODULE__{
+    @type t() :: %__MODULE__{
             type: integer(),
             state: integer(),
             path: String.t()
           }
   end
 
-  defmodule Error do
-    defmodule Response do
-      defstruct [:err]
+  defmodule ErrorResponse do
+    defstruct [
+      :err
+    ]
 
-      @type t() :: %__MODULE__{
-              err: integer()
-            }
-    end
+    @type t() :: %__MODULE__{
+            err: integer()
+          }
   end
 
-  defmodule Exists do
-    defmodule Request do
-      defstruct [:path, :watch]
+  defmodule CreateResponse do
+    defstruct [
+      :path
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              watch: boolean()
-            }
-    end
-
-    defmodule Response do
-      alias ExZk.Data.Stat
-
-      defstruct [:stat]
-
-      @type t() :: %__MODULE__{
-              stat: Stat.t()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t()
+          }
   end
 
-  defmodule CheckWatches do
-    defmodule Request do
-      defstruct [:path, :type]
+  defmodule Create2Response do
+    defstruct [
+      :path,
+      :stat
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              type: integer()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            stat: Stat
+          }
   end
 
-  defmodule RemoveWatches do
-    defmodule Request do
-      defstruct [:path, :type]
+  defmodule ExistsRequest do
+    defstruct [
+      :path,
+      :watch
+    ]
 
-      @type t() :: %__MODULE__{
-              path: Path.t(),
-              type: integer()
-            }
-    end
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            watch: boolean()
+          }
   end
 
-  defmodule GetEphemerals do
-    defmodule Request do
-      defstruct [:prefix_path]
+  defmodule ExistsResponse do
+    defstruct [
+      :stat
+    ]
 
-      @type t() :: %__MODULE__{
-              prefix_path: Path.t()
-            }
-    end
-
-    defmodule Response do
-      defstruct [:ephemerals]
-
-      @type t() :: %__MODULE__{
-              ephemerals: [Path.t()]
-            }
-    end
+    @type t() :: %__MODULE__{
+            stat: Stat
+          }
   end
 
-  defmodule WhoAmI do
-    defmodule Response do
-      alias ExZk.Data.ClientInfo
+  defmodule GetDataResponse do
+    defstruct [
+      :data,
+      :stat
+    ]
 
-      defstruct [:client_info]
+    @type t() :: %__MODULE__{
+            data: binary(),
+            stat: Stat
+          }
+  end
 
-      @type t() :: %__MODULE__{
-              client_info: ClientInfo.t()
-            }
-    end
+  defmodule GetChildrenResponse do
+    defstruct [
+      :children
+    ]
+
+    @type t() :: %__MODULE__{
+            children: list(String.t())
+          }
+  end
+
+  defmodule GetAllChildrenNumberResponse do
+    defstruct [
+      :total_number
+    ]
+
+    @type t() :: %__MODULE__{
+            total_number: integer()
+          }
+  end
+
+  defmodule GetChildren2Response do
+    defstruct [
+      :children,
+      :stat
+    ]
+
+    @type t() :: %__MODULE__{
+            children: list(String.t()),
+            stat: Stat
+          }
+  end
+
+  defmodule GetACLResponse do
+    defstruct [
+      :acl,
+      :stat
+    ]
+
+    @type t() :: %__MODULE__{
+            acl: list(ACL),
+            stat: Stat
+          }
+  end
+
+  defmodule CheckWatchesRequest do
+    defstruct [
+      :path,
+      :type
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            type: integer()
+          }
+  end
+
+  defmodule RemoveWatchesRequest do
+    defstruct [
+      :path,
+      :type
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            type: integer()
+          }
+  end
+
+  defmodule GetEphemeralsRequest do
+    defstruct [
+      :prefix_path
+    ]
+
+    @type t() :: %__MODULE__{
+            prefix_path: String.t()
+          }
+  end
+
+  defmodule GetEphemeralsResponse do
+    defstruct [
+      :ephemerals
+    ]
+
+    @type t() :: %__MODULE__{
+            ephemerals: list(String.t())
+          }
+  end
+
+  defmodule WhoAmIResponse do
+    defstruct [
+      :client_info
+    ]
+
+    @type t() :: %__MODULE__{
+            client_info: list(ClientInfo)
+          }
+  end
+end
+
+defmodule ExZk.Txn do
+  defmodule TxnDigest do
+    defstruct [
+      :version,
+      :tree_digest
+    ]
+
+    @type t() :: %__MODULE__{
+            version: integer(),
+            tree_digest: integer()
+          }
+  end
+
+  defmodule TxnHeader do
+    defstruct [
+      :client_id,
+      :cxid,
+      :zxid,
+      :time,
+      :type
+    ]
+
+    @type t() :: %__MODULE__{
+            client_id: integer(),
+            cxid: integer(),
+            zxid: integer(),
+            time: integer(),
+            type: integer()
+          }
+  end
+
+  defmodule CreateTxnV0 do
+    defstruct [
+      :path,
+      :data,
+      :acl,
+      :ephemeral
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            data: binary(),
+            acl: list(ACL),
+            ephemeral: boolean()
+          }
+  end
+
+  defmodule CreateTxn do
+    defstruct [
+      :path,
+      :data,
+      :acl,
+      :ephemeral,
+      :parent_c_version
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            data: binary(),
+            acl: list(ACL),
+            ephemeral: boolean(),
+            parent_c_version: integer()
+          }
+  end
+
+  defmodule CreateTTLTxn do
+    defstruct [
+      :path,
+      :data,
+      :acl,
+      :parent_c_version,
+      :ttl
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            data: binary(),
+            acl: list(ACL),
+            parent_c_version: integer(),
+            ttl: integer()
+          }
+  end
+
+  defmodule CreateContainerTxn do
+    defstruct [
+      :path,
+      :data,
+      :acl,
+      :parent_c_version
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            data: binary(),
+            acl: list(ACL),
+            parent_c_version: integer()
+          }
+  end
+
+  defmodule DeleteTxn do
+    defstruct [
+      :path
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t()
+          }
+  end
+
+  defmodule SetDataTxn do
+    defstruct [
+      :path,
+      :data,
+      :version
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            data: binary(),
+            version: integer()
+          }
+  end
+
+  defmodule CheckVersionTxn do
+    defstruct [
+      :path,
+      :version
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            version: integer()
+          }
+  end
+
+  defmodule SetACLTxn do
+    defstruct [
+      :path,
+      :acl,
+      :version
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            acl: list(ACL),
+            version: integer()
+          }
+  end
+
+  defmodule SetMaxChildrenTxn do
+    defstruct [
+      :path,
+      :max
+    ]
+
+    @type t() :: %__MODULE__{
+            path: String.t(),
+            max: integer()
+          }
+  end
+
+  defmodule CreateSessionTxn do
+    defstruct [
+      :time_out
+    ]
+
+    @type t() :: %__MODULE__{
+            time_out: integer()
+          }
+  end
+
+  defmodule CloseSessionTxn do
+    defstruct [
+      :paths2_delete
+    ]
+
+    @type t() :: %__MODULE__{
+            paths2_delete: list(String.t())
+          }
+  end
+
+  defmodule ErrorTxn do
+    defstruct [
+      :err
+    ]
+
+    @type t() :: %__MODULE__{
+            err: integer()
+          }
+  end
+
+  defmodule Txn do
+    defstruct [
+      :type,
+      :data
+    ]
+
+    @type t() :: %__MODULE__{
+            type: integer(),
+            data: binary()
+          }
+  end
+
+  defmodule MultiTxn do
+    defstruct [
+      :txns
+    ]
+
+    @type t() :: %__MODULE__{
+            txns: list(Txn)
+          }
   end
 end

@@ -1,0 +1,23 @@
+defmodule <%= @module_name %> do
+  <%= for %ExZk.Jute.Class{name: name, doc: doc, fields: fields} <- @classes do %>
+    defmodule <%= name %> do
+        <%= if doc do %>
+        @moduledoc """
+        <%= doc %>
+        """
+        <% end %>
+
+        defstruct [
+            <%= for %ExZk.Jute.Field{name: name} <- fields do %>
+            :<%= name |> to_string |> Macro.underscore %>,
+            <% end %>
+        ]
+
+        @type t() :: %__MODULE__{
+            <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
+            <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typespec(type, @opts) %>,
+            <% end %>
+        }
+    end
+  <% end %>
+end
