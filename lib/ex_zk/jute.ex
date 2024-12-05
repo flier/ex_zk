@@ -1,6 +1,4 @@
 defmodule ExZk.Jute do
-  @moduledoc false
-
   defmodule Module do
     alias ExZk.Jute.Class
 
@@ -487,22 +485,5 @@ defmodule ExZk.Jute do
     def typespec(:buffer, _), do: "binary()"
     def typespec({:vector, type}, opts), do: "list(" <> typespec(type, opts) <> ")"
     def typespec(type, opts), do: module_name(type, opts)
-  end
-
-  @spec parse_file(Path.t()) :: {:ok, list(Module.t()), String.t()} | {:error, reason :: term()}
-  def parse_file(path) do
-    with {:ok, f} <- File.open(path, [:read, :utf8]),
-         data <- IO.read(f, :eof),
-         {:ok, modules, rest, _, _, _} <- ExZk.Jute.Parser.parse_file(data) do
-      {:ok, modules, rest}
-    end
-  end
-
-  @spec bindgen(Path.t()) :: String.t()
-  def bindgen(path) do
-    with {:ok, modules, _} <- parse_file(path),
-         generated <- Binding.generate(modules, []) do
-      generated
-    end
   end
 end

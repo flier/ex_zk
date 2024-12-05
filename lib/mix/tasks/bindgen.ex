@@ -3,9 +3,12 @@ defmodule Mix.Tasks.Bindgen do
 
   @shortdoc "Generates the elixir bindings for the Zookeeper wire protocol"
 
+  @jute_file "./zookeeper.jute"
+  @binding_file "./lib/ex_zk/protocol.ex"
+
   def run(_) do
-    with {:ok, modules, _} <-
-           ExZk.Jute.parse_file(Path.expand("./zookeeper.jute", :code.priv_dir(:ex_zk))),
+    with {:ok, data} <- File.read(Path.expand(@jute_file, :code.priv_dir(:ex_zk))),
+         {:ok, modules, _, _, _, _} <- ExZk.Jute.Parser.parse_file(data),
          generated <-
            ExZk.Jute.Binding.generate(modules,
              namespaces: %{
@@ -15,7 +18,7 @@ defmodule Mix.Tasks.Bindgen do
                "org.apache.zookeeper.server"
              ]
            ),
-         :ok <- File.write("./lib/ex_zk/protocol.ex", generated) do
+         :ok <- File.write(@binding_file, generated) do
     end
   end
 end
