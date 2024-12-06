@@ -1,23 +1,53 @@
 defmodule <%= @module_name %> do
-  <%= for %ExZk.Jute.Class{name: name, doc: doc, fields: fields} <- @classes do %>
+  @moduledoc false
+  <%= for %ExZk.Jute.Class{name: name, fields: fields} <- @classes do %>
     defmodule <%= name %> do
-        <%= if doc do %>
-        @moduledoc """
-        <%= doc %>
-        """
+      @moduledoc false
+
+      defstruct [
+          <%= for %ExZk.Jute.Field{name: name} <- fields do %>
+          :<%= name |> to_string |> Macro.underscore %>,
+          <% end %>
+      ]
+
+      @type t() :: %__MODULE__{
+          <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
+          <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typespec(type, @opts) %>,
+          <% end %>
+      }
+
+      @spec pack(t()) :: binary()
+      def pack(%<%= name %>{
+        <%= for %ExZk.Jute.Field{name: name} <- fields do %>
+        <%= name |> to_string |> Macro.underscore %>: <%= name |> to_string |> Macro.underscore %>,
         <% end %>
+      }) do
+        ExZk.Wire.pack([
+          <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
+          {<%= ExZk.Jute.Binding.typename(type, @opts) %>, <%= name |> to_string |> Macro.underscore %>},
+          <% end %>
+        ])
+      end
 
-        defstruct [
+      @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(buf) do
+        case ExZk.Wire.unpack([
+          <%= for %ExZk.Jute.Field{type: type} <- fields do %>
+          <%= ExZk.Jute.Binding.typename(type, @opts) %>,
+          <% end %>
+        ], buf) do
+          {:ok, [
             <%= for %ExZk.Jute.Field{name: name} <- fields do %>
-            :<%= name |> to_string |> Macro.underscore %>,
+            <%= name |> to_string |> Macro.underscore %>,
             <% end %>
-        ]
-
-        @type t() :: %__MODULE__{
-            <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
-            <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typespec(type, @opts) %>,
+          ], rest} -> {:ok, %<%= name %>{
+            <%= for %ExZk.Jute.Field{name: name} <- fields do %>
+            <%= name |> to_string |> Macro.underscore %>: <%= name |> to_string |> Macro.underscore %>,
             <% end %>
-        }
+          }, rest}
+          {:error, reason} -> {:error, reason}
+        end
+      end
     end
   <% end %>
 end

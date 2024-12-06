@@ -31,23 +31,11 @@ defmodule ExZk.Jute do
   end
 
   defmodule Field do
-    @type type() ::
-            :byte
-            | :boolean
-            | :int
-            | :long
-            | :float
-            | :double
-            | :ustring
-            | :buffer
-            | term()
-            | {:vector, type()}
-
     defstruct [:name, :type, doc: nil]
 
     @type t() :: %__MODULE__{
             name: String.t(),
-            type: String.t(),
+            type: ExZk.Wire.type(),
             doc: String.t() | nil
           }
 
@@ -475,6 +463,7 @@ defmodule ExZk.Jute do
       end
     end
 
+    @spec typespec(ExZk.Wire.type(), [option()]) :: String.t()
     def typespec(:boolean, _), do: "boolean()"
     def typespec(:byte, _), do: "integer()"
     def typespec(:int, _), do: "integer()"
@@ -484,6 +473,18 @@ defmodule ExZk.Jute do
     def typespec(:ustring, _), do: "String.t()"
     def typespec(:buffer, _), do: "binary()"
     def typespec({:vector, type}, opts), do: "list(" <> typespec(type, opts) <> ")"
-    def typespec(type, opts), do: module_name(type, opts)
+    def typespec(type, opts), do: module_name(type, opts) <> ".t()"
+
+    @spec typename(ExZk.Wire.type(), [option()]) :: String.t()
+    def typename(:boolean, _), do: ":boolean"
+    def typename(:byte, _), do: ":byte"
+    def typename(:int, _), do: ":int"
+    def typename(:long, _), do: ":long"
+    def typename(:float, _), do: ":float"
+    def typename(:double, _), do: ":double"
+    def typename(:ustring, _), do: ":ustring"
+    def typename(:buffer, _), do: ":buffer"
+    def typename({:vector, type}, opts), do: "{:vector, " <> typename(type, opts) <> "}"
+    def typename(type, opts), do: module_name(type, opts)
   end
 end

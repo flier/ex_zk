@@ -12,7 +12,9 @@ defmodule Mix.Tasks.Bindgen do
          generated <-
            ExZk.Jute.Binding.generate(modules,
              namespaces: %{
-               "org.apache.zookeeper" => "ExZk"
+               "org.apache.zookeeper" => "ExZk",
+               "org.apache.zookeeper.data" => "ExZk.Data",
+               "org.apache.zookeeper.txn" => "ExZk.Txn"
              },
              skip: [
                "org.apache.zookeeper.server"
