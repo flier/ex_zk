@@ -70,5 +70,20 @@ defmodule SocketTest do
 
       assert_receive {:EXIT, ^sock, :normal}
     end
+
+    test "it can receive frame" do
+      {:ok, sock} = ExZk.Socket.start_link(self(), [])
+      assert is_pid(sock)
+
+      assert_receive {:connected, ^sock, :sock, :addr}
+
+      # receive frame
+      send(sock, {:tcp, :sock, <<0, 0, 0, 2, 122, 107, 0, 0, 0, 4>>})
+      assert_receive {:frame, ^sock, "zk"}
+
+      # receive remaining frame
+      send(sock, {:tcp, :sock, <<116, 101, 115, 116>>})
+      assert_receive {:frame, ^sock, "test"}
+    end
   end
 end

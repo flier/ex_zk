@@ -7,14 +7,16 @@ defmodule ExZk.Socket do
     :conn,
     :opts,
     :transport,
-    :socket
+    :socket,
+    :buffered
   ]
 
   @type t :: %__MODULE__{
           conn: pid(),
           opts: [option()],
           transport: module(),
-          socket: socket()
+          socket: socket(),
+          buffered: binary()
         }
 
   @type option :: {:ssl, boolean()} | :gen_tcp.option()
@@ -62,15 +64,68 @@ defmodule ExZk.Socket do
     end
   end
 
+  @impl true
+  def handle_info(msg, state)
+
+  # Inbound data from the socket.
+  def handle_info({transport, socket, data}, %__MODULE__{socket: socket} = state)
+      when transport in [:tcp, :ssl] do
+    :ok = setopts(transport, socket, active: :once)
+    state = new_data(state, data)
+    {:noreply, state}
+  end
+
+  # The socket was closed.
+  def handle_info({:tcp_closed, socket}, %__MODULE__{socket: socket} = state) do
+    stop(:tcp_closed, state)
+  end
+
+  # A socket error occurred.
+  def handle_info({:tcp_error, socket, reason}, %__MODULE__{socket: socket} = state) do
+    stop({:tcp_error, reason}, state)
+  end
+
+  # The socket was closed.
+  def handle_info({:ssl_closed, socket}, %__MODULE__{socket: socket} = state) do
+    stop(:ssl_closed, state)
+  end
+
+  # A socket error occurred.
+  def handle_info({:ssl_error, socket, reason}, %__MODULE__{socket: socket} = state) do
+    stop({:ssl_error, reason}, state)
+  end
+
   ####
   ## Private methods
   ##
 
+  defp setopts(transport, socket, opts) when transport in [:tcp, :gen_tcp],
+    do: :inet.setopts(socket, opts)
+
   defp setopts(:ssl, socket, opts), do: :ssl.setopts(socket, opts)
-  defp setopts(:gen_tcp, socket, opts), do: :inet.setopts(socket, opts)
 
   defp stop(reason, %__MODULE__{conn: conn} = state) do
     send(conn, {:stopped, self(), reason})
     {:stop, :normal, state}
+  end
+
+  defp new_data(state, _data = "") do
+    state
+  end
+
+  defp new_data(
+         %__MODULE__{conn: conn, buffered: nil} = state,
+         <<sz::32, frame::binary-size(sz), rest::binary>> = _data
+       ) do
+    send(conn, {:frame, self(), frame})
+    new_data(state, rest)
+  end
+
+  defp new_data(%__MODULE__{buffered: nil} = state, data) do
+    %__MODULE__{state | buffered: data}
+  end
+
+  defp new_data(%__MODULE__{buffered: buffered} = state, data) do
+    new_data(%__MODULE__{state | buffered: nil}, buffered <> data)
   end
 end
