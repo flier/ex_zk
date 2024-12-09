@@ -47,6 +47,15 @@ defmodule ExZk.StartOptions do
       connection timeout (in milliseconds) directly passed to the network layer.
       """
     ],
+    sync_connect: [
+      type: :boolean,
+      default: false,
+      doc: """
+      decides whether ExZk should initiate the network connection to the Zookeeper server *before*
+      or *after* returning from `start_link/1`. This option also changes some reconnection
+      semantics; read the "Reconnections" page in the documentation for more information.
+      """
+    ],
     exit_on_disconnection: [
       type: :boolean,
       default: false,

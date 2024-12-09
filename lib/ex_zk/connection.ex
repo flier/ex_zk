@@ -93,7 +93,19 @@ defmodule ExZk.Connection do
       socket: socket
     }
 
-    {:ok, :connecting, data}
+    if opts[:sync_connect] do
+      # We don't need to handle a timeout here because we're using a timeout in
+      # connect/3 down the pipe.
+      receive do
+        {:connected, ^socket, _sock, address} ->
+          {:ok, :connected, %__MODULE__{data | connected_address: address}}
+
+        {:stopped, ^socket, reason} ->
+          {:stop, %ExZk.ConnectionError{reason: reason}}
+      end
+    else
+      {:ok, :connecting, data}
+    end
   end
 
   @impl true
