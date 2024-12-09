@@ -47,6 +47,32 @@ defmodule ExZk.StartOptions do
       connection timeout (in milliseconds) directly passed to the network layer.
       """
     ],
+    exit_on_disconnection: [
+      type: :boolean,
+      default: false,
+      doc: """
+      if `true`, the ExZk session will exit if it fails to connect or disconnects from Zookeeper.
+      Note that setting this option to `true` means that the `:backoff_initial` and
+      `:backoff_max` options will be ignored.
+      """
+    ],
+    backoff_initial: [
+      type: :timeout,
+      default: 500,
+      doc: """
+      the initial backoff time (in milliseconds), which is the time that the Zookeeper process
+      will wait before attempting to reconnect to Redis after a disconnection or failed first
+      connection. See the "Reconnections" page in the docs for more information.
+      """
+    ],
+    backoff_max: [
+      type: :timeout,
+      default: 30_000,
+      doc: """
+      the maximum length (in milliseconds) of the time interval used between reconnection
+      attempts. See the "Reconnections" page in the docs for more information.
+      """
+    ],
     ssl: [
       type: :boolean,
       default: false,

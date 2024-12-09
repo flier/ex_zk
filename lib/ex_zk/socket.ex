@@ -11,7 +11,7 @@ defmodule ExZk.Socket do
   ]
 
   @type t :: %__MODULE__{
-          conn: ExZk.Connection.t(),
+          conn: pid(),
           opts: [option()],
           transport: module(),
           socket: socket()
@@ -25,7 +25,7 @@ defmodule ExZk.Socket do
   ## Public API
   ##
 
-  @spec start_link(ExZk.Connection.t(), [option()]) :: GenServer.on_start()
+  @spec start_link(pid(), [option()]) :: GenServer.on_start()
   def start_link(conn, opts) do
     GenServer.start_link(__MODULE__, {conn, opts}, [])
   end
@@ -52,8 +52,8 @@ defmodule ExZk.Socket do
 
   @impl true
   def handle_continue([], %{conn: conn, opts: opts, transport: transport} = state) do
-    with {:ok, socket, address} <- Connector.connect(opts, conn),
-         :ok <- set_opts(transport, socket, active: :once) do
+    with {:ok, socket, address} <- Connector.connect(conn, opts),
+         :ok <- setopts(transport, socket, active: :once) do
       send(conn, {:connected, self(), socket, address})
       {:noreply, %{state | socket: socket}}
     else
@@ -66,8 +66,8 @@ defmodule ExZk.Socket do
   ## Private methods
   ##
 
-  defp set_opts(:ssl, socket, opts), do: :ssl.setopts(socket, opts)
-  defp set_opts(:gen_tcp, socket, opts), do: :inet.setopts(socket, opts)
+  defp setopts(:ssl, socket, opts), do: :ssl.setopts(socket, opts)
+  defp setopts(:gen_tcp, socket, opts), do: :inet.setopts(socket, opts)
 
   defp stop(reason, %__MODULE__{conn: conn} = state) do
     send(conn, {:stopped, self(), reason})

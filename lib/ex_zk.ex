@@ -45,7 +45,7 @@ defmodule ExZk do
       iex> is_pid(pid)
       true
 
-      iex> {:ok, pid} = ExZk.start_link(database: 3, name: :ex_zk)
+      iex> {:ok, pid} = ExZk.start_link(name: :ex_zk)
       iex> is_pid(pid)
       true
 

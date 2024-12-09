@@ -5,11 +5,11 @@ defmodule ExZk.Connector do
   ## Public API
   ##
 
-  @spec connect(opts :: keyword(), conn_pid :: pid()) ::
-          {:ok, socket, connected_address} | {:error, term} | {:stop, term}
-        when socket: ExZk.Socket.socket(),
-             connected_address: String.t()
-  def connect(opts, conn_pid) when is_list(opts) and is_pid(conn_pid) do
+  @spec connect(conn :: pid(), opts :: keyword()) ::
+          {:ok, socket :: ExZk.Socket.socket(), connected_address :: String.t()}
+          | {:error, term}
+          | {:stop, term}
+  def connect(conn, opts) when is_pid(conn) and is_list(opts) do
     host = Keyword.fetch!(opts, :host)
     port = Keyword.fetch!(opts, :port)
 

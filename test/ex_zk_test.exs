@@ -1,9 +1,17 @@
 defmodule ExZkTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
+
   doctest ExZk
   doctest ExZk.Connection
   doctest ExZk.Connector
+  doctest ExZk.Jute
+  doctest ExZk.Jute.Binding
+  doctest ExZk.Jute.Parser
   doctest ExZk.Socket
   doctest ExZk.URI
   doctest ExZk.Wire
+
+  doctest ExZk.Data
+  doctest ExZk.Proto
+  doctest ExZk.Txn
 end
