@@ -235,7 +235,9 @@ defmodule ExZk.Connection do
 
     evt = struct!(%WatchedEvent{zxid: zxid}, Map.from_struct(w))
 
-    Logger.debug("Got notification for session id #{session_id(data)} #{evt |> inspect()}")
+    Logger.debug(
+      "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
+    )
 
     {:keep_state, queue_event(data, evt)}
   end

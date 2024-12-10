@@ -1,6 +1,7 @@
 defmodule ConnectionTest do
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureLog
   import Mock
 
   alias ExZk.{Connection, Connector, ConnectionError}
@@ -101,9 +102,11 @@ defmodule ConnectionTest do
       # it should be connected
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
-      send(conn, {:frame, socket, ReplyHeader.pack(%ReplyHeader{xid: @ping_xid})})
+      assert capture_log([level: :debug, format: "$message"], fn ->
+               send(conn, {:frame, socket, ReplyHeader.pack(%ReplyHeader{xid: @ping_xid})})
 
-      assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+               assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+             end) == "Got ping response for session id - after PT0S"
     end
 
     test "it can handle auth packet response" do
@@ -113,9 +116,14 @@ defmodule ConnectionTest do
       # it should be connected
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
-      send(conn, {:frame, socket, ReplyHeader.pack(%ReplyHeader{xid: @auth_packet_xid, err: 0})})
+      assert capture_log([level: :debug, format: "$message"], fn ->
+               send(
+                 conn,
+                 {:frame, socket, ReplyHeader.pack(%ReplyHeader{xid: @auth_packet_xid, err: -1})}
+               )
 
-      assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+               assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+             end) == "Got auth response for session id - with err: -1"
     end
 
     test "it can handle notification" do
@@ -129,9 +137,12 @@ defmodule ConnectionTest do
         ReplyHeader.pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
           WatcherEvent.pack(%WatcherEvent{type: 1, state: 3, path: "/test"})
 
-      send(conn, {:frame, socket, frame})
+      assert capture_log([level: :debug, format: "$message"], fn ->
+               send(conn, {:frame, socket, frame})
 
-      assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+               assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+             end) ==
+               ~s[Got notification for session id - with event: #{%ExZk.Connection.WatchedEvent{type: 1, state: 3, path: "/test", zxid: 123} |> inspect()}]
     end
   end
 end
