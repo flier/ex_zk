@@ -8,6 +8,7 @@ defmodule ExZkTest do
   doctest ExZk.Jute.Binding
   doctest ExZk.Jute.Parser
   doctest ExZk.Socket
+  doctest ExZk.TypedEnum
   doctest ExZk.URI
   doctest ExZk.Wire
 
