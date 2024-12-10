@@ -231,18 +231,13 @@ defmodule ExZk.Connection do
   end
 
   defp handle_frame(%ReplyHeader{xid: @notification_xid, zxid: zxid}, rest, data) do
-    Logger.debug("Got notification for session id #{session_id(data)}")
+    {:ok, w, _rest} = WatcherEvent.unpack(rest)
 
-    {:ok, %WatcherEvent{type: type, state: state, path: path}, _rest} = WatcherEvent.unpack(rest)
+    evt = struct!(%WatchedEvent{zxid: zxid}, Map.from_struct(w))
 
-    watched_event = %WatchedEvent{
-      type: type,
-      state: state,
-      path: path,
-      zxid: zxid
-    }
+    Logger.debug("Got notification for session id #{session_id(data)} #{evt |> inspect()}")
 
-    {:keep_state, queue_event(data, watched_event)}
+    {:keep_state, queue_event(data, evt)}
   end
 
   defp disconnect(%__MODULE__{opts: opts} = data, reason) do

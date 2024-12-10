@@ -126,7 +126,7 @@ defmodule ConnectionTest do
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
       frame =
-        ReplyHeader.pack(%ReplyHeader{xid: @notification_xid}) <>
+        ReplyHeader.pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
           WatcherEvent.pack(%WatcherEvent{type: 1, state: 3, path: "/test"})
 
       send(conn, {:frame, socket, frame})
