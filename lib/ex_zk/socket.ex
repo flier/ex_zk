@@ -104,11 +104,6 @@ defmodule ExZk.Socket do
 
   defp setopts(:ssl, socket, opts), do: :ssl.setopts(socket, opts)
 
-  defp stop(reason, %__MODULE__{conn: conn} = state) do
-    send(conn, {:stopped, self(), reason})
-    {:stop, :normal, state}
-  end
-
   defp new_data(state, _data = "") do
     state
   end
@@ -127,5 +122,10 @@ defmodule ExZk.Socket do
 
   defp new_data(%__MODULE__{buffered: buffered} = state, data) do
     new_data(%__MODULE__{state | buffered: nil}, buffered <> data)
+  end
+
+  defp stop(reason, %__MODULE__{conn: conn} = state) do
+    send(conn, {:stopped, self(), reason})
+    {:stop, :normal, state}
   end
 end

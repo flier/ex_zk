@@ -1,6 +1,8 @@
 defmodule ExZk.Connection do
   require Logger
 
+  alias ExZk.Proto.{ReplyHeader, WatcherEvent}
+
   @behaviour :gen_statem
 
   defstruct [
@@ -11,8 +13,23 @@ defmodule ExZk.Connection do
     :backoff_current,
     :backoff_initial,
     :backoff_max,
-    :reconnect_times
+    :reconnect_times,
+    :session_id,
+    :last_ping_sent,
+    :waiting_events
   ]
+
+  defmodule WatchedEvent do
+    defstruct [:state, :type, :path, :zxid]
+
+    @type t :: %__MODULE__{state: integer(), type: integer(), path: String.t(), zxid: integer()}
+  end
+
+  defmodule WatcherSetEvent do
+    defstruct [:watchers, :event]
+
+    @type t :: %__MODULE__{watchers: list(), event: WatcherEvent.t()}
+  end
 
   @type t :: %__MODULE__{
           opts: [option()],
@@ -22,10 +39,13 @@ defmodule ExZk.Connection do
           backoff_current: timeout(),
           backoff_initial: timeout(),
           backoff_max: timeout(),
-          reconnect_times: integer()
+          reconnect_times: integer(),
+          session_id: integer(),
+          last_ping_sent: Time.t(),
+          waiting_events: :queue.queue(WatcherSetEvent.t())
         }
 
-  @type option :: ExZk.Socket.option() | :gen_statem.start_opt()
+  @type option :: {:session_id, integer()} | ExZk.Socket.option() | :gen_statem.start_opt()
 
   @type status :: :disconnected | :connecting | :connected
 
@@ -169,14 +189,61 @@ defmodule ExZk.Connection do
     disconnect(data, reason)
   end
 
-  def connected({:call, from}, :status, %__MODULE__{connected_address: addr} = _data) do
-    :gen_statem.reply(from, {:connected, %{addr: addr}})
+  def connected(
+        :info,
+        {:frame, socket, frame},
+        %__MODULE__{socket: socket} = data
+      ) do
+    {:ok, reply_hdr, rest} = ReplyHeader.unpack(frame)
+
+    handle_frame(reply_hdr, rest, data)
+  end
+
+  def connected(
+        {:call, from},
+        :status,
+        %__MODULE__{socket: socket, connected_address: addr} = _data
+      ) do
+    :gen_statem.reply(from, {:connected, %{socket: socket, addr: addr}})
     :keep_state_and_data
   end
 
   ####
   ## Private methods
   ##
+
+  @notification_xid -1
+  @ping_xid -2
+  @auth_packet_xid -4
+
+  defp handle_frame(%ReplyHeader{xid: @ping_xid}, _rest, data) do
+    Logger.debug(
+      "Got ping response for session id #{session_id(data)} after #{ping_response_time(data) |> Duration.to_iso8601()}"
+    )
+
+    {:keep_state, %__MODULE__{data | last_ping_sent: nil}}
+  end
+
+  defp handle_frame(%ReplyHeader{xid: @auth_packet_xid, err: err}, _rest, data) do
+    Logger.debug("Got auth response for session id #{session_id(data)} with err: #{err}")
+
+    :keep_state_and_data
+  end
+
+  defp handle_frame(%ReplyHeader{xid: @notification_xid, zxid: zxid}, rest, data) do
+    Logger.debug("Got notification for session id #{session_id(data)}")
+
+    {:ok, %WatcherEvent{type: type, state: state, path: path}, _rest} = WatcherEvent.unpack(rest)
+
+    watched_event = %WatchedEvent{
+      type: type,
+      state: state,
+      path: path,
+      zxid: zxid
+    }
+
+    {:keep_state, queue_event(data, watched_event)}
+  end
 
   defp disconnect(%__MODULE__{opts: opts} = data, reason) do
     if opts[:exit_on_disconnection] do
@@ -210,5 +277,22 @@ defmodule ExZk.Connection do
 
     {backoff_current,
      %{data | backoff_current: backoff_current, reconnect_times: reconnect_times + 1}}
+  end
+
+  defp session_id(%__MODULE__{session_id: nil}), do: "-"
+  defp session_id(%__MODULE__{session_id: session_id}), do: Base.encode16(session_id)
+
+  defp ping_response_time(%__MODULE__{last_ping_sent: nil}), do: %Duration{}
+
+  defp ping_response_time(%__MODULE__{last_ping_sent: last_ping_sent}) do
+    %Duration{microsecond: {Time.diff(Time.utc_now(), last_ping_sent, :microsecond), 6}}
+  end
+
+  defp queue_event(%__MODULE__{waiting_events: nil} = data, event) do
+    queue_event(%__MODULE__{data | waiting_events: :queue.new()}, event)
+  end
+
+  defp queue_event(%__MODULE__{waiting_events: waiting_events} = data, event) do
+    %__MODULE__{data | waiting_events: :queue.in(%WatcherSetEvent{event: event}, waiting_events)}
   end
 end

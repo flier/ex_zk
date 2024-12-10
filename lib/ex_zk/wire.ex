@@ -26,36 +26,68 @@ defmodule ExZk.Wire do
       <<1>>
       iex> ExZk.Wire.pack(:boolean, false)
       <<0>>
+      iex> ExZk.Wire.pack(:boolean, nil)
+      <<0>>
       iex> ExZk.Wire.pack(:byte, 42)
       <<42>>
+      iex> ExZk.Wire.pack(:byte, -2)
+      <<254>>
+      iex> ExZk.Wire.pack(:byte, nil)
+      <<0>>
       iex> ExZk.Wire.pack(:int, 42)
       <<0, 0, 0, 42>>
+      iex> ExZk.Wire.pack(:int, -2)
+      <<0xFF, 0xFF, 0xFF, 0xFE>>
+      iex> ExZk.Wire.pack(:int, nil)
+      <<0, 0, 0, 0>>
       iex> ExZk.Wire.pack(:long, 42)
       <<0, 0, 0, 0, 0, 0, 0, 42>>
+      iex> ExZk.Wire.pack(:long, -2)
+      <<0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE>>
+      iex> ExZk.Wire.pack(:long, nil)
+      <<0, 0, 0, 0, 0, 0, 0, 0>>
       iex> ExZk.Wire.pack(:float, 3.14)
       <<64, 72, 245, 195>>
       iex> ExZk.Wire.pack(:double, 3.14)
       <<64, 9, 30, 184, 81, 235, 133, 31>>
       iex> ExZk.Wire.pack(:ustring, "hello")
       <<0, 0, 0, 5, 104, 101, 108, 108, 111>>
+      iex> ExZk.Wire.pack(:ustring, "")
+      <<0, 0, 0, 0>>
+      iex> ExZk.Wire.pack(:ustring, nil)
+      <<0, 0, 0, 0>>
       iex> ExZk.Wire.pack(:buffer, "hello")
       <<0, 0, 0, 5, 104, 101, 108, 108, 111>>
+      iex> ExZk.Wire.pack(:buffer, <<>>)
+      <<0, 0, 0, 0>>
+      iex> ExZk.Wire.pack(:buffer, nil)
+      <<0, 0, 0, 0>>
       iex> ExZk.Wire.pack({:vector, :int}, [1, 2, 3])
       <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>
+      iex> ExZk.Wire.pack({:vector, :int}, nil)
+      <<0xFF, 0xFF, 0xFF, 0xFF>>
       iex> ExZk.Wire.pack({:vector, :int}, [])
       <<0xFF, 0xFF, 0xFF, 0xFF>>
 
   """
   @spec pack(type(), value :: any()) :: binary()
+  def pack(:boolean, nil), do: pack(:boolean, false)
   def pack(:boolean, b) when is_boolean(b), do: if(b, do: <<1::8>>, else: <<0::8>>)
-  def pack(:byte, n) when is_integer(n), do: <<n::8>>
-  def pack(:int, n) when is_integer(n), do: <<n::32>>
-  def pack(:long, n) when is_integer(n), do: <<n::64>>
+  def pack(:byte, nil), do: pack(:byte, 0)
+  def pack(:byte, n) when is_integer(n), do: <<n::integer-signed-size(8)>>
+  def pack(:int, nil), do: pack(:int, 0)
+  def pack(:int, n) when is_integer(n), do: <<n::integer-signed-size(32)>>
+  def pack(:long, nil), do: pack(:long, 0)
+  def pack(:long, n) when is_integer(n), do: <<n::integer-signed-size(64)>>
+  def pack(:float, nil), do: pack(:float, 0.0)
   def pack(:float, f) when is_float(f), do: <<f::float-size(32)>>
+  def pack(:double, nil), do: pack(:double, 0.0)
   def pack(:double, f) when is_float(f), do: <<f::float-size(64)>>
+  def pack(:ustring, nil), do: pack(:ustring, "")
   def pack(:ustring, s) when is_binary(s), do: <<byte_size(s)::32, s::binary>>
+  def pack(:buffer, nil), do: pack(:buffer, <<>>)
   def pack(:buffer, b) when is_binary(b), do: <<byte_size(b)::32, b::binary>>
-  def pack({:vector, _type}, []), do: <<-1::32>>
+  def pack({:vector, _type}, v) when v in [nil, []], do: <<-1::32>>
 
   def pack({:vector, type}, v) when is_list(v) do
     v |> Enum.map(&pack(type, &1)) |> Enum.reduce(<<length(v)::32>>, &(&2 <> &1))
@@ -132,21 +164,21 @@ defmodule ExZk.Wire do
 
   def unpack(:byte, buf) when is_binary(buf) do
     case buf do
-      <<n::8, rest::binary>> -> {:ok, n, rest}
+      <<n::integer-signed-size(8), rest::binary>> -> {:ok, n, rest}
       _ -> {:error, :nomatch}
     end
   end
 
   def unpack(:int, buf) when is_binary(buf) do
     case buf do
-      <<n::32, rest::binary>> -> {:ok, n, rest}
+      <<n::integer-signed-size(32), rest::binary>> -> {:ok, n, rest}
       _ -> {:error, :nomatch}
     end
   end
 
   def unpack(:long, buf) when is_binary(buf) do
     case buf do
-      <<n::64, rest::binary>> -> {:ok, n, rest}
+      <<n::integer-signed-size(64), rest::binary>> -> {:ok, n, rest}
       _ -> {:error, :nomatch}
     end
   end
