@@ -1,9 +1,15 @@
 defmodule ExZk.Connection do
   require Logger
 
-  alias ExZk.Proto.{ReplyHeader, WatcherEvent}
+  alias ExZk.Defs.OpCode
+  alias ExZk.Proto.{RequestHeader, ReplyHeader, WatcherEvent}
+  alias ExZk.Socket
 
   @behaviour :gen_statem
+
+  @notification_xid -1
+  @ping_xid -2
+  @auth_packet_xid -4
 
   defstruct [
     :opts,
@@ -49,6 +55,8 @@ defmodule ExZk.Connection do
 
   @type status :: :disconnected | :connecting | :connected
 
+  @type xid :: integer()
+
   ####
   ## Public API
   ##
@@ -92,6 +100,11 @@ defmodule ExZk.Connection do
   @spec status(:gen_statem.server_ref()) :: status()
   def status(conn) do
     :gen_statem.call(conn, :status)
+  end
+
+  @spec send_ping(:gen_statem.server_ref()) :: :ok
+  def send_ping(conn) do
+    :gen_statem.cast(conn, :ping)
   end
 
   ####
@@ -208,13 +221,15 @@ defmodule ExZk.Connection do
     :keep_state_and_data
   end
 
+  def connected(:cast, :ping, %__MODULE__{socket: socket} = data) do
+    :ok = Socket.send_frame(socket, RequestHeader.pack(new_request_header(@ping_xid, :ping)))
+
+    {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
+  end
+
   ####
   ## Private methods
   ##
-
-  @notification_xid -1
-  @ping_xid -2
-  @auth_packet_xid -4
 
   defp handle_frame(%ReplyHeader{xid: @ping_xid}, _rest, data) do
     Logger.debug(
@@ -254,6 +269,12 @@ defmodule ExZk.Connection do
 
       {:next_state, :disconnected, data, actions}
     end
+  end
+
+  @spec new_request_header(xid(), OpCode.t()) :: ExZk.Proto.RequestHeader.t()
+  def new_request_header(xid, op_code) do
+    {:ok, type} = OpCode.value(op_code)
+    %ExZk.Proto.RequestHeader{xid: xid, type: type}
   end
 
   defp next_backoff(%__MODULE__{backoff_current: nil} = data) do

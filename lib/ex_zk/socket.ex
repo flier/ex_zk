@@ -27,14 +27,19 @@ defmodule ExZk.Socket do
   ## Public API
   ##
 
-  @spec start_link(pid(), [option()]) :: GenServer.on_start()
+  @spec start_link(conn :: pid(), [option()]) :: GenServer.on_start()
   def start_link(conn, opts) do
     GenServer.start_link(__MODULE__, {conn, opts}, [])
   end
 
-  @spec normal_stop(GenServer.server()) :: :ok
+  @spec normal_stop(sock :: GenServer.server()) :: :ok
   def normal_stop(sock) do
     GenServer.stop(sock, :normal)
+  end
+
+  @spec send_frame(sock :: GenServer.server(), frame :: binary()) :: :ok
+  def send_frame(sock, frame) when is_binary(frame) do
+    GenServer.cast(sock, {:send, <<byte_size(frame)::32>> <> frame})
   end
 
   ####
@@ -93,6 +98,30 @@ defmodule ExZk.Socket do
   # A socket error occurred.
   def handle_info({:ssl_error, socket, reason}, %__MODULE__{socket: socket} = state) do
     stop({:ssl_error, reason}, state)
+  end
+
+  @impl true
+  def handle_cast(
+        {:send, packet},
+        %__MODULE__{conn: conn, transport: transport, socket: socket} = state
+      ) do
+    case transport.send(socket, packet) do
+      :ok ->
+        {:noreply, state}
+
+      {:error, reason} ->
+        :ok = transport.close(socket)
+
+        send(conn, {:stopped, self(), reason})
+
+        error =
+          case transport do
+            :ssl -> {:ssl_error, :closed}
+            :gen_tcp -> {:tcp_error, :closed}
+          end
+
+        stop(error, state)
+    end
   end
 
   ####

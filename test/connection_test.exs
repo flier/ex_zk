@@ -4,8 +4,10 @@ defmodule ConnectionTest do
   import ExUnit.CaptureLog
   import Mock
 
+  alias ExZk.Defs.OpCode
+  alias ExZk.Proto.RequestHeader
   alias ExZk.{Connection, Connector, ConnectionError}
-  alias ExZk.Proto.{ReplyHeader, WatcherEvent}
+  alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
 
   setup_with_mocks([
     {:inet, [:no_link, :unstick], [setopts: fn _sock, _opts -> :ok end]},
@@ -143,6 +145,33 @@ defmodule ConnectionTest do
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
              end) ==
                ~s[Got notification for session id - with event: #{%ExZk.Connection.WatchedEvent{type: 1, state: 3, path: "/test", zxid: 123} |> inspect()}]
+    end
+
+    test "it can send ping" do
+      with_mocks([
+        {:gen_tcp, [:unstick], [send: fn _socket, _data -> :ok end]}
+      ]) do
+        # connect to the server
+        {:ok, conn} = Connection.start_link(sync_connect: true)
+
+        assert Connection.send_ping(conn) == :ok
+
+        assert {:connected, %{socket: socket}} = Connection.status(conn)
+
+        {:ok, type} = OpCode.value(:ping)
+        frame = RequestHeader.pack(%RequestHeader{xid: @ping_xid, type: type})
+
+        assert_called(:gen_tcp.send(:sock, <<byte_size(frame)::32>> <> frame))
+
+        assert String.starts_with?(
+                 capture_log([level: :debug, format: "$message"], fn ->
+                   send(conn, {:frame, socket, ReplyHeader.pack(%ReplyHeader{xid: @ping_xid})})
+
+                   assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+                 end),
+                 "Got ping response for session id - after PT"
+               )
+      end
     end
   end
 end

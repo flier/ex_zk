@@ -91,10 +91,10 @@ defmodule ExZk.TypedEnum.Use do
       def cast(_other), do: :error
 
       for {key, value} <- opts, k <- Enum.uniq([key, value, Atom.to_string(key)]) do
-        def dump(unquote(k)), do: {:ok, unquote(value)}
+        def value(unquote(k)), do: {:ok, unquote(value)}
       end
 
-      def dump(term) do
+      def value(term) do
         msg =
           "Value `#{inspect(term)}` is not a valid enum for `#{inspect(__MODULE__)}`. " <>
             "Valid enums are `#{inspect(__valid_values__())}`"
@@ -105,6 +105,12 @@ defmodule ExZk.TypedEnum.Use do
       def embed_as(_), do: :self
 
       def equal?(term1, term2), do: term1 == term2
+
+      for {key, _value} <- opts do
+        def match?(unquote(key)), do: true
+      end
+
+      def match?(_), do: false
 
       for {key, value} <- opts do
         def load(unquote(value)), do: {:ok, unquote(key)}
