@@ -8,7 +8,7 @@ defmodule JuteTest do
     test "it can be packed" do
       id = %Id{scheme: "zk", id: "test"}
 
-      assert pack(Id, id) ==
+      assert pack({Id, id}) ==
                <<0, 0, 0, 2, ?z, ?k, 0, 0, 0, 4, ?t, ?e, ?s, ?t>>
 
       assert pack(id) ==
