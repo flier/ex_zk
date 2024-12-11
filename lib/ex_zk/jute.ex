@@ -434,8 +434,7 @@ defmodule ExZk.Jute do
       |> Enum.filter(fn %Module{name: name} ->
         !Enum.any?(skipped_module, &String.starts_with?(to_string(name), &1))
       end)
-      |> Enum.map(&generate_module(&1, opts))
-      |> Enum.join("\n\n")
+      |> Enum.map_join("\n\n", &generate_module(&1, opts))
     end
 
     defp generate_module(%Module{name: name, classes: classes}, opts) do

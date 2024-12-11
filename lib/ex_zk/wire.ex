@@ -11,11 +11,19 @@ defmodule ExZk.Wire do
           | term()
           | {:vector, type()}
 
+  ####
+  ## Protocols
+  ##
+
   defprotocol Pack do
     @spec pack(value :: any()) :: binary()
     @doc "Pack a value into a binary"
     def pack(value)
   end
+
+  ####
+  ## Public API
+  ##
 
   @doc """
   Pack a value into a binary
@@ -138,88 +146,31 @@ defmodule ExZk.Wire do
       {:error, :nomatch}
 
   """
-  @spec unpack(buf :: binary(), type()) ::
+  @spec unpack(buf :: binary(), type() | [type()] | Keyword.t()) ::
           {:ok, value :: any(), rest :: binary()} | {:error, :nomatch}
-  def unpack(_type, <<>>), do: {:error, :nomatch}
+  def unpack(<<>>, _type), do: {:error, :nomatch}
 
-  def unpack(buf, :boolean) when is_binary(buf) do
-    case buf do
-      <<b::8, rest::binary>> -> {:ok, b != 0, rest}
-      _ -> {:error, :nomatch}
-    end
-  end
+  def unpack(<<b::8, rest::binary>>, :boolean), do: {:ok, b != 0, rest}
+  def unpack(<<n::integer-signed-size(8), rest::binary>>, :byte), do: {:ok, n, rest}
+  def unpack(<<n::integer-signed-size(32), rest::binary>>, :int), do: {:ok, n, rest}
+  def unpack(<<n::integer-signed-size(64), rest::binary>>, :long), do: {:ok, n, rest}
+  def unpack(<<f::float-size(32), rest::binary>>, :float), do: {:ok, f, rest}
+  def unpack(<<f::float-size(64), rest::binary>>, :double), do: {:ok, f, rest}
 
-  def unpack(buf, :byte) when is_binary(buf) do
-    case buf do
-      <<n::integer-signed-size(8), rest::binary>> -> {:ok, n, rest}
-      _ -> {:error, :nomatch}
-    end
-  end
+  def unpack(<<len::32, s::binary-size(len), rest::binary>>, type)
+      when type in [:ustring, :buffer],
+      do: {:ok, s, rest}
 
-  def unpack(buf, :int) when is_binary(buf) do
-    case buf do
-      <<n::integer-signed-size(32), rest::binary>> -> {:ok, n, rest}
-      _ -> {:error, :nomatch}
-    end
-  end
+  def unpack(_buf, type)
+      when type in [:boolean, :byte, :int, :long, :float, :double, :ustring, :buffer],
+      do: {:error, :nomatch}
 
-  def unpack(buf, :long) when is_binary(buf) do
-    case buf do
-      <<n::integer-signed-size(64), rest::binary>> -> {:ok, n, rest}
-      _ -> {:error, :nomatch}
-    end
-  end
+  def unpack(<<0xFF, 0xFF, 0xFF, 0xFF, rest::binary>>, {:vector, _type}), do: {:ok, [], rest}
 
-  def unpack(buf, :float) when is_binary(buf) do
-    case buf do
-      <<f::float-size(32), rest::binary>> -> {:ok, f, rest}
-      _ -> {:error, :nomatch}
-    end
-  end
-
-  def unpack(buf, :double) when is_binary(buf) do
-    case buf do
-      <<f::float-size(64), rest::binary>> -> {:ok, f, rest}
-      _ -> {:error, :nomatch}
-    end
-  end
-
-  def unpack(buf, :ustring) when is_binary(buf) do
-    case buf do
-      <<len::32, s::binary-size(len), rest::binary>> -> {:ok, s, rest}
-      _ -> {:error, :nomatch}
-    end
-  end
-
-  def unpack(buf, :buffer) when is_binary(buf) do
-    case buf do
-      <<len::32, s::binary-size(len), rest::binary>> -> {:ok, s, rest}
-      _ -> {:error, :nomatch}
-    end
-  end
-
-  def unpack(buf, {:vector, type}) when is_binary(buf) do
-    case buf do
-      <<0xFF, 0xFF, 0xFF, 0xFF, rest::binary>> ->
-        {:ok, [], rest}
-
-      <<len::32, rest::binary>> ->
-        case 1..len
-             |> Enum.reduce_while({rest, []}, fn _, {buf, acc} ->
-               case buf do
-                 [] ->
-                   {:halt, {[], {:error, :nomatch}}}
-
-                 _ ->
-                   case unpack(buf, type) do
-                     {:ok, v, rest} -> {:cont, {rest, [v | acc]}}
-                     {:error, reason} -> {:halt, {buf, {:error, reason}}}
-                   end
-               end
-             end) do
-          {rest, l} when is_list(l) -> {:ok, l |> Enum.reverse(), rest}
-          {_, {:error, reason}} -> {:error, reason}
-        end
+  def unpack(<<len::32, rest::binary>>, {:vector, type}) do
+    case 1..len |> Enum.reduce_while({[], rest}, &unpack_vector(&1, &2, type)) do
+      {:error, reason} -> {:error, reason}
+      {l, rest} -> {:ok, l |> Enum.reverse(), rest}
     end
   end
 
@@ -230,22 +181,36 @@ defmodule ExZk.Wire do
   end
 
   def unpack(buf, types) when is_binary(buf) and is_list(types) do
-    case types
-         |> Enum.reduce_while({:ok, [], buf}, fn
-           {name, type}, {:ok, acc, buf} ->
-             case unpack(buf, type) do
-               {:ok, v, rest} -> {:cont, {:ok, [{name, v} | acc], rest}}
-               {:error, reason} -> {:halt, {:error, reason}}
-             end
-
-           type, {:ok, acc, buf} ->
-             case unpack(buf, type) do
-               {:ok, v, rest} -> {:cont, {:ok, [v | acc], rest}}
-               {:error, reason} -> {:halt, {:error, reason}}
-             end
-         end) do
-      {:ok, l, rest} -> {:ok, l |> Enum.reverse(), rest}
+    case types |> Enum.reduce_while({[], buf}, &unpack_type(&1, &2)) do
       {:error, reason} -> {:error, reason}
+      {l, rest} -> {:ok, l |> Enum.reverse(), rest}
+    end
+  end
+
+  ####
+  ## Private methods
+  ##
+
+  defp unpack_vector(_, {_acc, []}, _type), do: {:halt, {[], {:error, :nomatch}}}
+
+  defp unpack_vector(_, {acc, buf}, type) do
+    case unpack(buf, type) do
+      {:ok, v, rest} -> {:cont, {[v | acc], rest}}
+      {:error, reason} -> {:halt, {:error, reason}}
+    end
+  end
+
+  defp unpack_type({name, type}, {acc, buf}) do
+    case unpack(buf, type) do
+      {:ok, v, rest} -> {:cont, {[{name, v} | acc], rest}}
+      {:error, reason} -> {:halt, {:error, reason}}
+    end
+  end
+
+  defp unpack_type(type, {acc, buf}) do
+    case unpack(buf, type) do
+      {:ok, v, rest} -> {:cont, {[v | acc], rest}}
+      {:error, reason} -> {:halt, {:error, reason}}
     end
   end
 end

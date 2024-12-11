@@ -132,14 +132,11 @@ defmodule ExZk.Socket do
   ## Private methods
   ##
 
-  defp setopts(transport, socket, opts) when transport in [:tcp, :gen_tcp],
-    do: :inet.setopts(socket, opts)
-
+  defp setopts(:tcp, socket, opts), do: :inet.setopts(socket, opts)
+  defp setopts(:gen_tcp, socket, opts), do: :inet.setopts(socket, opts)
   defp setopts(:ssl, socket, opts), do: :ssl.setopts(socket, opts)
 
-  defp new_data(state, _data = "") do
-    state
-  end
+  defp new_data(state, _data = ""), do: state
 
   defp new_data(
          %__MODULE__{conn: conn, buffered: nil} = state,

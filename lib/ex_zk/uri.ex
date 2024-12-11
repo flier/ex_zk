@@ -53,18 +53,18 @@ defmodule ExZk.URI do
   defp username_and_password(%URI{userinfo: nil}), do: {nil, nil}
 
   defp username_and_password(%URI{userinfo: userinfo}) do
-    case String.split(userinfo, ":", parts: 2) do
-      ["", password] ->
-        {nil, password}
-
-      [username, password] ->
-        {username, password}
-
-      _other ->
-        raise ArgumentError,
-              "expected password in the Zookeeper URI to be given as zk://:PASSWORD@HOST or zk://USERNAME:PASSWORD@HOST"
-    end
+    String.split(userinfo, ":", parts: 2) |> username_and_password()
   end
+
+  defp username_and_password(["", password]), do: {nil, password}
+  defp username_and_password([username, password]), do: {username, password}
+
+  defp username_and_password(_),
+    do:
+      raise(
+        ArgumentError,
+        "expected password in the Zookeeper URI to be given as zk://:PASSWORD@HOST or zk://USERNAME:PASSWORD@HOST"
+      )
 
   defp path(%URI{path: path}) when path in [nil, "", "/"], do: nil
   defp path(%URI{path: "/" <> _ = path}), do: path
