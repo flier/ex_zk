@@ -102,101 +102,103 @@ defmodule ExZk.Wire do
   ## Examples
 
       iex> import ExZk.Wire
-      iex> unpack(:boolean, <<1>>)
+      iex> unpack(<<1>>, :boolean)
       {:ok, true, <<>>}
-      iex> unpack(:boolean, <<0>>)
+      iex> unpack(<<0>>, :boolean)
       {:ok, false, <<>>}
-      iex> unpack(:byte, <<42>>)
+      iex> unpack(<<42>>, :byte)
       {:ok, 42, <<>>}
-      iex> unpack(:int, <<0, 0, 0, 42>>)
+      iex> unpack(<<0, 0, 0, 42>>, :int)
       {:ok, 42, <<>>}
-      iex> unpack(:long, <<0, 0, 0, 0, 0, 0, 0, 42>>)
+      iex> unpack(<<0, 0, 0, 0, 0, 0, 0, 42>>, :long)
       {:ok, 42, <<>>}
-      iex> {:ok, n, <<>>} = unpack(:float, <<64, 72, 245, 195>>)
+      iex> {:ok, n, <<>>} = unpack(<<64, 72, 245, 195>>, :float)
       iex> Float.round(n, 3)
       3.14
-      iex> {:ok, n, <<>>} = unpack(:double, <<64, 9, 30, 184, 81, 235, 133, 31>>)
+      iex> {:ok, n, <<>>} = unpack(<<64, 9, 30, 184, 81, 235, 133, 31>>, :double)
       iex> Float.round(n, 3)
       3.14
-      iex> unpack(:ustring, <<0, 0, 0, 5, 104, 101, 108, 108, 111>>)
+      iex> unpack(<<0, 0, 0, 5, 104, 101, 108, 108, 111>>, :ustring)
       {:ok, "hello", <<>>}
-      iex> unpack(:buffer, <<0, 0, 0, 5, 104, 101, 108, 108, 111>>)
+      iex> unpack(<<0, 0, 0, 5, 104, 101, 108, 108, 111>>, :buffer)
       {:ok, "hello", <<>>}
-      iex> unpack({:vector, :int}, <<0xff, 0xff, 0xff, 0xff>>)
+      iex> unpack(<<0xff, 0xff, 0xff, 0xff>>, {:vector, :int})
       {:ok, [], <<>>}
-      iex> unpack({:vector, :int}, <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>)
+      iex> unpack(<<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>, {:vector, :int})
       {:ok, [1, 2, 3], <<>>}
-      iex> unpack(:boolean, <<>>)
+      iex> unpack(<<>>, :boolean)
       {:error, :nomatch}
-      iex> unpack({:vector, :int}, <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2>>)
+      iex> unpack(<<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2>>, {:vector, :int})
       {:error, :nomatch}
-      iex> unpack([:int, :ustring], <<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>)
+      iex> unpack(<<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>, [:int, :ustring])
       {:ok, [42, "hello"], <<>>}
-      iex> unpack([:int, :ustring, :buffer], <<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>)
+      iex> unpack(<<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>, age: :int, name: :ustring)
+      {:ok, [age: 42, name: "hello"], <<>>}
+      iex> unpack(<<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>, [:int, :ustring, :buffer])
       {:error, :nomatch}
 
   """
-  @spec unpack(type(), buf :: binary()) ::
+  @spec unpack(buf :: binary(), type()) ::
           {:ok, value :: any(), rest :: binary()} | {:error, :nomatch}
   def unpack(_type, <<>>), do: {:error, :nomatch}
 
-  def unpack(:boolean, buf) when is_binary(buf) do
+  def unpack(buf, :boolean) when is_binary(buf) do
     case buf do
       <<b::8, rest::binary>> -> {:ok, b != 0, rest}
       _ -> {:error, :nomatch}
     end
   end
 
-  def unpack(:byte, buf) when is_binary(buf) do
+  def unpack(buf, :byte) when is_binary(buf) do
     case buf do
       <<n::integer-signed-size(8), rest::binary>> -> {:ok, n, rest}
       _ -> {:error, :nomatch}
     end
   end
 
-  def unpack(:int, buf) when is_binary(buf) do
+  def unpack(buf, :int) when is_binary(buf) do
     case buf do
       <<n::integer-signed-size(32), rest::binary>> -> {:ok, n, rest}
       _ -> {:error, :nomatch}
     end
   end
 
-  def unpack(:long, buf) when is_binary(buf) do
+  def unpack(buf, :long) when is_binary(buf) do
     case buf do
       <<n::integer-signed-size(64), rest::binary>> -> {:ok, n, rest}
       _ -> {:error, :nomatch}
     end
   end
 
-  def unpack(:float, buf) when is_binary(buf) do
+  def unpack(buf, :float) when is_binary(buf) do
     case buf do
       <<f::float-size(32), rest::binary>> -> {:ok, f, rest}
       _ -> {:error, :nomatch}
     end
   end
 
-  def unpack(:double, buf) when is_binary(buf) do
+  def unpack(buf, :double) when is_binary(buf) do
     case buf do
       <<f::float-size(64), rest::binary>> -> {:ok, f, rest}
       _ -> {:error, :nomatch}
     end
   end
 
-  def unpack(:ustring, buf) when is_binary(buf) do
+  def unpack(buf, :ustring) when is_binary(buf) do
     case buf do
       <<len::32, s::binary-size(len), rest::binary>> -> {:ok, s, rest}
       _ -> {:error, :nomatch}
     end
   end
 
-  def unpack(:buffer, buf) when is_binary(buf) do
+  def unpack(buf, :buffer) when is_binary(buf) do
     case buf do
       <<len::32, s::binary-size(len), rest::binary>> -> {:ok, s, rest}
       _ -> {:error, :nomatch}
     end
   end
 
-  def unpack({:vector, type}, buf) when is_binary(buf) do
+  def unpack(buf, {:vector, type}) when is_binary(buf) do
     case buf do
       <<0xFF, 0xFF, 0xFF, 0xFF, rest::binary>> ->
         {:ok, [], rest}
@@ -209,7 +211,7 @@ defmodule ExZk.Wire do
                    {:halt, {[], {:error, :nomatch}}}
 
                  _ ->
-                   case unpack(type, buf) do
+                   case unpack(buf, type) do
                      {:ok, v, rest} -> {:cont, {rest, [v | acc]}}
                      {:error, reason} -> {:halt, {buf, {:error, reason}}}
                    end
@@ -221,21 +223,28 @@ defmodule ExZk.Wire do
     end
   end
 
-  def unpack(mod, buf) when is_atom(mod) and is_binary(buf), do: apply(mod, :unpack, [buf])
+  def unpack(buf, mod) when is_binary(buf) and is_atom(mod), do: apply(mod, :unpack, [buf])
 
-  def unpack(type, buf) when is_binary(type) and is_binary(buf) do
+  def unpack(buf, type) when is_binary(buf) and is_binary(type) do
     apply(type |> String.to_atom(), :unpack, [buf])
   end
 
-  def unpack(types, buf) when is_list(types) and is_binary(buf) do
+  def unpack(buf, types) when is_binary(buf) and is_list(types) do
     case types
-         |> Enum.reduce_while({:ok, [], buf}, fn type, {:ok, acc, buf} ->
-           case unpack(type, buf) do
-             {:ok, v, rest} -> {:cont, {:ok, [v | acc], rest}}
-             {:error, reason} -> {:halt, {:error, reason}}
-           end
+         |> Enum.reduce_while({:ok, [], buf}, fn
+           {name, type}, {:ok, acc, buf} ->
+             case unpack(buf, type) do
+               {:ok, v, rest} -> {:cont, {:ok, [{name, v} | acc], rest}}
+               {:error, reason} -> {:halt, {:error, reason}}
+             end
+
+           type, {:ok, acc, buf} ->
+             case unpack(buf, type) do
+               {:ok, v, rest} -> {:cont, {:ok, [v | acc], rest}}
+               {:error, reason} -> {:halt, {:error, reason}}
+             end
          end) do
-      {:ok, l, rest} -> {:ok, Enum.reverse(l), rest}
+      {:ok, l, rest} -> {:ok, l |> Enum.reverse(), rest}
       {:error, reason} -> {:error, reason}
     end
   end

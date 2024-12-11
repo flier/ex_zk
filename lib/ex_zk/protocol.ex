@@ -27,26 +27,12 @@ defmodule ExZk.Data do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           scheme,
-           id
-         ], rest} ->
-          {:ok,
-           %Id{
-             scheme: scheme,
-             id: id
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               scheme: :ustring,
+               id: :ustring
+             ) do
+        {:ok, struct!(Id, fields), rest}
       end
     end
   end
@@ -77,26 +63,12 @@ defmodule ExZk.Data do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               Id
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           perms,
-           id
-         ], rest} ->
-          {:ok,
-           %ACL{
-             perms: perms,
-             id: id
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               perms: :int,
+               id: Id
+             ) do
+        {:ok, struct!(ACL, fields), rest}
       end
     end
   end
@@ -163,53 +135,21 @@ defmodule ExZk.Data do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :long,
-               :long,
-               :long,
-               :long,
-               :int,
-               :int,
-               :int,
-               :long,
-               :int,
-               :int,
-               :long
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           czxid,
-           mzxid,
-           ctime,
-           mtime,
-           version,
-           cversion,
-           aversion,
-           ephemeral_owner,
-           data_length,
-           num_children,
-           pzxid
-         ], rest} ->
-          {:ok,
-           %Stat{
-             czxid: czxid,
-             mzxid: mzxid,
-             ctime: ctime,
-             mtime: mtime,
-             version: version,
-             cversion: cversion,
-             aversion: aversion,
-             ephemeral_owner: ephemeral_owner,
-             data_length: data_length,
-             num_children: num_children,
-             pzxid: pzxid
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               czxid: :long,
+               mzxid: :long,
+               ctime: :long,
+               mtime: :long,
+               version: :int,
+               cversion: :int,
+               aversion: :int,
+               ephemeral_owner: :long,
+               data_length: :int,
+               num_children: :int,
+               pzxid: :long
+             ) do
+        {:ok, struct!(Stat, fields), rest}
       end
     end
   end
@@ -268,47 +208,19 @@ defmodule ExZk.Data do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :long,
-               :long,
-               :long,
-               :long,
-               :int,
-               :int,
-               :int,
-               :long,
-               :long
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           czxid,
-           mzxid,
-           ctime,
-           mtime,
-           version,
-           cversion,
-           aversion,
-           ephemeral_owner,
-           pzxid
-         ], rest} ->
-          {:ok,
-           %StatPersisted{
-             czxid: czxid,
-             mzxid: mzxid,
-             ctime: ctime,
-             mtime: mtime,
-             version: version,
-             cversion: cversion,
-             aversion: aversion,
-             ephemeral_owner: ephemeral_owner,
-             pzxid: pzxid
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               czxid: :long,
+               mzxid: :long,
+               ctime: :long,
+               mtime: :long,
+               version: :int,
+               cversion: :int,
+               aversion: :int,
+               ephemeral_owner: :long,
+               pzxid: :long
+             ) do
+        {:ok, struct!(StatPersisted, fields), rest}
       end
     end
   end
@@ -339,26 +251,12 @@ defmodule ExZk.Data do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           auth_scheme,
-           user
-         ], rest} ->
-          {:ok,
-           %ClientInfo{
-             auth_scheme: auth_scheme,
-             user: user
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               auth_scheme: :ustring,
+               user: :ustring
+             ) do
+        {:ok, struct!(ClientInfo, fields), rest}
       end
     end
   end
@@ -409,38 +307,16 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :long,
-               :int,
-               :long,
-               :buffer,
-               :boolean
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           protocol_version,
-           last_zxid_seen,
-           time_out,
-           session_id,
-           passwd,
-           read_only
-         ], rest} ->
-          {:ok,
-           %ConnectRequest{
-             protocol_version: protocol_version,
-             last_zxid_seen: last_zxid_seen,
-             time_out: time_out,
-             session_id: session_id,
-             passwd: passwd,
-             read_only: read_only
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               protocol_version: :int,
+               last_zxid_seen: :long,
+               time_out: :int,
+               session_id: :long,
+               passwd: :buffer,
+               read_only: :boolean
+             ) do
+        {:ok, struct!(ConnectRequest, fields), rest}
       end
     end
   end
@@ -483,35 +359,15 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :int,
-               :long,
-               :buffer,
-               :boolean
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           protocol_version,
-           time_out,
-           session_id,
-           passwd,
-           read_only
-         ], rest} ->
-          {:ok,
-           %ConnectResponse{
-             protocol_version: protocol_version,
-             time_out: time_out,
-             session_id: session_id,
-             passwd: passwd,
-             read_only: read_only
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               protocol_version: :int,
+               time_out: :int,
+               session_id: :long,
+               passwd: :buffer,
+               read_only: :boolean
+             ) do
+        {:ok, struct!(ConnectResponse, fields), rest}
       end
     end
   end
@@ -550,32 +406,14 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :long,
-               {:vector, :ustring},
-               {:vector, :ustring},
-               {:vector, :ustring}
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           relative_zxid,
-           data_watches,
-           exist_watches,
-           child_watches
-         ], rest} ->
-          {:ok,
-           %SetWatches{
-             relative_zxid: relative_zxid,
-             data_watches: data_watches,
-             exist_watches: exist_watches,
-             child_watches: child_watches
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               relative_zxid: :long,
+               data_watches: {:vector, :ustring},
+               exist_watches: {:vector, :ustring},
+               child_watches: {:vector, :ustring}
+             ) do
+        {:ok, struct!(SetWatches, fields), rest}
       end
     end
   end
@@ -622,38 +460,16 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :long,
-               {:vector, :ustring},
-               {:vector, :ustring},
-               {:vector, :ustring},
-               {:vector, :ustring},
-               {:vector, :ustring}
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           relative_zxid,
-           data_watches,
-           exist_watches,
-           child_watches,
-           persistent_watches,
-           persistent_recursive_watches
-         ], rest} ->
-          {:ok,
-           %SetWatches2{
-             relative_zxid: relative_zxid,
-             data_watches: data_watches,
-             exist_watches: exist_watches,
-             child_watches: child_watches,
-             persistent_watches: persistent_watches,
-             persistent_recursive_watches: persistent_recursive_watches
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               relative_zxid: :long,
+               data_watches: {:vector, :ustring},
+               exist_watches: {:vector, :ustring},
+               child_watches: {:vector, :ustring},
+               persistent_watches: {:vector, :ustring},
+               persistent_recursive_watches: {:vector, :ustring}
+             ) do
+        {:ok, struct!(SetWatches2, fields), rest}
       end
     end
   end
@@ -684,26 +500,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           xid,
-           type
-         ], rest} ->
-          {:ok,
-           %RequestHeader{
-             xid: xid,
-             type: type
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               xid: :int,
+               type: :int
+             ) do
+        {:ok, struct!(RequestHeader, fields), rest}
       end
     end
   end
@@ -738,29 +540,13 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :boolean,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           type,
-           done,
-           err
-         ], rest} ->
-          {:ok,
-           %MultiHeader{
-             type: type,
-             done: done,
-             err: err
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               type: :int,
+               done: :boolean,
+               err: :int
+             ) do
+        {:ok, struct!(MultiHeader, fields), rest}
       end
     end
   end
@@ -795,29 +581,13 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :ustring,
-               :buffer
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           type,
-           scheme,
-           auth
-         ], rest} ->
-          {:ok,
-           %AuthPacket{
-             type: type,
-             scheme: scheme,
-             auth: auth
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               type: :int,
+               scheme: :ustring,
+               auth: :buffer
+             ) do
+        {:ok, struct!(AuthPacket, fields), rest}
       end
     end
   end
@@ -852,29 +622,13 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :long,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           xid,
-           zxid,
-           err
-         ], rest} ->
-          {:ok,
-           %ReplyHeader{
-             xid: xid,
-             zxid: zxid,
-             err: err
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               xid: :int,
+               zxid: :long,
+               err: :int
+             ) do
+        {:ok, struct!(ReplyHeader, fields), rest}
       end
     end
   end
@@ -905,26 +659,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :boolean
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           watch
-         ], rest} ->
-          {:ok,
-           %GetDataRequest{
-             path: path,
-             watch: watch
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               watch: :boolean
+             ) do
+        {:ok, struct!(GetDataRequest, fields), rest}
       end
     end
   end
@@ -959,29 +699,13 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :buffer,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           data,
-           version
-         ], rest} ->
-          {:ok,
-           %SetDataRequest{
-             path: path,
-             data: data,
-             version: version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               data: :buffer,
+               version: :int
+             ) do
+        {:ok, struct!(SetDataRequest, fields), rest}
       end
     end
   end
@@ -1020,32 +744,14 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :ustring,
-               :ustring,
-               :long
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           joining_servers,
-           leaving_servers,
-           new_members,
-           cur_config_id
-         ], rest} ->
-          {:ok,
-           %ReconfigRequest{
-             joining_servers: joining_servers,
-             leaving_servers: leaving_servers,
-             new_members: new_members,
-             cur_config_id: cur_config_id
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               joining_servers: :ustring,
+               leaving_servers: :ustring,
+               new_members: :ustring,
+               cur_config_id: :long
+             ) do
+        {:ok, struct!(ReconfigRequest, fields), rest}
       end
     end
   end
@@ -1072,23 +778,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               ExZk.Data.Stat
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           stat
-         ], rest} ->
-          {:ok,
-           %SetDataResponse{
-             stat: stat
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               stat: ExZk.Data.Stat
+             ) do
+        {:ok, struct!(SetDataResponse, fields), rest}
       end
     end
   end
@@ -1115,23 +809,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :buffer
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           token
-         ], rest} ->
-          {:ok,
-           %GetSASLRequest{
-             token: token
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               token: :buffer
+             ) do
+        {:ok, struct!(GetSASLRequest, fields), rest}
       end
     end
   end
@@ -1158,23 +840,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :buffer
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           token
-         ], rest} ->
-          {:ok,
-           %SetSASLRequest{
-             token: token
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               token: :buffer
+             ) do
+        {:ok, struct!(SetSASLRequest, fields), rest}
       end
     end
   end
@@ -1201,23 +871,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :buffer
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           token
-         ], rest} ->
-          {:ok,
-           %SetSASLResponse{
-             token: token
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               token: :buffer
+             ) do
+        {:ok, struct!(SetSASLResponse, fields), rest}
       end
     end
   end
@@ -1256,32 +914,14 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :buffer,
-               {:vector, ExZk.Data.ACL},
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           data,
-           acl,
-           flags
-         ], rest} ->
-          {:ok,
-           %CreateRequest{
-             path: path,
-             data: data,
-             acl: acl,
-             flags: flags
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               data: :buffer,
+               acl: {:vector, ExZk.Data.ACL},
+               flags: :int
+             ) do
+        {:ok, struct!(CreateRequest, fields), rest}
       end
     end
   end
@@ -1324,35 +964,15 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :buffer,
-               {:vector, ExZk.Data.ACL},
-               :int,
-               :long
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           data,
-           acl,
-           flags,
-           ttl
-         ], rest} ->
-          {:ok,
-           %CreateTTLRequest{
-             path: path,
-             data: data,
-             acl: acl,
-             flags: flags,
-             ttl: ttl
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               data: :buffer,
+               acl: {:vector, ExZk.Data.ACL},
+               flags: :int,
+               ttl: :long
+             ) do
+        {:ok, struct!(CreateTTLRequest, fields), rest}
       end
     end
   end
@@ -1383,26 +1003,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           version
-         ], rest} ->
-          {:ok,
-           %DeleteRequest{
-             path: path,
-             version: version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               version: :int
+             ) do
+        {:ok, struct!(DeleteRequest, fields), rest}
       end
     end
   end
@@ -1433,26 +1039,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :boolean
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           watch
-         ], rest} ->
-          {:ok,
-           %GetChildrenRequest{
-             path: path,
-             watch: watch
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               watch: :boolean
+             ) do
+        {:ok, struct!(GetChildrenRequest, fields), rest}
       end
     end
   end
@@ -1479,23 +1071,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path
-         ], rest} ->
-          {:ok,
-           %GetAllChildrenNumberRequest{
-             path: path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring
+             ) do
+        {:ok, struct!(GetAllChildrenNumberRequest, fields), rest}
       end
     end
   end
@@ -1526,26 +1106,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :boolean
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           watch
-         ], rest} ->
-          {:ok,
-           %GetChildren2Request{
-             path: path,
-             watch: watch
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               watch: :boolean
+             ) do
+        {:ok, struct!(GetChildren2Request, fields), rest}
       end
     end
   end
@@ -1576,26 +1142,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           version
-         ], rest} ->
-          {:ok,
-           %CheckVersionRequest{
-             path: path,
-             version: version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               version: :int
+             ) do
+        {:ok, struct!(CheckVersionRequest, fields), rest}
       end
     end
   end
@@ -1622,23 +1174,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path
-         ], rest} ->
-          {:ok,
-           %GetMaxChildrenRequest{
-             path: path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring
+             ) do
+        {:ok, struct!(GetMaxChildrenRequest, fields), rest}
       end
     end
   end
@@ -1665,23 +1205,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           max
-         ], rest} ->
-          {:ok,
-           %GetMaxChildrenResponse{
-             max: max
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               max: :int
+             ) do
+        {:ok, struct!(GetMaxChildrenResponse, fields), rest}
       end
     end
   end
@@ -1712,26 +1240,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           max
-         ], rest} ->
-          {:ok,
-           %SetMaxChildrenRequest{
-             path: path,
-             max: max
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               max: :int
+             ) do
+        {:ok, struct!(SetMaxChildrenRequest, fields), rest}
       end
     end
   end
@@ -1758,23 +1272,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path
-         ], rest} ->
-          {:ok,
-           %SyncRequest{
-             path: path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring
+             ) do
+        {:ok, struct!(SyncRequest, fields), rest}
       end
     end
   end
@@ -1801,23 +1303,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path
-         ], rest} ->
-          {:ok,
-           %SyncResponse{
-             path: path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring
+             ) do
+        {:ok, struct!(SyncResponse, fields), rest}
       end
     end
   end
@@ -1844,23 +1334,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path
-         ], rest} ->
-          {:ok,
-           %GetACLRequest{
-             path: path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring
+             ) do
+        {:ok, struct!(GetACLRequest, fields), rest}
       end
     end
   end
@@ -1895,29 +1373,13 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               {:vector, ExZk.Data.ACL},
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           acl,
-           version
-         ], rest} ->
-          {:ok,
-           %SetACLRequest{
-             path: path,
-             acl: acl,
-             version: version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               acl: {:vector, ExZk.Data.ACL},
+               version: :int
+             ) do
+        {:ok, struct!(SetACLRequest, fields), rest}
       end
     end
   end
@@ -1944,23 +1406,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               ExZk.Data.Stat
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           stat
-         ], rest} ->
-          {:ok,
-           %SetACLResponse{
-             stat: stat
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               stat: ExZk.Data.Stat
+             ) do
+        {:ok, struct!(SetACLResponse, fields), rest}
       end
     end
   end
@@ -1991,26 +1441,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           mode
-         ], rest} ->
-          {:ok,
-           %AddWatchRequest{
-             path: path,
-             mode: mode
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               mode: :int
+             ) do
+        {:ok, struct!(AddWatchRequest, fields), rest}
       end
     end
   end
@@ -2045,29 +1481,13 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :int,
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           type,
-           state,
-           path
-         ], rest} ->
-          {:ok,
-           %WatcherEvent{
-             type: type,
-             state: state,
-             path: path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               type: :int,
+               state: :int,
+               path: :ustring
+             ) do
+        {:ok, struct!(WatcherEvent, fields), rest}
       end
     end
   end
@@ -2094,23 +1514,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           err
-         ], rest} ->
-          {:ok,
-           %ErrorResponse{
-             err: err
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               err: :int
+             ) do
+        {:ok, struct!(ErrorResponse, fields), rest}
       end
     end
   end
@@ -2137,23 +1545,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path
-         ], rest} ->
-          {:ok,
-           %CreateResponse{
-             path: path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring
+             ) do
+        {:ok, struct!(CreateResponse, fields), rest}
       end
     end
   end
@@ -2184,26 +1580,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               ExZk.Data.Stat
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           stat
-         ], rest} ->
-          {:ok,
-           %Create2Response{
-             path: path,
-             stat: stat
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               stat: ExZk.Data.Stat
+             ) do
+        {:ok, struct!(Create2Response, fields), rest}
       end
     end
   end
@@ -2234,26 +1616,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :boolean
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           watch
-         ], rest} ->
-          {:ok,
-           %ExistsRequest{
-             path: path,
-             watch: watch
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               watch: :boolean
+             ) do
+        {:ok, struct!(ExistsRequest, fields), rest}
       end
     end
   end
@@ -2280,23 +1648,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               ExZk.Data.Stat
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           stat
-         ], rest} ->
-          {:ok,
-           %ExistsResponse{
-             stat: stat
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               stat: ExZk.Data.Stat
+             ) do
+        {:ok, struct!(ExistsResponse, fields), rest}
       end
     end
   end
@@ -2327,26 +1683,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :buffer,
-               ExZk.Data.Stat
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           data,
-           stat
-         ], rest} ->
-          {:ok,
-           %GetDataResponse{
-             data: data,
-             stat: stat
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               data: :buffer,
+               stat: ExZk.Data.Stat
+             ) do
+        {:ok, struct!(GetDataResponse, fields), rest}
       end
     end
   end
@@ -2373,23 +1715,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               {:vector, :ustring}
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           children
-         ], rest} ->
-          {:ok,
-           %GetChildrenResponse{
-             children: children
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               children: {:vector, :ustring}
+             ) do
+        {:ok, struct!(GetChildrenResponse, fields), rest}
       end
     end
   end
@@ -2416,23 +1746,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           total_number
-         ], rest} ->
-          {:ok,
-           %GetAllChildrenNumberResponse{
-             total_number: total_number
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               total_number: :int
+             ) do
+        {:ok, struct!(GetAllChildrenNumberResponse, fields), rest}
       end
     end
   end
@@ -2463,26 +1781,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               {:vector, :ustring},
-               ExZk.Data.Stat
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           children,
-           stat
-         ], rest} ->
-          {:ok,
-           %GetChildren2Response{
-             children: children,
-             stat: stat
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               children: {:vector, :ustring},
+               stat: ExZk.Data.Stat
+             ) do
+        {:ok, struct!(GetChildren2Response, fields), rest}
       end
     end
   end
@@ -2513,26 +1817,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               {:vector, ExZk.Data.ACL},
-               ExZk.Data.Stat
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           acl,
-           stat
-         ], rest} ->
-          {:ok,
-           %GetACLResponse{
-             acl: acl,
-             stat: stat
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               acl: {:vector, ExZk.Data.ACL},
+               stat: ExZk.Data.Stat
+             ) do
+        {:ok, struct!(GetACLResponse, fields), rest}
       end
     end
   end
@@ -2563,26 +1853,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           type
-         ], rest} ->
-          {:ok,
-           %CheckWatchesRequest{
-             path: path,
-             type: type
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               type: :int
+             ) do
+        {:ok, struct!(CheckWatchesRequest, fields), rest}
       end
     end
   end
@@ -2613,26 +1889,12 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           type
-         ], rest} ->
-          {:ok,
-           %RemoveWatchesRequest{
-             path: path,
-             type: type
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               type: :int
+             ) do
+        {:ok, struct!(RemoveWatchesRequest, fields), rest}
       end
     end
   end
@@ -2659,23 +1921,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           prefix_path
-         ], rest} ->
-          {:ok,
-           %GetEphemeralsRequest{
-             prefix_path: prefix_path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               prefix_path: :ustring
+             ) do
+        {:ok, struct!(GetEphemeralsRequest, fields), rest}
       end
     end
   end
@@ -2702,23 +1952,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               {:vector, :ustring}
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           ephemerals
-         ], rest} ->
-          {:ok,
-           %GetEphemeralsResponse{
-             ephemerals: ephemerals
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               ephemerals: {:vector, :ustring}
+             ) do
+        {:ok, struct!(GetEphemeralsResponse, fields), rest}
       end
     end
   end
@@ -2745,23 +1983,11 @@ defmodule ExZk.Proto do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               {:vector, ExZk.Data.ClientInfo}
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           client_info
-         ], rest} ->
-          {:ok,
-           %WhoAmIResponse{
-             client_info: client_info
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               client_info: {:vector, ExZk.Data.ClientInfo}
+             ) do
+        {:ok, struct!(WhoAmIResponse, fields), rest}
       end
     end
   end
@@ -2796,26 +2022,12 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :long
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           version,
-           tree_digest
-         ], rest} ->
-          {:ok,
-           %TxnDigest{
-             version: version,
-             tree_digest: tree_digest
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               version: :int,
+               tree_digest: :long
+             ) do
+        {:ok, struct!(TxnDigest, fields), rest}
       end
     end
   end
@@ -2858,35 +2070,15 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :long,
-               :int,
-               :long,
-               :long,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           client_id,
-           cxid,
-           zxid,
-           time,
-           type
-         ], rest} ->
-          {:ok,
-           %TxnHeader{
-             client_id: client_id,
-             cxid: cxid,
-             zxid: zxid,
-             time: time,
-             type: type
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               client_id: :long,
+               cxid: :int,
+               zxid: :long,
+               time: :long,
+               type: :int
+             ) do
+        {:ok, struct!(TxnHeader, fields), rest}
       end
     end
   end
@@ -2925,32 +2117,14 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :buffer,
-               {:vector, ExZk.Data.ACL},
-               :boolean
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           data,
-           acl,
-           ephemeral
-         ], rest} ->
-          {:ok,
-           %CreateTxnV0{
-             path: path,
-             data: data,
-             acl: acl,
-             ephemeral: ephemeral
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               data: :buffer,
+               acl: {:vector, ExZk.Data.ACL},
+               ephemeral: :boolean
+             ) do
+        {:ok, struct!(CreateTxnV0, fields), rest}
       end
     end
   end
@@ -2993,35 +2167,15 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :buffer,
-               {:vector, ExZk.Data.ACL},
-               :boolean,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           data,
-           acl,
-           ephemeral,
-           parent_c_version
-         ], rest} ->
-          {:ok,
-           %CreateTxn{
-             path: path,
-             data: data,
-             acl: acl,
-             ephemeral: ephemeral,
-             parent_c_version: parent_c_version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               data: :buffer,
+               acl: {:vector, ExZk.Data.ACL},
+               ephemeral: :boolean,
+               parent_c_version: :int
+             ) do
+        {:ok, struct!(CreateTxn, fields), rest}
       end
     end
   end
@@ -3064,35 +2218,15 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :buffer,
-               {:vector, ExZk.Data.ACL},
-               :int,
-               :long
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           data,
-           acl,
-           parent_c_version,
-           ttl
-         ], rest} ->
-          {:ok,
-           %CreateTTLTxn{
-             path: path,
-             data: data,
-             acl: acl,
-             parent_c_version: parent_c_version,
-             ttl: ttl
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               data: :buffer,
+               acl: {:vector, ExZk.Data.ACL},
+               parent_c_version: :int,
+               ttl: :long
+             ) do
+        {:ok, struct!(CreateTTLTxn, fields), rest}
       end
     end
   end
@@ -3131,32 +2265,14 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :buffer,
-               {:vector, ExZk.Data.ACL},
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           data,
-           acl,
-           parent_c_version
-         ], rest} ->
-          {:ok,
-           %CreateContainerTxn{
-             path: path,
-             data: data,
-             acl: acl,
-             parent_c_version: parent_c_version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               data: :buffer,
+               acl: {:vector, ExZk.Data.ACL},
+               parent_c_version: :int
+             ) do
+        {:ok, struct!(CreateContainerTxn, fields), rest}
       end
     end
   end
@@ -3183,23 +2299,11 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path
-         ], rest} ->
-          {:ok,
-           %DeleteTxn{
-             path: path
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring
+             ) do
+        {:ok, struct!(DeleteTxn, fields), rest}
       end
     end
   end
@@ -3234,29 +2338,13 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :buffer,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           data,
-           version
-         ], rest} ->
-          {:ok,
-           %SetDataTxn{
-             path: path,
-             data: data,
-             version: version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               data: :buffer,
+               version: :int
+             ) do
+        {:ok, struct!(SetDataTxn, fields), rest}
       end
     end
   end
@@ -3287,26 +2375,12 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           version
-         ], rest} ->
-          {:ok,
-           %CheckVersionTxn{
-             path: path,
-             version: version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               version: :int
+             ) do
+        {:ok, struct!(CheckVersionTxn, fields), rest}
       end
     end
   end
@@ -3341,29 +2415,13 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               {:vector, ExZk.Data.ACL},
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           acl,
-           version
-         ], rest} ->
-          {:ok,
-           %SetACLTxn{
-             path: path,
-             acl: acl,
-             version: version
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               acl: {:vector, ExZk.Data.ACL},
+               version: :int
+             ) do
+        {:ok, struct!(SetACLTxn, fields), rest}
       end
     end
   end
@@ -3394,26 +2452,12 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :ustring,
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           path,
-           max
-         ], rest} ->
-          {:ok,
-           %SetMaxChildrenTxn{
-             path: path,
-             max: max
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               path: :ustring,
+               max: :int
+             ) do
+        {:ok, struct!(SetMaxChildrenTxn, fields), rest}
       end
     end
   end
@@ -3440,23 +2484,11 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           time_out
-         ], rest} ->
-          {:ok,
-           %CreateSessionTxn{
-             time_out: time_out
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               time_out: :int
+             ) do
+        {:ok, struct!(CreateSessionTxn, fields), rest}
       end
     end
   end
@@ -3483,23 +2515,11 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               {:vector, :ustring}
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           paths2_delete
-         ], rest} ->
-          {:ok,
-           %CloseSessionTxn{
-             paths2_delete: paths2_delete
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               paths2_delete: {:vector, :ustring}
+             ) do
+        {:ok, struct!(CloseSessionTxn, fields), rest}
       end
     end
   end
@@ -3526,23 +2546,11 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           err
-         ], rest} ->
-          {:ok,
-           %ErrorTxn{
-             err: err
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               err: :int
+             ) do
+        {:ok, struct!(ErrorTxn, fields), rest}
       end
     end
   end
@@ -3573,26 +2581,12 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               :int,
-               :buffer
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           type,
-           data
-         ], rest} ->
-          {:ok,
-           %Txn{
-             type: type,
-             data: data
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               type: :int,
+               data: :buffer
+             ) do
+        {:ok, struct!(Txn, fields), rest}
       end
     end
   end
@@ -3619,23 +2613,11 @@ defmodule ExZk.Txn do
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
     def unpack(buf) do
-      case ExZk.Wire.unpack(
-             [
-               {:vector, ExZk.Txn.Txn}
-             ],
-             buf
-           ) do
-        {:ok,
-         [
-           txns
-         ], rest} ->
-          {:ok,
-           %MultiTxn{
-             txns: txns
-           }, rest}
-
-        {:error, reason} ->
-          {:error, reason}
+      with {:ok, fields, rest} <-
+             ExZk.Wire.unpack(buf,
+               txns: {:vector, ExZk.Txn.Txn}
+             ) do
+        {:ok, struct!(MultiTxn, fields), rest}
       end
     end
   end

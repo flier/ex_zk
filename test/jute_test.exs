@@ -18,7 +18,7 @@ defmodule JuteTest do
     test "it can be unpacked" do
       buf = <<0, 0, 0, 2, ?z, ?k, 0, 0, 0, 4, ?t, ?e, ?s, ?t>>
 
-      assert unpack(Id, buf) ==
+      assert unpack(buf, Id) ==
                {:ok, %Id{scheme: "zk", id: "test"}, ""}
     end
   end

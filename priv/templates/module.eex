@@ -33,21 +33,12 @@ defmodule <%= @module_name %> do
 
       @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
       def unpack(buf) do
-        case ExZk.Wire.unpack([
-          <%= for %ExZk.Jute.Field{type: type} <- fields do %>
-          <%= ExZk.Jute.Binding.typename(type, @opts) %>,
+        with {:ok, fields, rest} <- ExZk.Wire.unpack(buf,
+          <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
+          <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typename(type, @opts) %>,
           <% end %>
-        ], buf) do
-          {:ok, [
-            <%= for %ExZk.Jute.Field{name: name} <- fields do %>
-            <%= name |> to_string |> Macro.underscore %>,
-            <% end %>
-          ], rest} -> {:ok, %<%= name %>{
-            <%= for %ExZk.Jute.Field{name: name} <- fields do %>
-            <%= name |> to_string |> Macro.underscore %>: <%= name |> to_string |> Macro.underscore %>,
-            <% end %>
-          }, rest}
-          {:error, reason} -> {:error, reason}
+        ) do
+          {:ok, struct!(<%= name %>, fields), rest}
         end
       end
     end
