@@ -5,8 +5,8 @@ defmodule <%= @module_name %> do
       @moduledoc false
 
       defstruct [
-          <%= for %ExZk.Jute.Field{name: name} <- fields do %>
-          :<%= name |> to_string |> Macro.underscore %>,
+          <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
+          <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.default_value(type, @opts) %>,
           <% end %>
       ]
 

@@ -465,11 +465,8 @@ defmodule ExZk.Jute do
 
     @spec typespec(ExZk.Wire.type(), [option()]) :: String.t()
     def typespec(:boolean, _), do: "boolean()"
-    def typespec(:byte, _), do: "integer()"
-    def typespec(:int, _), do: "integer()"
-    def typespec(:long, _), do: "integer()"
-    def typespec(:float, _), do: "float()"
-    def typespec(:double, _), do: "float()"
+    def typespec(type, _) when type in [:byte, :int, :long], do: "integer()"
+    def typespec(type, _) when type in [:float, :double], do: "float()"
     def typespec(:ustring, _), do: "String.t()"
     def typespec(:buffer, _), do: "binary()"
     def typespec({:vector, type}, opts), do: "list(" <> typespec(type, opts) <> ")"
@@ -486,5 +483,13 @@ defmodule ExZk.Jute do
     def typename(:buffer, _), do: ":buffer"
     def typename({:vector, type}, opts), do: "{:vector, " <> typename(type, opts) <> "}"
     def typename(type, opts), do: module_name(type, opts)
+
+    def default_value(:boolean, _), do: "false"
+    def default_value(type, _) when type in [:byte, :int, :long], do: "0"
+    def default_value(type, _) when type in [:float, :double], do: "0.0"
+    def default_value(:ustring, _), do: "\"\""
+    def default_value(:buffer, _), do: "<<>>"
+    def default_value({:vector, _type}, _), do: "[]"
+    def default_value(type, opts), do: "%" <> module_name(type, opts) <> "{}"
   end
 end

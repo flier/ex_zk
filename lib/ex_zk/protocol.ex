@@ -4,10 +4,8 @@ defmodule ExZk.Data do
   defmodule Id do
     @moduledoc false
 
-    defstruct [
-      :scheme,
-      :id
-    ]
+    defstruct scheme: "",
+              id: ""
 
     @type t() :: %__MODULE__{
             scheme: String.t(),
@@ -56,10 +54,8 @@ defmodule ExZk.Data do
   defmodule ACL do
     @moduledoc false
 
-    defstruct [
-      :perms,
-      :id
-    ]
+    defstruct perms: 0,
+              id: %Id{}
 
     @type t() :: %__MODULE__{
             perms: integer(),
@@ -108,19 +104,17 @@ defmodule ExZk.Data do
   defmodule Stat do
     @moduledoc false
 
-    defstruct [
-      :czxid,
-      :mzxid,
-      :ctime,
-      :mtime,
-      :version,
-      :cversion,
-      :aversion,
-      :ephemeral_owner,
-      :data_length,
-      :num_children,
-      :pzxid
-    ]
+    defstruct czxid: 0,
+              mzxid: 0,
+              ctime: 0,
+              mtime: 0,
+              version: 0,
+              cversion: 0,
+              aversion: 0,
+              ephemeral_owner: 0,
+              data_length: 0,
+              num_children: 0,
+              pzxid: 0
 
     @type t() :: %__MODULE__{
             czxid: integer(),
@@ -223,17 +217,15 @@ defmodule ExZk.Data do
   defmodule StatPersisted do
     @moduledoc false
 
-    defstruct [
-      :czxid,
-      :mzxid,
-      :ctime,
-      :mtime,
-      :version,
-      :cversion,
-      :aversion,
-      :ephemeral_owner,
-      :pzxid
-    ]
+    defstruct czxid: 0,
+              mzxid: 0,
+              ctime: 0,
+              mtime: 0,
+              version: 0,
+              cversion: 0,
+              aversion: 0,
+              ephemeral_owner: 0,
+              pzxid: 0
 
     @type t() :: %__MODULE__{
             czxid: integer(),
@@ -324,10 +316,8 @@ defmodule ExZk.Data do
   defmodule ClientInfo do
     @moduledoc false
 
-    defstruct [
-      :auth_scheme,
-      :user
-    ]
+    defstruct auth_scheme: "",
+              user: ""
 
     @type t() :: %__MODULE__{
             auth_scheme: String.t(),
@@ -380,14 +370,12 @@ defmodule ExZk.Proto do
   defmodule ConnectRequest do
     @moduledoc false
 
-    defstruct [
-      :protocol_version,
-      :last_zxid_seen,
-      :time_out,
-      :session_id,
-      :passwd,
-      :read_only
-    ]
+    defstruct protocol_version: 0,
+              last_zxid_seen: 0,
+              time_out: 0,
+              session_id: 0,
+              passwd: <<>>,
+              read_only: false
 
     @type t() :: %__MODULE__{
             protocol_version: integer(),
@@ -460,13 +448,11 @@ defmodule ExZk.Proto do
   defmodule ConnectResponse do
     @moduledoc false
 
-    defstruct [
-      :protocol_version,
-      :time_out,
-      :session_id,
-      :passwd,
-      :read_only
-    ]
+    defstruct protocol_version: 0,
+              time_out: 0,
+              session_id: 0,
+              passwd: <<>>,
+              read_only: false
 
     @type t() :: %__MODULE__{
             protocol_version: integer(),
@@ -533,12 +519,10 @@ defmodule ExZk.Proto do
   defmodule SetWatches do
     @moduledoc false
 
-    defstruct [
-      :relative_zxid,
-      :data_watches,
-      :exist_watches,
-      :child_watches
-    ]
+    defstruct relative_zxid: 0,
+              data_watches: [],
+              exist_watches: [],
+              child_watches: []
 
     @type t() :: %__MODULE__{
             relative_zxid: integer(),
@@ -599,14 +583,12 @@ defmodule ExZk.Proto do
   defmodule SetWatches2 do
     @moduledoc false
 
-    defstruct [
-      :relative_zxid,
-      :data_watches,
-      :exist_watches,
-      :child_watches,
-      :persistent_watches,
-      :persistent_recursive_watches
-    ]
+    defstruct relative_zxid: 0,
+              data_watches: [],
+              exist_watches: [],
+              child_watches: [],
+              persistent_watches: [],
+              persistent_recursive_watches: []
 
     @type t() :: %__MODULE__{
             relative_zxid: integer(),
@@ -679,10 +661,8 @@ defmodule ExZk.Proto do
   defmodule RequestHeader do
     @moduledoc false
 
-    defstruct [
-      :xid,
-      :type
-    ]
+    defstruct xid: 0,
+              type: 0
 
     @type t() :: %__MODULE__{
             xid: integer(),
@@ -731,11 +711,9 @@ defmodule ExZk.Proto do
   defmodule MultiHeader do
     @moduledoc false
 
-    defstruct [
-      :type,
-      :done,
-      :err
-    ]
+    defstruct type: 0,
+              done: false,
+              err: 0
 
     @type t() :: %__MODULE__{
             type: integer(),
@@ -790,11 +768,9 @@ defmodule ExZk.Proto do
   defmodule AuthPacket do
     @moduledoc false
 
-    defstruct [
-      :type,
-      :scheme,
-      :auth
-    ]
+    defstruct type: 0,
+              scheme: "",
+              auth: <<>>
 
     @type t() :: %__MODULE__{
             type: integer(),
@@ -849,11 +825,9 @@ defmodule ExZk.Proto do
   defmodule ReplyHeader do
     @moduledoc false
 
-    defstruct [
-      :xid,
-      :zxid,
-      :err
-    ]
+    defstruct xid: 0,
+              zxid: 0,
+              err: 0
 
     @type t() :: %__MODULE__{
             xid: integer(),
@@ -908,10 +882,8 @@ defmodule ExZk.Proto do
   defmodule GetDataRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :watch
-    ]
+    defstruct path: "",
+              watch: false
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -960,11 +932,9 @@ defmodule ExZk.Proto do
   defmodule SetDataRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :data,
-      :version
-    ]
+    defstruct path: "",
+              data: <<>>,
+              version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1019,12 +989,10 @@ defmodule ExZk.Proto do
   defmodule ReconfigRequest do
     @moduledoc false
 
-    defstruct [
-      :joining_servers,
-      :leaving_servers,
-      :new_members,
-      :cur_config_id
-    ]
+    defstruct joining_servers: "",
+              leaving_servers: "",
+              new_members: "",
+              cur_config_id: 0
 
     @type t() :: %__MODULE__{
             joining_servers: String.t(),
@@ -1085,9 +1053,7 @@ defmodule ExZk.Proto do
   defmodule SetDataResponse do
     @moduledoc false
 
-    defstruct [
-      :stat
-    ]
+    defstruct stat: %ExZk.Data.Stat{}
 
     @type t() :: %__MODULE__{
             stat: ExZk.Data.Stat.t()
@@ -1130,9 +1096,7 @@ defmodule ExZk.Proto do
   defmodule GetSASLRequest do
     @moduledoc false
 
-    defstruct [
-      :token
-    ]
+    defstruct token: <<>>
 
     @type t() :: %__MODULE__{
             token: binary()
@@ -1175,9 +1139,7 @@ defmodule ExZk.Proto do
   defmodule SetSASLRequest do
     @moduledoc false
 
-    defstruct [
-      :token
-    ]
+    defstruct token: <<>>
 
     @type t() :: %__MODULE__{
             token: binary()
@@ -1220,9 +1182,7 @@ defmodule ExZk.Proto do
   defmodule SetSASLResponse do
     @moduledoc false
 
-    defstruct [
-      :token
-    ]
+    defstruct token: <<>>
 
     @type t() :: %__MODULE__{
             token: binary()
@@ -1265,12 +1225,10 @@ defmodule ExZk.Proto do
   defmodule CreateRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :data,
-      :acl,
-      :flags
-    ]
+    defstruct path: "",
+              data: <<>>,
+              acl: [],
+              flags: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1331,13 +1289,11 @@ defmodule ExZk.Proto do
   defmodule CreateTTLRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :data,
-      :acl,
-      :flags,
-      :ttl
-    ]
+    defstruct path: "",
+              data: <<>>,
+              acl: [],
+              flags: 0,
+              ttl: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1404,10 +1360,8 @@ defmodule ExZk.Proto do
   defmodule DeleteRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :version
-    ]
+    defstruct path: "",
+              version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1456,10 +1410,8 @@ defmodule ExZk.Proto do
   defmodule GetChildrenRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :watch
-    ]
+    defstruct path: "",
+              watch: false
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1508,9 +1460,7 @@ defmodule ExZk.Proto do
   defmodule GetAllChildrenNumberRequest do
     @moduledoc false
 
-    defstruct [
-      :path
-    ]
+    defstruct path: ""
 
     @type t() :: %__MODULE__{
             path: String.t()
@@ -1553,10 +1503,8 @@ defmodule ExZk.Proto do
   defmodule GetChildren2Request do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :watch
-    ]
+    defstruct path: "",
+              watch: false
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1605,10 +1553,8 @@ defmodule ExZk.Proto do
   defmodule CheckVersionRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :version
-    ]
+    defstruct path: "",
+              version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1657,9 +1603,7 @@ defmodule ExZk.Proto do
   defmodule GetMaxChildrenRequest do
     @moduledoc false
 
-    defstruct [
-      :path
-    ]
+    defstruct path: ""
 
     @type t() :: %__MODULE__{
             path: String.t()
@@ -1702,9 +1646,7 @@ defmodule ExZk.Proto do
   defmodule GetMaxChildrenResponse do
     @moduledoc false
 
-    defstruct [
-      :max
-    ]
+    defstruct max: 0
 
     @type t() :: %__MODULE__{
             max: integer()
@@ -1747,10 +1689,8 @@ defmodule ExZk.Proto do
   defmodule SetMaxChildrenRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :max
-    ]
+    defstruct path: "",
+              max: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1799,9 +1739,7 @@ defmodule ExZk.Proto do
   defmodule SyncRequest do
     @moduledoc false
 
-    defstruct [
-      :path
-    ]
+    defstruct path: ""
 
     @type t() :: %__MODULE__{
             path: String.t()
@@ -1844,9 +1782,7 @@ defmodule ExZk.Proto do
   defmodule SyncResponse do
     @moduledoc false
 
-    defstruct [
-      :path
-    ]
+    defstruct path: ""
 
     @type t() :: %__MODULE__{
             path: String.t()
@@ -1889,9 +1825,7 @@ defmodule ExZk.Proto do
   defmodule GetACLRequest do
     @moduledoc false
 
-    defstruct [
-      :path
-    ]
+    defstruct path: ""
 
     @type t() :: %__MODULE__{
             path: String.t()
@@ -1934,11 +1868,9 @@ defmodule ExZk.Proto do
   defmodule SetACLRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :acl,
-      :version
-    ]
+    defstruct path: "",
+              acl: [],
+              version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -1993,9 +1925,7 @@ defmodule ExZk.Proto do
   defmodule SetACLResponse do
     @moduledoc false
 
-    defstruct [
-      :stat
-    ]
+    defstruct stat: %ExZk.Data.Stat{}
 
     @type t() :: %__MODULE__{
             stat: ExZk.Data.Stat.t()
@@ -2038,10 +1968,8 @@ defmodule ExZk.Proto do
   defmodule AddWatchRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :mode
-    ]
+    defstruct path: "",
+              mode: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -2090,11 +2018,9 @@ defmodule ExZk.Proto do
   defmodule WatcherEvent do
     @moduledoc false
 
-    defstruct [
-      :type,
-      :state,
-      :path
-    ]
+    defstruct type: 0,
+              state: 0,
+              path: ""
 
     @type t() :: %__MODULE__{
             type: integer(),
@@ -2149,9 +2075,7 @@ defmodule ExZk.Proto do
   defmodule ErrorResponse do
     @moduledoc false
 
-    defstruct [
-      :err
-    ]
+    defstruct err: 0
 
     @type t() :: %__MODULE__{
             err: integer()
@@ -2194,9 +2118,7 @@ defmodule ExZk.Proto do
   defmodule CreateResponse do
     @moduledoc false
 
-    defstruct [
-      :path
-    ]
+    defstruct path: ""
 
     @type t() :: %__MODULE__{
             path: String.t()
@@ -2239,10 +2161,8 @@ defmodule ExZk.Proto do
   defmodule Create2Response do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :stat
-    ]
+    defstruct path: "",
+              stat: %ExZk.Data.Stat{}
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -2291,10 +2211,8 @@ defmodule ExZk.Proto do
   defmodule ExistsRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :watch
-    ]
+    defstruct path: "",
+              watch: false
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -2343,9 +2261,7 @@ defmodule ExZk.Proto do
   defmodule ExistsResponse do
     @moduledoc false
 
-    defstruct [
-      :stat
-    ]
+    defstruct stat: %ExZk.Data.Stat{}
 
     @type t() :: %__MODULE__{
             stat: ExZk.Data.Stat.t()
@@ -2388,10 +2304,8 @@ defmodule ExZk.Proto do
   defmodule GetDataResponse do
     @moduledoc false
 
-    defstruct [
-      :data,
-      :stat
-    ]
+    defstruct data: <<>>,
+              stat: %ExZk.Data.Stat{}
 
     @type t() :: %__MODULE__{
             data: binary(),
@@ -2440,9 +2354,7 @@ defmodule ExZk.Proto do
   defmodule GetChildrenResponse do
     @moduledoc false
 
-    defstruct [
-      :children
-    ]
+    defstruct children: []
 
     @type t() :: %__MODULE__{
             children: list(String.t())
@@ -2485,9 +2397,7 @@ defmodule ExZk.Proto do
   defmodule GetAllChildrenNumberResponse do
     @moduledoc false
 
-    defstruct [
-      :total_number
-    ]
+    defstruct total_number: 0
 
     @type t() :: %__MODULE__{
             total_number: integer()
@@ -2530,10 +2440,8 @@ defmodule ExZk.Proto do
   defmodule GetChildren2Response do
     @moduledoc false
 
-    defstruct [
-      :children,
-      :stat
-    ]
+    defstruct children: [],
+              stat: %ExZk.Data.Stat{}
 
     @type t() :: %__MODULE__{
             children: list(String.t()),
@@ -2582,10 +2490,8 @@ defmodule ExZk.Proto do
   defmodule GetACLResponse do
     @moduledoc false
 
-    defstruct [
-      :acl,
-      :stat
-    ]
+    defstruct acl: [],
+              stat: %ExZk.Data.Stat{}
 
     @type t() :: %__MODULE__{
             acl: list(ExZk.Data.ACL.t()),
@@ -2634,10 +2540,8 @@ defmodule ExZk.Proto do
   defmodule CheckWatchesRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :type
-    ]
+    defstruct path: "",
+              type: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -2686,10 +2590,8 @@ defmodule ExZk.Proto do
   defmodule RemoveWatchesRequest do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :type
-    ]
+    defstruct path: "",
+              type: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -2738,9 +2640,7 @@ defmodule ExZk.Proto do
   defmodule GetEphemeralsRequest do
     @moduledoc false
 
-    defstruct [
-      :prefix_path
-    ]
+    defstruct prefix_path: ""
 
     @type t() :: %__MODULE__{
             prefix_path: String.t()
@@ -2783,9 +2683,7 @@ defmodule ExZk.Proto do
   defmodule GetEphemeralsResponse do
     @moduledoc false
 
-    defstruct [
-      :ephemerals
-    ]
+    defstruct ephemerals: []
 
     @type t() :: %__MODULE__{
             ephemerals: list(String.t())
@@ -2828,9 +2726,7 @@ defmodule ExZk.Proto do
   defmodule WhoAmIResponse do
     @moduledoc false
 
-    defstruct [
-      :client_info
-    ]
+    defstruct client_info: []
 
     @type t() :: %__MODULE__{
             client_info: list(ExZk.Data.ClientInfo.t())
@@ -2877,10 +2773,8 @@ defmodule ExZk.Txn do
   defmodule TxnDigest do
     @moduledoc false
 
-    defstruct [
-      :version,
-      :tree_digest
-    ]
+    defstruct version: 0,
+              tree_digest: 0
 
     @type t() :: %__MODULE__{
             version: integer(),
@@ -2929,13 +2823,11 @@ defmodule ExZk.Txn do
   defmodule TxnHeader do
     @moduledoc false
 
-    defstruct [
-      :client_id,
-      :cxid,
-      :zxid,
-      :time,
-      :type
-    ]
+    defstruct client_id: 0,
+              cxid: 0,
+              zxid: 0,
+              time: 0,
+              type: 0
 
     @type t() :: %__MODULE__{
             client_id: integer(),
@@ -3002,12 +2894,10 @@ defmodule ExZk.Txn do
   defmodule CreateTxnV0 do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :data,
-      :acl,
-      :ephemeral
-    ]
+    defstruct path: "",
+              data: <<>>,
+              acl: [],
+              ephemeral: false
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -3068,13 +2958,11 @@ defmodule ExZk.Txn do
   defmodule CreateTxn do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :data,
-      :acl,
-      :ephemeral,
-      :parent_c_version
-    ]
+    defstruct path: "",
+              data: <<>>,
+              acl: [],
+              ephemeral: false,
+              parent_c_version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -3141,13 +3029,11 @@ defmodule ExZk.Txn do
   defmodule CreateTTLTxn do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :data,
-      :acl,
-      :parent_c_version,
-      :ttl
-    ]
+    defstruct path: "",
+              data: <<>>,
+              acl: [],
+              parent_c_version: 0,
+              ttl: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -3214,12 +3100,10 @@ defmodule ExZk.Txn do
   defmodule CreateContainerTxn do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :data,
-      :acl,
-      :parent_c_version
-    ]
+    defstruct path: "",
+              data: <<>>,
+              acl: [],
+              parent_c_version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -3280,9 +3164,7 @@ defmodule ExZk.Txn do
   defmodule DeleteTxn do
     @moduledoc false
 
-    defstruct [
-      :path
-    ]
+    defstruct path: ""
 
     @type t() :: %__MODULE__{
             path: String.t()
@@ -3325,11 +3207,9 @@ defmodule ExZk.Txn do
   defmodule SetDataTxn do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :data,
-      :version
-    ]
+    defstruct path: "",
+              data: <<>>,
+              version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -3384,10 +3264,8 @@ defmodule ExZk.Txn do
   defmodule CheckVersionTxn do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :version
-    ]
+    defstruct path: "",
+              version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -3436,11 +3314,9 @@ defmodule ExZk.Txn do
   defmodule SetACLTxn do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :acl,
-      :version
-    ]
+    defstruct path: "",
+              acl: [],
+              version: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -3495,10 +3371,8 @@ defmodule ExZk.Txn do
   defmodule SetMaxChildrenTxn do
     @moduledoc false
 
-    defstruct [
-      :path,
-      :max
-    ]
+    defstruct path: "",
+              max: 0
 
     @type t() :: %__MODULE__{
             path: String.t(),
@@ -3547,9 +3421,7 @@ defmodule ExZk.Txn do
   defmodule CreateSessionTxn do
     @moduledoc false
 
-    defstruct [
-      :time_out
-    ]
+    defstruct time_out: 0
 
     @type t() :: %__MODULE__{
             time_out: integer()
@@ -3592,9 +3464,7 @@ defmodule ExZk.Txn do
   defmodule CloseSessionTxn do
     @moduledoc false
 
-    defstruct [
-      :paths2_delete
-    ]
+    defstruct paths2_delete: []
 
     @type t() :: %__MODULE__{
             paths2_delete: list(String.t())
@@ -3637,9 +3507,7 @@ defmodule ExZk.Txn do
   defmodule ErrorTxn do
     @moduledoc false
 
-    defstruct [
-      :err
-    ]
+    defstruct err: 0
 
     @type t() :: %__MODULE__{
             err: integer()
@@ -3682,10 +3550,8 @@ defmodule ExZk.Txn do
   defmodule Txn do
     @moduledoc false
 
-    defstruct [
-      :type,
-      :data
-    ]
+    defstruct type: 0,
+              data: <<>>
 
     @type t() :: %__MODULE__{
             type: integer(),
@@ -3734,9 +3600,7 @@ defmodule ExZk.Txn do
   defmodule MultiTxn do
     @moduledoc false
 
-    defstruct [
-      :txns
-    ]
+    defstruct txns: []
 
     @type t() :: %__MODULE__{
             txns: list(ExZk.Txn.Txn.t())
