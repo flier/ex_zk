@@ -22,51 +22,52 @@ defmodule ExZk.Wire do
 
   ## Examples
 
-      iex> ExZk.Wire.pack(:boolean, true)
+      iex> import ExZk.Wire
+      iex> pack(:boolean, true)
       <<1>>
-      iex> ExZk.Wire.pack(:boolean, false)
+      iex> pack(:boolean, false)
       <<0>>
-      iex> ExZk.Wire.pack(:boolean, nil)
+      iex> pack(:boolean, nil)
       <<0>>
-      iex> ExZk.Wire.pack(:byte, 42)
+      iex> pack(:byte, 42)
       <<42>>
-      iex> ExZk.Wire.pack(:byte, -2)
+      iex> pack(:byte, -2)
       <<254>>
-      iex> ExZk.Wire.pack(:byte, nil)
+      iex> pack(:byte, nil)
       <<0>>
-      iex> ExZk.Wire.pack(:int, 42)
+      iex> pack(:int, 42)
       <<0, 0, 0, 42>>
-      iex> ExZk.Wire.pack(:int, -2)
+      iex> pack(:int, -2)
       <<0xFF, 0xFF, 0xFF, 0xFE>>
-      iex> ExZk.Wire.pack(:int, nil)
+      iex> pack(:int, nil)
       <<0, 0, 0, 0>>
-      iex> ExZk.Wire.pack(:long, 42)
+      iex> pack(:long, 42)
       <<0, 0, 0, 0, 0, 0, 0, 42>>
-      iex> ExZk.Wire.pack(:long, -2)
+      iex> pack(:long, -2)
       <<0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE>>
-      iex> ExZk.Wire.pack(:long, nil)
+      iex> pack(:long, nil)
       <<0, 0, 0, 0, 0, 0, 0, 0>>
-      iex> ExZk.Wire.pack(:float, 3.14)
+      iex> pack(:float, 3.14)
       <<64, 72, 245, 195>>
-      iex> ExZk.Wire.pack(:double, 3.14)
+      iex> pack(:double, 3.14)
       <<64, 9, 30, 184, 81, 235, 133, 31>>
-      iex> ExZk.Wire.pack(:ustring, "hello")
+      iex> pack(:ustring, "hello")
       <<0, 0, 0, 5, 104, 101, 108, 108, 111>>
-      iex> ExZk.Wire.pack(:ustring, "")
+      iex> pack(:ustring, "")
       <<0, 0, 0, 0>>
-      iex> ExZk.Wire.pack(:ustring, nil)
+      iex> pack(:ustring, nil)
       <<0, 0, 0, 0>>
-      iex> ExZk.Wire.pack(:buffer, "hello")
+      iex> pack(:buffer, "hello")
       <<0, 0, 0, 5, 104, 101, 108, 108, 111>>
-      iex> ExZk.Wire.pack(:buffer, <<>>)
+      iex> pack(:buffer, <<>>)
       <<0, 0, 0, 0>>
-      iex> ExZk.Wire.pack(:buffer, nil)
+      iex> pack(:buffer, nil)
       <<0, 0, 0, 0>>
-      iex> ExZk.Wire.pack({:vector, :int}, [1, 2, 3])
+      iex> pack({:vector, :int}, [1, 2, 3])
       <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>
-      iex> ExZk.Wire.pack({:vector, :int}, nil)
+      iex> pack({:vector, :int}, nil)
       <<0xFF, 0xFF, 0xFF, 0xFF>>
-      iex> ExZk.Wire.pack({:vector, :int}, [])
+      iex> pack({:vector, :int}, [])
       <<0xFF, 0xFF, 0xFF, 0xFF>>
 
   """
@@ -93,8 +94,13 @@ defmodule ExZk.Wire do
     v |> Enum.map(&pack(type, &1)) |> Enum.reduce(<<length(v)::32>>, &(&2 <> &1))
   end
 
-  def pack(mod, value) when is_atom(mod), do: apply(mod, :pack, [value])
-  def pack(_, value), do: Pack.pack(value)
+  def pack(mod, value) do
+    if Pack.impl_for(value) do
+      Pack.pack(value)
+    else
+      apply(mod, :pack, [value])
+    end
+  end
 
   @doc """
   Pack a list of values into a binary
@@ -105,49 +111,50 @@ defmodule ExZk.Wire do
       <<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>
 
   """
-  @spec pack([{type(), value :: any()}]) :: binary()
+  @spec pack([{type(), value :: any()}] | term()) :: binary()
   def pack(values) when is_list(values) do
     Enum.reduce(values, <<>>, fn {type, value}, buf -> buf <> pack(type, value) end)
   end
+
+  def pack(value) when is_struct(value), do: Pack.pack(value)
 
   @doc """
   Unpack a binary into a value
 
   ## Examples
 
-      iex> ExZk.Wire.unpack(:boolean, <<1>>)
+      iex> import ExZk.Wire
+      iex> unpack(:boolean, <<1>>)
       {:ok, true, <<>>}
-      iex> ExZk.Wire.unpack(:boolean, <<0>>)
+      iex> unpack(:boolean, <<0>>)
       {:ok, false, <<>>}
-      iex> ExZk.Wire.unpack(:byte, <<42>>)
+      iex> unpack(:byte, <<42>>)
       {:ok, 42, <<>>}
-      iex> ExZk.Wire.unpack(:int, <<0, 0, 0, 42>>)
+      iex> unpack(:int, <<0, 0, 0, 42>>)
       {:ok, 42, <<>>}
-      iex> ExZk.Wire.unpack(:long, <<0, 0, 0, 0, 0, 0, 0, 42>>)
+      iex> unpack(:long, <<0, 0, 0, 0, 0, 0, 0, 42>>)
       {:ok, 42, <<>>}
-      iex> {:ok, n, <<>>} = ExZk.Wire.unpack(:float, <<64, 72, 245, 195>>)
+      iex> {:ok, n, <<>>} = unpack(:float, <<64, 72, 245, 195>>)
       iex> Float.round(n, 3)
       3.14
-      iex> {:ok, n, <<>>} = ExZk.Wire.unpack(:double, <<64, 9, 30, 184, 81, 235, 133, 31>>)
+      iex> {:ok, n, <<>>} = unpack(:double, <<64, 9, 30, 184, 81, 235, 133, 31>>)
       iex> Float.round(n, 3)
       3.14
-      iex> ExZk.Wire.unpack(:ustring, <<0, 0, 0, 5, 104, 101, 108, 108, 111>>)
+      iex> unpack(:ustring, <<0, 0, 0, 5, 104, 101, 108, 108, 111>>)
       {:ok, "hello", <<>>}
-      iex> ExZk.Wire.unpack(:buffer, <<0, 0, 0, 5, 104, 101, 108, 108, 111>>)
+      iex> unpack(:buffer, <<0, 0, 0, 5, 104, 101, 108, 108, 111>>)
       {:ok, "hello", <<>>}
-      iex> ExZk.Wire.unpack({:vector, :int}, <<0xff, 0xff, 0xff, 0xff>>)
+      iex> unpack({:vector, :int}, <<0xff, 0xff, 0xff, 0xff>>)
       {:ok, [], <<>>}
-      iex> ExZk.Wire.unpack({:vector, :int}, <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>)
+      iex> unpack({:vector, :int}, <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>)
       {:ok, [1, 2, 3], <<>>}
-
-      iex> ExZk.Wire.unpack(:boolean, <<>>)
+      iex> unpack(:boolean, <<>>)
       {:error, :nomatch}
-      iex> ExZk.Wire.unpack({:vector, :int}, <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2>>)
+      iex> unpack({:vector, :int}, <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2>>)
       {:error, :nomatch}
-
-      iex> ExZk.Wire.unpack([:int, :ustring], <<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>)
+      iex> unpack([:int, :ustring], <<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>)
       {:ok, [42, "hello"], <<>>}
-      iex> ExZk.Wire.unpack([:int, :ustring, :buffer], <<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>)
+      iex> unpack([:int, :ustring, :buffer], <<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>)
       {:error, :nomatch}
 
   """

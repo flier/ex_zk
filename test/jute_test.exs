@@ -1,19 +1,25 @@
 defmodule JuteTest do
   use ExUnit.Case
 
+  import ExZk.Wire
+  alias ExZk.Data.Id
+
   describe "Given a data id" do
     test "it can be packed" do
-      id = %ExZk.Data.Id{scheme: "zk", id: "test"}
+      id = %Id{scheme: "zk", id: "test"}
 
-      assert ExZk.Wire.pack(ExZk.Data.Id, id) ==
+      assert pack(Id, id) ==
+               <<0, 0, 0, 2, ?z, ?k, 0, 0, 0, 4, ?t, ?e, ?s, ?t>>
+
+      assert pack(id) ==
                <<0, 0, 0, 2, ?z, ?k, 0, 0, 0, 4, ?t, ?e, ?s, ?t>>
     end
 
     test "it can be unpacked" do
       buf = <<0, 0, 0, 2, ?z, ?k, 0, 0, 0, 4, ?t, ?e, ?s, ?t>>
 
-      assert ExZk.Wire.unpack(ExZk.Data.Id, buf) ==
-               {:ok, %ExZk.Data.Id{scheme: "zk", id: "test"}, ""}
+      assert unpack(Id, buf) ==
+               {:ok, %Id{scheme: "zk", id: "test"}, ""}
     end
   end
 end

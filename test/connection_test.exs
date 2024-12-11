@@ -4,6 +4,7 @@ defmodule ConnectionTest do
   import ExUnit.CaptureLog
   import Mock
 
+  import ExZk.Wire
   alias ExZk.Defs.OpCode
   alias ExZk.Proto.RequestHeader
   alias ExZk.{Connection, Connector, ConnectionError}
@@ -105,7 +106,7 @@ defmodule ConnectionTest do
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
       assert capture_log([level: :debug, format: "$message"], fn ->
-               send(conn, {:frame, socket, ReplyHeader.pack(%ReplyHeader{xid: @ping_xid})})
+               send(conn, {:frame, socket, pack(%ReplyHeader{xid: @ping_xid})})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
              end) == "Got ping response for session id - after PT0S"
@@ -121,7 +122,7 @@ defmodule ConnectionTest do
       assert capture_log([level: :debug, format: "$message"], fn ->
                send(
                  conn,
-                 {:frame, socket, ReplyHeader.pack(%ReplyHeader{xid: @auth_packet_xid, err: -1})}
+                 {:frame, socket, pack(%ReplyHeader{xid: @auth_packet_xid, err: -1})}
                )
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
@@ -136,8 +137,8 @@ defmodule ConnectionTest do
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
       frame =
-        ReplyHeader.pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
-          WatcherEvent.pack(%WatcherEvent{type: 1, state: 3, path: "/test"})
+        pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
+          pack(%WatcherEvent{type: 1, state: 3, path: "/test"})
 
       assert capture_log([level: :debug, format: "$message"], fn ->
                send(conn, {:frame, socket, frame})
@@ -159,13 +160,13 @@ defmodule ConnectionTest do
         assert {:connected, %{socket: socket}} = Connection.status(conn)
 
         {:ok, type} = OpCode.value(:ping)
-        frame = RequestHeader.pack(%RequestHeader{xid: @ping_xid, type: type})
+        frame = pack(%RequestHeader{xid: @ping_xid, type: type})
 
         assert_called(:gen_tcp.send(:sock, <<byte_size(frame)::32>> <> frame))
 
         assert String.starts_with?(
                  capture_log([level: :debug, format: "$message"], fn ->
-                   send(conn, {:frame, socket, ReplyHeader.pack(%ReplyHeader{xid: @ping_xid})})
+                   send(conn, {:frame, socket, pack(%ReplyHeader{xid: @ping_xid})})
 
                    assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
                  end),

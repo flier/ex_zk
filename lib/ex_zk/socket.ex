@@ -42,6 +42,10 @@ defmodule ExZk.Socket do
     GenServer.cast(sock, {:send, <<byte_size(frame)::32>> <> frame})
   end
 
+  def send_frame(sock, frame) do
+    send_frame(sock, ExZk.Wire.pack(frame))
+  end
+
   ####
   ## Callbacks
   ##

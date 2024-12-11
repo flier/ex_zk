@@ -14,15 +14,17 @@ defmodule ExZk.Data do
             id: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%Id{
-          scheme: scheme,
-          id: id
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, scheme},
-        {:ustring, id}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(Id.t()) :: binary()
+      def pack(%Id{
+            scheme: scheme,
+            id: id
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, scheme},
+          {:ustring, id}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -64,15 +66,17 @@ defmodule ExZk.Data do
             id: Id.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ACL{
-          perms: perms,
-          id: id
-        }) do
-      ExZk.Wire.pack([
-        {:int, perms},
-        {Id, id}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ACL.t()) :: binary()
+      def pack(%ACL{
+            perms: perms,
+            id: id
+          }) do
+        ExZk.Wire.pack([
+          {:int, perms},
+          {Id, id}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -132,33 +136,35 @@ defmodule ExZk.Data do
             pzxid: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%Stat{
-          czxid: czxid,
-          mzxid: mzxid,
-          ctime: ctime,
-          mtime: mtime,
-          version: version,
-          cversion: cversion,
-          aversion: aversion,
-          ephemeral_owner: ephemeral_owner,
-          data_length: data_length,
-          num_children: num_children,
-          pzxid: pzxid
-        }) do
-      ExZk.Wire.pack([
-        {:long, czxid},
-        {:long, mzxid},
-        {:long, ctime},
-        {:long, mtime},
-        {:int, version},
-        {:int, cversion},
-        {:int, aversion},
-        {:long, ephemeral_owner},
-        {:int, data_length},
-        {:int, num_children},
-        {:long, pzxid}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(Stat.t()) :: binary()
+      def pack(%Stat{
+            czxid: czxid,
+            mzxid: mzxid,
+            ctime: ctime,
+            mtime: mtime,
+            version: version,
+            cversion: cversion,
+            aversion: aversion,
+            ephemeral_owner: ephemeral_owner,
+            data_length: data_length,
+            num_children: num_children,
+            pzxid: pzxid
+          }) do
+        ExZk.Wire.pack([
+          {:long, czxid},
+          {:long, mzxid},
+          {:long, ctime},
+          {:long, mtime},
+          {:int, version},
+          {:int, cversion},
+          {:int, aversion},
+          {:long, ephemeral_owner},
+          {:int, data_length},
+          {:int, num_children},
+          {:long, pzxid}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -241,29 +247,31 @@ defmodule ExZk.Data do
             pzxid: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%StatPersisted{
-          czxid: czxid,
-          mzxid: mzxid,
-          ctime: ctime,
-          mtime: mtime,
-          version: version,
-          cversion: cversion,
-          aversion: aversion,
-          ephemeral_owner: ephemeral_owner,
-          pzxid: pzxid
-        }) do
-      ExZk.Wire.pack([
-        {:long, czxid},
-        {:long, mzxid},
-        {:long, ctime},
-        {:long, mtime},
-        {:int, version},
-        {:int, cversion},
-        {:int, aversion},
-        {:long, ephemeral_owner},
-        {:long, pzxid}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(StatPersisted.t()) :: binary()
+      def pack(%StatPersisted{
+            czxid: czxid,
+            mzxid: mzxid,
+            ctime: ctime,
+            mtime: mtime,
+            version: version,
+            cversion: cversion,
+            aversion: aversion,
+            ephemeral_owner: ephemeral_owner,
+            pzxid: pzxid
+          }) do
+        ExZk.Wire.pack([
+          {:long, czxid},
+          {:long, mzxid},
+          {:long, ctime},
+          {:long, mtime},
+          {:int, version},
+          {:int, cversion},
+          {:int, aversion},
+          {:long, ephemeral_owner},
+          {:long, pzxid}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -326,15 +334,17 @@ defmodule ExZk.Data do
             user: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ClientInfo{
-          auth_scheme: auth_scheme,
-          user: user
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, auth_scheme},
-        {:ustring, user}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ClientInfo.t()) :: binary()
+      def pack(%ClientInfo{
+            auth_scheme: auth_scheme,
+            user: user
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, auth_scheme},
+          {:ustring, user}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -388,23 +398,25 @@ defmodule ExZk.Proto do
             read_only: boolean()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ConnectRequest{
-          protocol_version: protocol_version,
-          last_zxid_seen: last_zxid_seen,
-          time_out: time_out,
-          session_id: session_id,
-          passwd: passwd,
-          read_only: read_only
-        }) do
-      ExZk.Wire.pack([
-        {:int, protocol_version},
-        {:long, last_zxid_seen},
-        {:int, time_out},
-        {:long, session_id},
-        {:buffer, passwd},
-        {:boolean, read_only}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ConnectRequest.t()) :: binary()
+      def pack(%ConnectRequest{
+            protocol_version: protocol_version,
+            last_zxid_seen: last_zxid_seen,
+            time_out: time_out,
+            session_id: session_id,
+            passwd: passwd,
+            read_only: read_only
+          }) do
+        ExZk.Wire.pack([
+          {:int, protocol_version},
+          {:long, last_zxid_seen},
+          {:int, time_out},
+          {:long, session_id},
+          {:buffer, passwd},
+          {:boolean, read_only}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -464,21 +476,23 @@ defmodule ExZk.Proto do
             read_only: boolean()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ConnectResponse{
-          protocol_version: protocol_version,
-          time_out: time_out,
-          session_id: session_id,
-          passwd: passwd,
-          read_only: read_only
-        }) do
-      ExZk.Wire.pack([
-        {:int, protocol_version},
-        {:int, time_out},
-        {:long, session_id},
-        {:buffer, passwd},
-        {:boolean, read_only}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ConnectResponse.t()) :: binary()
+      def pack(%ConnectResponse{
+            protocol_version: protocol_version,
+            time_out: time_out,
+            session_id: session_id,
+            passwd: passwd,
+            read_only: read_only
+          }) do
+        ExZk.Wire.pack([
+          {:int, protocol_version},
+          {:int, time_out},
+          {:long, session_id},
+          {:buffer, passwd},
+          {:boolean, read_only}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -533,19 +547,21 @@ defmodule ExZk.Proto do
             child_watches: list(String.t())
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetWatches{
-          relative_zxid: relative_zxid,
-          data_watches: data_watches,
-          exist_watches: exist_watches,
-          child_watches: child_watches
-        }) do
-      ExZk.Wire.pack([
-        {:long, relative_zxid},
-        {{:vector, :ustring}, data_watches},
-        {{:vector, :ustring}, exist_watches},
-        {{:vector, :ustring}, child_watches}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetWatches.t()) :: binary()
+      def pack(%SetWatches{
+            relative_zxid: relative_zxid,
+            data_watches: data_watches,
+            exist_watches: exist_watches,
+            child_watches: child_watches
+          }) do
+        ExZk.Wire.pack([
+          {:long, relative_zxid},
+          {{:vector, :ustring}, data_watches},
+          {{:vector, :ustring}, exist_watches},
+          {{:vector, :ustring}, child_watches}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -601,23 +617,25 @@ defmodule ExZk.Proto do
             persistent_recursive_watches: list(String.t())
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetWatches2{
-          relative_zxid: relative_zxid,
-          data_watches: data_watches,
-          exist_watches: exist_watches,
-          child_watches: child_watches,
-          persistent_watches: persistent_watches,
-          persistent_recursive_watches: persistent_recursive_watches
-        }) do
-      ExZk.Wire.pack([
-        {:long, relative_zxid},
-        {{:vector, :ustring}, data_watches},
-        {{:vector, :ustring}, exist_watches},
-        {{:vector, :ustring}, child_watches},
-        {{:vector, :ustring}, persistent_watches},
-        {{:vector, :ustring}, persistent_recursive_watches}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetWatches2.t()) :: binary()
+      def pack(%SetWatches2{
+            relative_zxid: relative_zxid,
+            data_watches: data_watches,
+            exist_watches: exist_watches,
+            child_watches: child_watches,
+            persistent_watches: persistent_watches,
+            persistent_recursive_watches: persistent_recursive_watches
+          }) do
+        ExZk.Wire.pack([
+          {:long, relative_zxid},
+          {{:vector, :ustring}, data_watches},
+          {{:vector, :ustring}, exist_watches},
+          {{:vector, :ustring}, child_watches},
+          {{:vector, :ustring}, persistent_watches},
+          {{:vector, :ustring}, persistent_recursive_watches}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -671,15 +689,17 @@ defmodule ExZk.Proto do
             type: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%RequestHeader{
-          xid: xid,
-          type: type
-        }) do
-      ExZk.Wire.pack([
-        {:int, xid},
-        {:int, type}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(RequestHeader.t()) :: binary()
+      def pack(%RequestHeader{
+            xid: xid,
+            type: type
+          }) do
+        ExZk.Wire.pack([
+          {:int, xid},
+          {:int, type}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -723,17 +743,19 @@ defmodule ExZk.Proto do
             err: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%MultiHeader{
-          type: type,
-          done: done,
-          err: err
-        }) do
-      ExZk.Wire.pack([
-        {:int, type},
-        {:boolean, done},
-        {:int, err}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(MultiHeader.t()) :: binary()
+      def pack(%MultiHeader{
+            type: type,
+            done: done,
+            err: err
+          }) do
+        ExZk.Wire.pack([
+          {:int, type},
+          {:boolean, done},
+          {:int, err}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -780,17 +802,19 @@ defmodule ExZk.Proto do
             auth: binary()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%AuthPacket{
-          type: type,
-          scheme: scheme,
-          auth: auth
-        }) do
-      ExZk.Wire.pack([
-        {:int, type},
-        {:ustring, scheme},
-        {:buffer, auth}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(AuthPacket.t()) :: binary()
+      def pack(%AuthPacket{
+            type: type,
+            scheme: scheme,
+            auth: auth
+          }) do
+        ExZk.Wire.pack([
+          {:int, type},
+          {:ustring, scheme},
+          {:buffer, auth}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -837,17 +861,19 @@ defmodule ExZk.Proto do
             err: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ReplyHeader{
-          xid: xid,
-          zxid: zxid,
-          err: err
-        }) do
-      ExZk.Wire.pack([
-        {:int, xid},
-        {:long, zxid},
-        {:int, err}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ReplyHeader.t()) :: binary()
+      def pack(%ReplyHeader{
+            xid: xid,
+            zxid: zxid,
+            err: err
+          }) do
+        ExZk.Wire.pack([
+          {:int, xid},
+          {:long, zxid},
+          {:int, err}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -892,15 +918,17 @@ defmodule ExZk.Proto do
             watch: boolean()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetDataRequest{
-          path: path,
-          watch: watch
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:boolean, watch}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetDataRequest.t()) :: binary()
+      def pack(%GetDataRequest{
+            path: path,
+            watch: watch
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:boolean, watch}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -944,17 +972,19 @@ defmodule ExZk.Proto do
             version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetDataRequest{
-          path: path,
-          data: data,
-          version: version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:buffer, data},
-        {:int, version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetDataRequest.t()) :: binary()
+      def pack(%SetDataRequest{
+            path: path,
+            data: data,
+            version: version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:buffer, data},
+          {:int, version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1003,19 +1033,21 @@ defmodule ExZk.Proto do
             cur_config_id: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ReconfigRequest{
-          joining_servers: joining_servers,
-          leaving_servers: leaving_servers,
-          new_members: new_members,
-          cur_config_id: cur_config_id
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, joining_servers},
-        {:ustring, leaving_servers},
-        {:ustring, new_members},
-        {:long, cur_config_id}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ReconfigRequest.t()) :: binary()
+      def pack(%ReconfigRequest{
+            joining_servers: joining_servers,
+            leaving_servers: leaving_servers,
+            new_members: new_members,
+            cur_config_id: cur_config_id
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, joining_servers},
+          {:ustring, leaving_servers},
+          {:ustring, new_members},
+          {:long, cur_config_id}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1061,13 +1093,15 @@ defmodule ExZk.Proto do
             stat: ExZk.Data.Stat.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetDataResponse{
-          stat: stat
-        }) do
-      ExZk.Wire.pack([
-        {ExZk.Data.Stat, stat}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetDataResponse.t()) :: binary()
+      def pack(%SetDataResponse{
+            stat: stat
+          }) do
+        ExZk.Wire.pack([
+          {ExZk.Data.Stat, stat}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1104,13 +1138,15 @@ defmodule ExZk.Proto do
             token: binary()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetSASLRequest{
-          token: token
-        }) do
-      ExZk.Wire.pack([
-        {:buffer, token}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetSASLRequest.t()) :: binary()
+      def pack(%GetSASLRequest{
+            token: token
+          }) do
+        ExZk.Wire.pack([
+          {:buffer, token}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1147,13 +1183,15 @@ defmodule ExZk.Proto do
             token: binary()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetSASLRequest{
-          token: token
-        }) do
-      ExZk.Wire.pack([
-        {:buffer, token}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetSASLRequest.t()) :: binary()
+      def pack(%SetSASLRequest{
+            token: token
+          }) do
+        ExZk.Wire.pack([
+          {:buffer, token}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1190,13 +1228,15 @@ defmodule ExZk.Proto do
             token: binary()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetSASLResponse{
-          token: token
-        }) do
-      ExZk.Wire.pack([
-        {:buffer, token}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetSASLResponse.t()) :: binary()
+      def pack(%SetSASLResponse{
+            token: token
+          }) do
+        ExZk.Wire.pack([
+          {:buffer, token}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1239,19 +1279,21 @@ defmodule ExZk.Proto do
             flags: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CreateRequest{
-          path: path,
-          data: data,
-          acl: acl,
-          flags: flags
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:buffer, data},
-        {{:vector, ExZk.Data.ACL}, acl},
-        {:int, flags}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CreateRequest.t()) :: binary()
+      def pack(%CreateRequest{
+            path: path,
+            data: data,
+            acl: acl,
+            flags: flags
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:buffer, data},
+          {{:vector, ExZk.Data.ACL}, acl},
+          {:int, flags}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1305,21 +1347,23 @@ defmodule ExZk.Proto do
             ttl: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CreateTTLRequest{
-          path: path,
-          data: data,
-          acl: acl,
-          flags: flags,
-          ttl: ttl
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:buffer, data},
-        {{:vector, ExZk.Data.ACL}, acl},
-        {:int, flags},
-        {:long, ttl}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CreateTTLRequest.t()) :: binary()
+      def pack(%CreateTTLRequest{
+            path: path,
+            data: data,
+            acl: acl,
+            flags: flags,
+            ttl: ttl
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:buffer, data},
+          {{:vector, ExZk.Data.ACL}, acl},
+          {:int, flags},
+          {:long, ttl}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1370,15 +1414,17 @@ defmodule ExZk.Proto do
             version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%DeleteRequest{
-          path: path,
-          version: version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:int, version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(DeleteRequest.t()) :: binary()
+      def pack(%DeleteRequest{
+            path: path,
+            version: version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:int, version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1420,15 +1466,17 @@ defmodule ExZk.Proto do
             watch: boolean()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetChildrenRequest{
-          path: path,
-          watch: watch
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:boolean, watch}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetChildrenRequest.t()) :: binary()
+      def pack(%GetChildrenRequest{
+            path: path,
+            watch: watch
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:boolean, watch}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1468,13 +1516,15 @@ defmodule ExZk.Proto do
             path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetAllChildrenNumberRequest{
-          path: path
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetAllChildrenNumberRequest.t()) :: binary()
+      def pack(%GetAllChildrenNumberRequest{
+            path: path
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1513,15 +1563,17 @@ defmodule ExZk.Proto do
             watch: boolean()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetChildren2Request{
-          path: path,
-          watch: watch
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:boolean, watch}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetChildren2Request.t()) :: binary()
+      def pack(%GetChildren2Request{
+            path: path,
+            watch: watch
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:boolean, watch}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1563,15 +1615,17 @@ defmodule ExZk.Proto do
             version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CheckVersionRequest{
-          path: path,
-          version: version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:int, version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CheckVersionRequest.t()) :: binary()
+      def pack(%CheckVersionRequest{
+            path: path,
+            version: version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:int, version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1611,13 +1665,15 @@ defmodule ExZk.Proto do
             path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetMaxChildrenRequest{
-          path: path
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetMaxChildrenRequest.t()) :: binary()
+      def pack(%GetMaxChildrenRequest{
+            path: path
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1654,13 +1710,15 @@ defmodule ExZk.Proto do
             max: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetMaxChildrenResponse{
-          max: max
-        }) do
-      ExZk.Wire.pack([
-        {:int, max}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetMaxChildrenResponse.t()) :: binary()
+      def pack(%GetMaxChildrenResponse{
+            max: max
+          }) do
+        ExZk.Wire.pack([
+          {:int, max}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1699,15 +1757,17 @@ defmodule ExZk.Proto do
             max: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetMaxChildrenRequest{
-          path: path,
-          max: max
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:int, max}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetMaxChildrenRequest.t()) :: binary()
+      def pack(%SetMaxChildrenRequest{
+            path: path,
+            max: max
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:int, max}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1747,13 +1807,15 @@ defmodule ExZk.Proto do
             path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SyncRequest{
-          path: path
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SyncRequest.t()) :: binary()
+      def pack(%SyncRequest{
+            path: path
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1790,13 +1852,15 @@ defmodule ExZk.Proto do
             path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SyncResponse{
-          path: path
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SyncResponse.t()) :: binary()
+      def pack(%SyncResponse{
+            path: path
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1833,13 +1897,15 @@ defmodule ExZk.Proto do
             path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetACLRequest{
-          path: path
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetACLRequest.t()) :: binary()
+      def pack(%GetACLRequest{
+            path: path
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1880,17 +1946,19 @@ defmodule ExZk.Proto do
             version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetACLRequest{
-          path: path,
-          acl: acl,
-          version: version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {{:vector, ExZk.Data.ACL}, acl},
-        {:int, version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetACLRequest.t()) :: binary()
+      def pack(%SetACLRequest{
+            path: path,
+            acl: acl,
+            version: version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {{:vector, ExZk.Data.ACL}, acl},
+          {:int, version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1933,13 +2001,15 @@ defmodule ExZk.Proto do
             stat: ExZk.Data.Stat.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetACLResponse{
-          stat: stat
-        }) do
-      ExZk.Wire.pack([
-        {ExZk.Data.Stat, stat}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetACLResponse.t()) :: binary()
+      def pack(%SetACLResponse{
+            stat: stat
+          }) do
+        ExZk.Wire.pack([
+          {ExZk.Data.Stat, stat}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -1978,15 +2048,17 @@ defmodule ExZk.Proto do
             mode: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%AddWatchRequest{
-          path: path,
-          mode: mode
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:int, mode}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(AddWatchRequest.t()) :: binary()
+      def pack(%AddWatchRequest{
+            path: path,
+            mode: mode
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:int, mode}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2030,17 +2102,19 @@ defmodule ExZk.Proto do
             path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%WatcherEvent{
-          type: type,
-          state: state,
-          path: path
-        }) do
-      ExZk.Wire.pack([
-        {:int, type},
-        {:int, state},
-        {:ustring, path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(WatcherEvent.t()) :: binary()
+      def pack(%WatcherEvent{
+            type: type,
+            state: state,
+            path: path
+          }) do
+        ExZk.Wire.pack([
+          {:int, type},
+          {:int, state},
+          {:ustring, path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2083,13 +2157,15 @@ defmodule ExZk.Proto do
             err: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ErrorResponse{
-          err: err
-        }) do
-      ExZk.Wire.pack([
-        {:int, err}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ErrorResponse.t()) :: binary()
+      def pack(%ErrorResponse{
+            err: err
+          }) do
+        ExZk.Wire.pack([
+          {:int, err}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2126,13 +2202,15 @@ defmodule ExZk.Proto do
             path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CreateResponse{
-          path: path
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CreateResponse.t()) :: binary()
+      def pack(%CreateResponse{
+            path: path
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2171,15 +2249,17 @@ defmodule ExZk.Proto do
             stat: ExZk.Data.Stat.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%Create2Response{
-          path: path,
-          stat: stat
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {ExZk.Data.Stat, stat}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(Create2Response.t()) :: binary()
+      def pack(%Create2Response{
+            path: path,
+            stat: stat
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {ExZk.Data.Stat, stat}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2221,15 +2301,17 @@ defmodule ExZk.Proto do
             watch: boolean()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ExistsRequest{
-          path: path,
-          watch: watch
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:boolean, watch}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ExistsRequest.t()) :: binary()
+      def pack(%ExistsRequest{
+            path: path,
+            watch: watch
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:boolean, watch}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2269,13 +2351,15 @@ defmodule ExZk.Proto do
             stat: ExZk.Data.Stat.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ExistsResponse{
-          stat: stat
-        }) do
-      ExZk.Wire.pack([
-        {ExZk.Data.Stat, stat}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ExistsResponse.t()) :: binary()
+      def pack(%ExistsResponse{
+            stat: stat
+          }) do
+        ExZk.Wire.pack([
+          {ExZk.Data.Stat, stat}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2314,15 +2398,17 @@ defmodule ExZk.Proto do
             stat: ExZk.Data.Stat.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetDataResponse{
-          data: data,
-          stat: stat
-        }) do
-      ExZk.Wire.pack([
-        {:buffer, data},
-        {ExZk.Data.Stat, stat}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetDataResponse.t()) :: binary()
+      def pack(%GetDataResponse{
+            data: data,
+            stat: stat
+          }) do
+        ExZk.Wire.pack([
+          {:buffer, data},
+          {ExZk.Data.Stat, stat}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2362,13 +2448,15 @@ defmodule ExZk.Proto do
             children: list(String.t())
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetChildrenResponse{
-          children: children
-        }) do
-      ExZk.Wire.pack([
-        {{:vector, :ustring}, children}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetChildrenResponse.t()) :: binary()
+      def pack(%GetChildrenResponse{
+            children: children
+          }) do
+        ExZk.Wire.pack([
+          {{:vector, :ustring}, children}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2405,13 +2493,15 @@ defmodule ExZk.Proto do
             total_number: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetAllChildrenNumberResponse{
-          total_number: total_number
-        }) do
-      ExZk.Wire.pack([
-        {:int, total_number}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetAllChildrenNumberResponse.t()) :: binary()
+      def pack(%GetAllChildrenNumberResponse{
+            total_number: total_number
+          }) do
+        ExZk.Wire.pack([
+          {:int, total_number}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2450,15 +2540,17 @@ defmodule ExZk.Proto do
             stat: ExZk.Data.Stat.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetChildren2Response{
-          children: children,
-          stat: stat
-        }) do
-      ExZk.Wire.pack([
-        {{:vector, :ustring}, children},
-        {ExZk.Data.Stat, stat}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetChildren2Response.t()) :: binary()
+      def pack(%GetChildren2Response{
+            children: children,
+            stat: stat
+          }) do
+        ExZk.Wire.pack([
+          {{:vector, :ustring}, children},
+          {ExZk.Data.Stat, stat}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2500,15 +2592,17 @@ defmodule ExZk.Proto do
             stat: ExZk.Data.Stat.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetACLResponse{
-          acl: acl,
-          stat: stat
-        }) do
-      ExZk.Wire.pack([
-        {{:vector, ExZk.Data.ACL}, acl},
-        {ExZk.Data.Stat, stat}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetACLResponse.t()) :: binary()
+      def pack(%GetACLResponse{
+            acl: acl,
+            stat: stat
+          }) do
+        ExZk.Wire.pack([
+          {{:vector, ExZk.Data.ACL}, acl},
+          {ExZk.Data.Stat, stat}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2550,15 +2644,17 @@ defmodule ExZk.Proto do
             type: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CheckWatchesRequest{
-          path: path,
-          type: type
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:int, type}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CheckWatchesRequest.t()) :: binary()
+      def pack(%CheckWatchesRequest{
+            path: path,
+            type: type
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:int, type}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2600,15 +2696,17 @@ defmodule ExZk.Proto do
             type: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%RemoveWatchesRequest{
-          path: path,
-          type: type
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:int, type}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(RemoveWatchesRequest.t()) :: binary()
+      def pack(%RemoveWatchesRequest{
+            path: path,
+            type: type
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:int, type}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2648,13 +2746,15 @@ defmodule ExZk.Proto do
             prefix_path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetEphemeralsRequest{
-          prefix_path: prefix_path
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, prefix_path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetEphemeralsRequest.t()) :: binary()
+      def pack(%GetEphemeralsRequest{
+            prefix_path: prefix_path
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, prefix_path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2691,13 +2791,15 @@ defmodule ExZk.Proto do
             ephemerals: list(String.t())
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%GetEphemeralsResponse{
-          ephemerals: ephemerals
-        }) do
-      ExZk.Wire.pack([
-        {{:vector, :ustring}, ephemerals}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(GetEphemeralsResponse.t()) :: binary()
+      def pack(%GetEphemeralsResponse{
+            ephemerals: ephemerals
+          }) do
+        ExZk.Wire.pack([
+          {{:vector, :ustring}, ephemerals}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2734,13 +2836,15 @@ defmodule ExZk.Proto do
             client_info: list(ExZk.Data.ClientInfo.t())
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%WhoAmIResponse{
-          client_info: client_info
-        }) do
-      ExZk.Wire.pack([
-        {{:vector, ExZk.Data.ClientInfo}, client_info}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(WhoAmIResponse.t()) :: binary()
+      def pack(%WhoAmIResponse{
+            client_info: client_info
+          }) do
+        ExZk.Wire.pack([
+          {{:vector, ExZk.Data.ClientInfo}, client_info}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2783,15 +2887,17 @@ defmodule ExZk.Txn do
             tree_digest: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%TxnDigest{
-          version: version,
-          tree_digest: tree_digest
-        }) do
-      ExZk.Wire.pack([
-        {:int, version},
-        {:long, tree_digest}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(TxnDigest.t()) :: binary()
+      def pack(%TxnDigest{
+            version: version,
+            tree_digest: tree_digest
+          }) do
+        ExZk.Wire.pack([
+          {:int, version},
+          {:long, tree_digest}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2839,21 +2945,23 @@ defmodule ExZk.Txn do
             type: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%TxnHeader{
-          client_id: client_id,
-          cxid: cxid,
-          zxid: zxid,
-          time: time,
-          type: type
-        }) do
-      ExZk.Wire.pack([
-        {:long, client_id},
-        {:int, cxid},
-        {:long, zxid},
-        {:long, time},
-        {:int, type}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(TxnHeader.t()) :: binary()
+      def pack(%TxnHeader{
+            client_id: client_id,
+            cxid: cxid,
+            zxid: zxid,
+            time: time,
+            type: type
+          }) do
+        ExZk.Wire.pack([
+          {:long, client_id},
+          {:int, cxid},
+          {:long, zxid},
+          {:long, time},
+          {:int, type}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2908,19 +3016,21 @@ defmodule ExZk.Txn do
             ephemeral: boolean()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CreateTxnV0{
-          path: path,
-          data: data,
-          acl: acl,
-          ephemeral: ephemeral
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:buffer, data},
-        {{:vector, ExZk.Data.ACL}, acl},
-        {:boolean, ephemeral}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CreateTxnV0.t()) :: binary()
+      def pack(%CreateTxnV0{
+            path: path,
+            data: data,
+            acl: acl,
+            ephemeral: ephemeral
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:buffer, data},
+          {{:vector, ExZk.Data.ACL}, acl},
+          {:boolean, ephemeral}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -2974,21 +3084,23 @@ defmodule ExZk.Txn do
             parent_c_version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CreateTxn{
-          path: path,
-          data: data,
-          acl: acl,
-          ephemeral: ephemeral,
-          parent_c_version: parent_c_version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:buffer, data},
-        {{:vector, ExZk.Data.ACL}, acl},
-        {:boolean, ephemeral},
-        {:int, parent_c_version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CreateTxn.t()) :: binary()
+      def pack(%CreateTxn{
+            path: path,
+            data: data,
+            acl: acl,
+            ephemeral: ephemeral,
+            parent_c_version: parent_c_version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:buffer, data},
+          {{:vector, ExZk.Data.ACL}, acl},
+          {:boolean, ephemeral},
+          {:int, parent_c_version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3045,21 +3157,23 @@ defmodule ExZk.Txn do
             ttl: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CreateTTLTxn{
-          path: path,
-          data: data,
-          acl: acl,
-          parent_c_version: parent_c_version,
-          ttl: ttl
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:buffer, data},
-        {{:vector, ExZk.Data.ACL}, acl},
-        {:int, parent_c_version},
-        {:long, ttl}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CreateTTLTxn.t()) :: binary()
+      def pack(%CreateTTLTxn{
+            path: path,
+            data: data,
+            acl: acl,
+            parent_c_version: parent_c_version,
+            ttl: ttl
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:buffer, data},
+          {{:vector, ExZk.Data.ACL}, acl},
+          {:int, parent_c_version},
+          {:long, ttl}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3114,19 +3228,21 @@ defmodule ExZk.Txn do
             parent_c_version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CreateContainerTxn{
-          path: path,
-          data: data,
-          acl: acl,
-          parent_c_version: parent_c_version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:buffer, data},
-        {{:vector, ExZk.Data.ACL}, acl},
-        {:int, parent_c_version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CreateContainerTxn.t()) :: binary()
+      def pack(%CreateContainerTxn{
+            path: path,
+            data: data,
+            acl: acl,
+            parent_c_version: parent_c_version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:buffer, data},
+          {{:vector, ExZk.Data.ACL}, acl},
+          {:int, parent_c_version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3172,13 +3288,15 @@ defmodule ExZk.Txn do
             path: String.t()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%DeleteTxn{
-          path: path
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(DeleteTxn.t()) :: binary()
+      def pack(%DeleteTxn{
+            path: path
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3219,17 +3337,19 @@ defmodule ExZk.Txn do
             version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetDataTxn{
-          path: path,
-          data: data,
-          version: version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:buffer, data},
-        {:int, version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetDataTxn.t()) :: binary()
+      def pack(%SetDataTxn{
+            path: path,
+            data: data,
+            version: version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:buffer, data},
+          {:int, version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3274,15 +3394,17 @@ defmodule ExZk.Txn do
             version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CheckVersionTxn{
-          path: path,
-          version: version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:int, version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CheckVersionTxn.t()) :: binary()
+      def pack(%CheckVersionTxn{
+            path: path,
+            version: version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:int, version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3326,17 +3448,19 @@ defmodule ExZk.Txn do
             version: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetACLTxn{
-          path: path,
-          acl: acl,
-          version: version
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {{:vector, ExZk.Data.ACL}, acl},
-        {:int, version}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetACLTxn.t()) :: binary()
+      def pack(%SetACLTxn{
+            path: path,
+            acl: acl,
+            version: version
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {{:vector, ExZk.Data.ACL}, acl},
+          {:int, version}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3381,15 +3505,17 @@ defmodule ExZk.Txn do
             max: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%SetMaxChildrenTxn{
-          path: path,
-          max: max
-        }) do
-      ExZk.Wire.pack([
-        {:ustring, path},
-        {:int, max}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(SetMaxChildrenTxn.t()) :: binary()
+      def pack(%SetMaxChildrenTxn{
+            path: path,
+            max: max
+          }) do
+        ExZk.Wire.pack([
+          {:ustring, path},
+          {:int, max}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3429,13 +3555,15 @@ defmodule ExZk.Txn do
             time_out: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CreateSessionTxn{
-          time_out: time_out
-        }) do
-      ExZk.Wire.pack([
-        {:int, time_out}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CreateSessionTxn.t()) :: binary()
+      def pack(%CreateSessionTxn{
+            time_out: time_out
+          }) do
+        ExZk.Wire.pack([
+          {:int, time_out}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3472,13 +3600,15 @@ defmodule ExZk.Txn do
             paths2_delete: list(String.t())
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%CloseSessionTxn{
-          paths2_delete: paths2_delete
-        }) do
-      ExZk.Wire.pack([
-        {{:vector, :ustring}, paths2_delete}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(CloseSessionTxn.t()) :: binary()
+      def pack(%CloseSessionTxn{
+            paths2_delete: paths2_delete
+          }) do
+        ExZk.Wire.pack([
+          {{:vector, :ustring}, paths2_delete}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3515,13 +3645,15 @@ defmodule ExZk.Txn do
             err: integer()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%ErrorTxn{
-          err: err
-        }) do
-      ExZk.Wire.pack([
-        {:int, err}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(ErrorTxn.t()) :: binary()
+      def pack(%ErrorTxn{
+            err: err
+          }) do
+        ExZk.Wire.pack([
+          {:int, err}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3560,15 +3692,17 @@ defmodule ExZk.Txn do
             data: binary()
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%Txn{
-          type: type,
-          data: data
-        }) do
-      ExZk.Wire.pack([
-        {:int, type},
-        {:buffer, data}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(Txn.t()) :: binary()
+      def pack(%Txn{
+            type: type,
+            data: data
+          }) do
+        ExZk.Wire.pack([
+          {:int, type},
+          {:buffer, data}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
@@ -3608,13 +3742,15 @@ defmodule ExZk.Txn do
             txns: list(ExZk.Txn.Txn.t())
           }
 
-    @spec pack(t()) :: binary()
-    def pack(%MultiTxn{
-          txns: txns
-        }) do
-      ExZk.Wire.pack([
-        {{:vector, ExZk.Txn.Txn}, txns}
-      ])
+    defimpl ExZk.Wire.Pack do
+      @spec pack(MultiTxn.t()) :: binary()
+      def pack(%MultiTxn{
+            txns: txns
+          }) do
+        ExZk.Wire.pack([
+          {{:vector, ExZk.Txn.Txn}, txns}
+        ])
+      end
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}

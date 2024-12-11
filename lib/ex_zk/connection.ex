@@ -2,7 +2,7 @@ defmodule ExZk.Connection do
   require Logger
 
   alias ExZk.Defs.OpCode
-  alias ExZk.Proto.{RequestHeader, ReplyHeader, WatcherEvent}
+  alias ExZk.Proto.{ReplyHeader, WatcherEvent}
   alias ExZk.Socket
 
   @behaviour :gen_statem
@@ -222,7 +222,7 @@ defmodule ExZk.Connection do
   end
 
   def connected(:cast, :ping, %__MODULE__{socket: socket} = data) do
-    :ok = Socket.send_frame(socket, RequestHeader.pack(new_request_header(@ping_xid, :ping)))
+    :ok = Socket.send_frame(socket, new_request_header(@ping_xid, :ping))
 
     {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
   end

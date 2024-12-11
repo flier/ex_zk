@@ -16,17 +16,19 @@ defmodule <%= @module_name %> do
           <% end %>
       }
 
-      @spec pack(t()) :: binary()
-      def pack(%<%= name %>{
-        <%= for %ExZk.Jute.Field{name: name} <- fields do %>
-        <%= name |> to_string |> Macro.underscore %>: <%= name |> to_string |> Macro.underscore %>,
-        <% end %>
-      }) do
-        ExZk.Wire.pack([
-          <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
-          {<%= ExZk.Jute.Binding.typename(type, @opts) %>, <%= name |> to_string |> Macro.underscore %>},
+      defimpl ExZk.Wire.Pack do
+        @spec pack(<%= name %>.t()) :: binary()
+        def pack(%<%= name %>{
+          <%= for %ExZk.Jute.Field{name: name} <- fields do %>
+          <%= name |> to_string |> Macro.underscore %>: <%= name |> to_string |> Macro.underscore %>,
           <% end %>
-        ])
+        }) do
+          ExZk.Wire.pack([
+            <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
+            {<%= ExZk.Jute.Binding.typename(type, @opts) %>, <%= name |> to_string |> Macro.underscore %>},
+            <% end %>
+          ])
+        end
       end
 
       @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
