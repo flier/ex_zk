@@ -32,7 +32,7 @@ defmodule <%= @module_name %> do
       end
 
       @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-      def unpack(buf) do
+      def unpack(buf) when is_binary(buf) do
         with {:ok, fields, rest} <- ExZk.Wire.unpack(buf,
           <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
           <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typename(type, @opts) %>,

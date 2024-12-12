@@ -3,8 +3,12 @@ defmodule SocketTest do
 
   import Mock
 
+  import ExZk.Wire
+  alias ExZk.{Connector, Frame, Socket}
+  alias ExZk.Proto.ReplyHeader
+
   setup_with_mocks([
-    {ExZk.Connector, [], [connect: fn _pid, _opts -> {:ok, :sock, :addr} end]},
+    {Connector, [], [connect: fn _pid, _opts -> {:ok, :sock, :addr} end]},
     {:inet, [:unstick], [setopts: fn _sock, _opts -> :ok end]},
     {:ssl, [], [setopts: fn _sock, _opts -> :ok end]}
   ]) do
@@ -15,75 +19,75 @@ defmodule SocketTest do
     test "it can be connected with TCP" do
       Process.flag(:trap_exit, true)
 
-      {:ok, sock} = ExZk.Socket.start_link(self(), [])
+      {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
 
       assert_receive {:connected, ^sock, :sock, :addr}
-      assert_called(ExZk.Connector.connect(self(), []))
+      assert_called(Connector.connect(self(), []))
       assert_called(:inet.setopts(:sock, active: :once))
 
-      ExZk.Socket.normal_stop(sock)
+      Socket.normal_stop(sock)
       assert_receive {:EXIT, ^sock, :normal}
     end
 
     test "it can be connected with SSL" do
       Process.flag(:trap_exit, true)
 
-      {:ok, sock} = ExZk.Socket.start_link(self(), ssl: true)
+      {:ok, sock} = Socket.start_link(self(), ssl: true)
       assert is_pid(sock)
 
       assert_receive {:connected, ^sock, :sock, :addr}
-      assert_called(ExZk.Connector.connect(self(), ssl: true))
+      assert_called(Connector.connect(self(), ssl: true))
       assert_called(:ssl.setopts(:sock, active: :once))
 
-      ExZk.Socket.normal_stop(sock)
+      Socket.normal_stop(sock)
       assert_receive {:EXIT, ^sock, :normal}
     end
 
-    test_with_mock "it may be stopped when ExZk.Connector.connect return {:stop, _}",
-                   ExZk.Connector,
+    test_with_mock "it may be stopped when Connector.connect return {:stop, _}",
+                   Connector,
                    [],
                    connect: fn _pid, _opts -> {:stop, :reason} end do
       Process.flag(:trap_exit, true)
 
-      {:ok, sock} = ExZk.Socket.start_link(self(), [])
+      {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
 
       assert_receive {:stopped, ^sock, :reason}
-      assert_called(ExZk.Connector.connect(self(), []))
+      assert_called(Connector.connect(self(), []))
 
       assert_receive {:EXIT, ^sock, :normal}
     end
 
-    test_with_mock "it may be failed when ExZk.Connector.setopts return {:error, _}",
+    test_with_mock "it may be failed when Connector.setopts return {:error, _}",
                    :ssl,
                    [],
                    setopts: fn _sock, _opts -> {:error, :reason} end do
       Process.flag(:trap_exit, true)
 
-      {:ok, sock} = ExZk.Socket.start_link(self(), ssl: true)
+      {:ok, sock} = Socket.start_link(self(), ssl: true)
       assert is_pid(sock)
 
       assert_receive {:stopped, ^sock, :reason}
-      assert_called(ExZk.Connector.connect(self(), ssl: true))
+      assert_called(Connector.connect(self(), ssl: true))
       assert_called(:ssl.setopts(:sock, active: :once))
 
       assert_receive {:EXIT, ^sock, :normal}
     end
 
     test "it can receive frame" do
-      {:ok, sock} = ExZk.Socket.start_link(self(), [])
+      {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
 
       assert_receive {:connected, ^sock, :sock, :addr}
 
-      # receive frame
-      send(sock, {:tcp, :sock, <<0, 0, 0, 2, 122, 107, 0, 0, 0, 4>>})
-      assert_receive {:frame, ^sock, "zk"}
+      reply_hdr = %ReplyHeader{xid: 123, zxid: 456, err: 789}
+      buf = pack(reply_hdr)
+      frame = <<byte_size(buf)::32>> <> buf
 
-      # receive remaining frame
-      send(sock, {:tcp, :sock, <<116, 101, 115, 116>>})
-      assert_receive {:frame, ^sock, "test"}
+      # receive frame
+      send(sock, {:tcp, :sock, frame})
+      assert_receive {:frame, ^sock, %Frame{reply_hdr: ^reply_hdr, payload: ""}}
     end
   end
 end

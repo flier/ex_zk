@@ -1,19 +1,13 @@
 defmodule ExZk.Connection do
   require Logger
 
-  alias ExZk.Defs.OpCode
-  alias ExZk.Proto.{ReplyHeader, WatcherEvent}
-  alias ExZk.Socket
+  alias ExZk.{Frame, Socket}
+  alias ExZk.Proto.WatcherEvent
 
   @behaviour :gen_statem
 
-  @notification_xid -1
-  @ping_xid -2
-  @auth_packet_xid -4
-
   defstruct [
     :opts,
-    :transport,
     :socket,
     :connected_address,
     :backoff_current,
@@ -39,8 +33,7 @@ defmodule ExZk.Connection do
 
   @type t :: %__MODULE__{
           opts: [option()],
-          transport: ExZk.Socket.transport(),
-          socket: ExZk.Socket.t(),
+          socket: pid(),
           connected_address: String.t(),
           backoff_current: timeout(),
           backoff_initial: timeout(),
@@ -54,8 +47,6 @@ defmodule ExZk.Connection do
   @type option :: {:session_id, integer()} | ExZk.Socket.option() | :gen_statem.start_opt()
 
   @type status :: :disconnected | :connecting | :connected
-
-  @type xid :: integer()
 
   ####
   ## Public API
@@ -102,11 +93,6 @@ defmodule ExZk.Connection do
     :gen_statem.call(conn, :status)
   end
 
-  @spec send_ping(:gen_statem.server_ref()) :: :ok
-  def send_ping(conn) do
-    :gen_statem.cast(conn, :ping)
-  end
-
   ####
   ## Callbacks
   ##
@@ -116,15 +102,9 @@ defmodule ExZk.Connection do
 
   @impl true
   def init(opts) do
-    transport = if(opts[:ssl], do: :ssl, else: :gen_tcp)
-
     {:ok, socket} = ExZk.Socket.start_link(self(), opts)
 
-    data = %__MODULE__{
-      opts: opts,
-      transport: transport,
-      socket: socket
-    }
+    data = %__MODULE__{opts: opts, socket: socket}
 
     if opts[:sync_connect] do
       # We don't need to handle a timeout here because we're using a timeout in
@@ -187,12 +167,8 @@ defmodule ExZk.Connection do
     disconnect(data, reason)
   end
 
-  def connecting(
-        {:call, from},
-        :status,
-        %__MODULE__{transport: transport, socket: socket} = _data
-      ) do
-    :gen_statem.reply(from, {:connecting, %{transport: transport, socket: socket}})
+  def connecting({:call, from}, :status, %__MODULE__{socket: socket} = _data) do
+    :gen_statem.reply(from, {:connecting, %{socket: socket}})
     :keep_state_and_data
   end
 
@@ -204,12 +180,38 @@ defmodule ExZk.Connection do
 
   def connected(
         :info,
-        {:frame, socket, frame},
+        {:frame, socket, %Frame{response: :pong}},
         %__MODULE__{socket: socket} = data
       ) do
-    {:ok, reply_hdr, rest} = ReplyHeader.unpack(frame)
+    Logger.debug(
+      "Got ping response for session id #{session_id(data)} after #{ping_response_time(data) |> Duration.to_iso8601()}"
+    )
 
-    handle_frame(reply_hdr, rest, data)
+    {:keep_state, %__MODULE__{data | last_ping_sent: nil}}
+  end
+
+  def connected(
+        :info,
+        {:frame, socket, %Frame{response: {:auth_failed, err}}},
+        %__MODULE__{socket: socket} = data
+      ) do
+    Logger.debug("Got auth response for session id #{session_id(data)} with err: #{err}")
+
+    :keep_state_and_data
+  end
+
+  def connected(
+        :info,
+        {:frame, socket, %Frame{response: {:notification, zxid, watcher_event}}},
+        %__MODULE__{socket: socket} = data
+      ) do
+    evt = struct!(%WatchedEvent{zxid: zxid}, Map.from_struct(watcher_event))
+
+    Logger.debug(
+      "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
+    )
+
+    {:keep_state, queue_event(data, evt)}
   end
 
   def connected(
@@ -222,7 +224,7 @@ defmodule ExZk.Connection do
   end
 
   def connected(:cast, :ping, %__MODULE__{socket: socket} = data) do
-    :ok = Socket.send_frame(socket, new_request_header(@ping_xid, :ping))
+    :ok = Socket.send_frame(socket, Frame.new_ping_request())
 
     {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
   end
@@ -230,32 +232,6 @@ defmodule ExZk.Connection do
   ####
   ## Private methods
   ##
-
-  defp handle_frame(%ReplyHeader{xid: @ping_xid}, _rest, data) do
-    Logger.debug(
-      "Got ping response for session id #{session_id(data)} after #{ping_response_time(data) |> Duration.to_iso8601()}"
-    )
-
-    {:keep_state, %__MODULE__{data | last_ping_sent: nil}}
-  end
-
-  defp handle_frame(%ReplyHeader{xid: @auth_packet_xid, err: err}, _rest, data) do
-    Logger.debug("Got auth response for session id #{session_id(data)} with err: #{err}")
-
-    :keep_state_and_data
-  end
-
-  defp handle_frame(%ReplyHeader{xid: @notification_xid, zxid: zxid}, rest, data) do
-    {:ok, w, _rest} = WatcherEvent.unpack(rest)
-
-    evt = struct!(%WatchedEvent{zxid: zxid}, Map.from_struct(w))
-
-    Logger.debug(
-      "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
-    )
-
-    {:keep_state, queue_event(data, evt)}
-  end
 
   defp disconnect(%__MODULE__{opts: opts} = data, reason) do
     if opts[:exit_on_disconnection] do
@@ -269,12 +245,6 @@ defmodule ExZk.Connection do
 
       {:next_state, :disconnected, data, actions}
     end
-  end
-
-  @spec new_request_header(xid(), OpCode.t()) :: ExZk.Proto.RequestHeader.t()
-  def new_request_header(xid, op_code) do
-    {:ok, type} = OpCode.value(op_code)
-    %ExZk.Proto.RequestHeader{xid: xid, type: type}
   end
 
   defp next_backoff(%__MODULE__{backoff_current: nil} = data) do

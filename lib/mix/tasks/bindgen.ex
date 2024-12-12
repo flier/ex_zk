@@ -6,6 +6,7 @@ defmodule Mix.Tasks.Bindgen do
   @jute_file "./zookeeper.jute"
   @binding_file "./lib/ex_zk/protocol.ex"
 
+  @impl true
   def run(_) do
     with {:ok, data} <- File.read(Path.expand(@jute_file, :code.priv_dir(:ex_zk))),
          {:ok, modules, _, _, _, _} <- ExZk.Jute.Parser.parse_file(data),

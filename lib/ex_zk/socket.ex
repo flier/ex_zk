@@ -1,6 +1,7 @@
 defmodule ExZk.Socket do
   use GenServer
 
+  alias ExZk.Frame
   alias ExZk.Connector
 
   defstruct [
@@ -37,13 +38,10 @@ defmodule ExZk.Socket do
     GenServer.stop(sock, :normal)
   end
 
-  @spec send_frame(sock :: GenServer.server(), frame :: binary()) :: :ok
-  def send_frame(sock, frame) when is_binary(frame) do
-    GenServer.cast(sock, {:send, <<byte_size(frame)::32>> <> frame})
-  end
-
-  def send_frame(sock, frame) do
-    send_frame(sock, ExZk.Wire.pack(frame))
+  @spec send_frame(sock :: GenServer.server(), frame :: Frame.t()) :: :ok
+  def send_frame(sock, %Frame{} = frame) do
+    buf = ExZk.Wire.pack(frame)
+    GenServer.cast(sock, {:send, <<byte_size(buf)::32>> <> buf})
   end
 
   ####
@@ -140,9 +138,12 @@ defmodule ExZk.Socket do
 
   defp new_data(
          %__MODULE__{conn: conn, buffered: nil} = state,
-         <<sz::32, frame::binary-size(sz), rest::binary>> = _data
+         <<sz::32, data::binary-size(sz), rest::binary>> = _data
        ) do
+    frame = Frame.unpack(data)
+
     send(conn, {:frame, self(), frame})
+
     new_data(state, rest)
   end
 

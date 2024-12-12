@@ -26,7 +26,7 @@ defmodule ExZk.Data do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                scheme: :ustring,
@@ -62,7 +62,7 @@ defmodule ExZk.Data do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                perms: :int,
@@ -134,7 +134,7 @@ defmodule ExZk.Data do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                czxid: :long,
@@ -207,7 +207,7 @@ defmodule ExZk.Data do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                czxid: :long,
@@ -250,7 +250,7 @@ defmodule ExZk.Data do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                auth_scheme: :ustring,
@@ -306,7 +306,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                protocol_version: :int,
@@ -358,7 +358,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                protocol_version: :int,
@@ -405,7 +405,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                relative_zxid: :long,
@@ -459,7 +459,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                relative_zxid: :long,
@@ -499,7 +499,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                xid: :int,
@@ -539,7 +539,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                type: :int,
@@ -580,7 +580,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                type: :int,
@@ -621,7 +621,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                xid: :int,
@@ -658,7 +658,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -698,7 +698,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -743,7 +743,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                joining_servers: :ustring,
@@ -777,7 +777,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                stat: ExZk.Data.Stat
@@ -808,7 +808,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                token: :buffer
@@ -839,7 +839,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                token: :buffer
@@ -870,7 +870,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                token: :buffer
@@ -913,7 +913,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -963,7 +963,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1002,7 +1002,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1038,7 +1038,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1070,7 +1070,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring
@@ -1105,7 +1105,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1141,7 +1141,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1173,7 +1173,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring
@@ -1204,7 +1204,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                max: :int
@@ -1239,7 +1239,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1271,7 +1271,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring
@@ -1302,7 +1302,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring
@@ -1333,7 +1333,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring
@@ -1372,7 +1372,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1405,7 +1405,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                stat: ExZk.Data.Stat
@@ -1440,7 +1440,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1480,7 +1480,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                type: :int,
@@ -1513,7 +1513,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                err: :int
@@ -1544,7 +1544,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring
@@ -1579,7 +1579,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1615,7 +1615,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1647,7 +1647,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                stat: ExZk.Data.Stat
@@ -1682,7 +1682,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                data: :buffer,
@@ -1714,7 +1714,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                children: {:vector, :ustring}
@@ -1745,7 +1745,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                total_number: :int
@@ -1780,7 +1780,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                children: {:vector, :ustring},
@@ -1816,7 +1816,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                acl: {:vector, ExZk.Data.ACL},
@@ -1852,7 +1852,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1888,7 +1888,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -1920,7 +1920,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                prefix_path: :ustring
@@ -1951,7 +1951,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                ephemerals: {:vector, :ustring}
@@ -1982,7 +1982,7 @@ defmodule ExZk.Proto do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                client_info: {:vector, ExZk.Data.ClientInfo}
@@ -2021,7 +2021,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                version: :int,
@@ -2069,7 +2069,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                client_id: :long,
@@ -2116,7 +2116,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -2166,7 +2166,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -2217,7 +2217,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -2264,7 +2264,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -2298,7 +2298,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring
@@ -2337,7 +2337,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -2374,7 +2374,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -2414,7 +2414,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -2451,7 +2451,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                path: :ustring,
@@ -2483,7 +2483,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                time_out: :int
@@ -2514,7 +2514,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                paths2_delete: {:vector, :ustring}
@@ -2545,7 +2545,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                err: :int
@@ -2580,7 +2580,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                type: :int,
@@ -2612,7 +2612,7 @@ defmodule ExZk.Txn do
     end
 
     @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) do
+    def unpack(buf) when is_binary(buf) do
       with {:ok, fields, rest} <-
              ExZk.Wire.unpack(buf,
                txns: {:vector, ExZk.Txn.Txn}

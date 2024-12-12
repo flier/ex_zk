@@ -6,7 +6,7 @@ defmodule ConnectionTest do
 
   import ExZk.Wire
   alias ExZk.Defs.OpCode
-  alias ExZk.Proto.RequestHeader
+  alias ExZk.Frame
   alias ExZk.{Connection, Connector, ConnectionError}
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
 
@@ -106,7 +106,9 @@ defmodule ConnectionTest do
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
       assert capture_log([level: :debug, format: "$message"], fn ->
-               send(conn, {:frame, socket, pack(%ReplyHeader{xid: @ping_xid})})
+               frame = Frame.unpack(pack(%ReplyHeader{xid: @ping_xid}))
+
+               send(conn, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
              end) == "Got ping response for session id - after PT0S"
@@ -120,10 +122,9 @@ defmodule ConnectionTest do
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
       assert capture_log([level: :debug, format: "$message"], fn ->
-               send(
-                 conn,
-                 {:frame, socket, pack(%ReplyHeader{xid: @auth_packet_xid, err: -1})}
-               )
+               frame = Frame.unpack(pack(%ReplyHeader{xid: @auth_packet_xid, err: -1}))
+
+               send(conn, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
              end) == "Got auth response for session id - with err: -1"
@@ -136,11 +137,13 @@ defmodule ConnectionTest do
       # it should be connected
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
-      frame =
-        pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
-          pack(%WatcherEvent{type: 1, state: 3, path: "/test"})
-
       assert capture_log([level: :debug, format: "$message"], fn ->
+               frame =
+                 Frame.unpack(
+                   pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
+                     pack(%WatcherEvent{type: 1, state: 3, path: "/test"})
+                 )
+
                send(conn, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
@@ -155,7 +158,7 @@ defmodule ConnectionTest do
         # connect to the server
         {:ok, conn} = Connection.start_link(sync_connect: true)
 
-        assert Connection.send_ping(conn) == :ok
+        assert :gen_statem.cast(conn, :ping) == :ok
 
         assert {:connected, %{socket: socket}} = Connection.status(conn)
 
@@ -166,7 +169,9 @@ defmodule ConnectionTest do
 
         assert String.starts_with?(
                  capture_log([level: :debug, format: "$message"], fn ->
-                   send(conn, {:frame, socket, pack(%ReplyHeader{xid: @ping_xid})})
+                   frame = Frame.unpack(pack(%ReplyHeader{xid: @ping_xid}))
+
+                   send(conn, {:frame, socket, frame})
 
                    assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
                  end),
