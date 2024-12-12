@@ -6,19 +6,6 @@ defmodule ExZk.Connection do
 
   @behaviour :gen_statem
 
-  defstruct [
-    :opts,
-    :socket,
-    :connected_address,
-    :backoff_current,
-    :backoff_initial,
-    :backoff_max,
-    :reconnect_times,
-    :session_id,
-    :last_ping_sent,
-    :waiting_events
-  ]
-
   defmodule WatchedEvent do
     defstruct [:state, :type, :path, :zxid]
 
@@ -31,13 +18,22 @@ defmodule ExZk.Connection do
     @type t :: %__MODULE__{watchers: list(), event: WatcherEvent.t()}
   end
 
+  defstruct [
+    :opts,
+    :socket,
+    :connected_address,
+    :backoff_current,
+    :reconnect_times,
+    :session_id,
+    :last_ping_sent,
+    :waiting_events
+  ]
+
   @type t :: %__MODULE__{
           opts: [option()],
           socket: pid(),
           connected_address: String.t(),
           backoff_current: timeout(),
-          backoff_initial: timeout(),
-          backoff_max: timeout(),
           reconnect_times: integer(),
           session_id: integer(),
           last_ping_sent: Time.t(),
