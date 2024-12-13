@@ -431,7 +431,7 @@ defmodule ExZk.Jute do
       skipped_module = Keyword.get(opts, :skip, [])
 
       modules
-      |> Enum.filter(fn %Module{name: name} ->
+      |> Stream.filter(fn %Module{name: name} ->
         !Enum.any?(skipped_module, &String.starts_with?(to_string(name), &1))
       end)
       |> Enum.map_join("\n\n", &generate_module(&1, opts))

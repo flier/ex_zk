@@ -327,7 +327,7 @@ defmodule ExZk.Connection do
   end
 
   defp new_set_watches_request(last_zxid, watches) when is_list(watches) do
-    watches |> Enum.group_by(fn {type, _path} -> type end, fn {_, path} -> path end)
+    watches = watches |> Enum.group_by(fn {type, _path} -> type end, fn {_, path} -> path end)
 
     data_watches = watches[:data] || []
     exists_watches = watches[:exists] || []

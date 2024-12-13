@@ -87,7 +87,7 @@ defmodule ExZk.Wire do
   def pack({{:vector, _type}, []}), do: <<-1::32>>
 
   def pack({{:vector, type}, v}) when is_list(v) do
-    v |> Enum.map(&pack({type, &1})) |> Enum.reduce(<<length(v)::32>>, &(&2 <> &1))
+    v |> Stream.map(&pack({type, &1})) |> Enum.reduce(<<length(v)::32>>, &(&2 <> &1))
   end
 
   def pack({mod, value}) do
@@ -98,10 +98,7 @@ defmodule ExZk.Wire do
     end
   end
 
-  def pack(values) when is_list(values) do
-    Enum.reduce(values, <<>>, fn e, buf -> buf <> pack(e) end)
-  end
-
+  def pack(values) when is_list(values), do: Enum.map_join(values, &pack(&1))
   def pack(value) when is_struct(value), do: Pack.pack(value)
 
   @doc """
