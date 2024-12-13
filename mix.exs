@@ -36,7 +36,10 @@ defmodule ExZk.MixProject do
           "CHANGELOG.md",
           "LICENSE.txt": [title: "License"]
         ]
-      ]
+      ],
+
+      # Dialyzer
+      dialyzer: [plt_add_apps: [:mix]]
     ]
   end
 
