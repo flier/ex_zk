@@ -1,16 +1,11 @@
 defmodule ExZk.Connection do
   require Logger
 
-  alias ExZk.{Frame, Socket}
+  alias ExZk.{Auth, Frame, Socket, WatchedEvent, WatchManager}
   alias ExZk.Proto.WatcherEvent
+  alias ExZk.Watcher.Event
 
   @behaviour :gen_statem
-
-  defmodule WatchedEvent do
-    defstruct [:state, :type, :path, :zxid]
-
-    @type t :: %__MODULE__{state: integer(), type: integer(), path: String.t(), zxid: integer()}
-  end
 
   defmodule WatcherSetEvent do
     defstruct [:watchers, :event]
@@ -25,7 +20,9 @@ defmodule ExZk.Connection do
     :backoff_current,
     :reconnect_times,
     :session_id,
+    :last_zxid,
     :last_ping_sent,
+    :watch_manager,
     :waiting_events
   ]
 
@@ -36,7 +33,9 @@ defmodule ExZk.Connection do
           backoff_current: timeout(),
           reconnect_times: integer(),
           session_id: integer(),
+          last_zxid: Frame.zxid(),
           last_ping_sent: Time.t(),
+          watch_manager: WatchManager.t(),
           waiting_events: :queue.queue(WatcherSetEvent.t())
         }
 
@@ -100,7 +99,11 @@ defmodule ExZk.Connection do
   def init(opts) do
     {:ok, socket} = ExZk.Socket.start_link(self(), opts)
 
-    data = %__MODULE__{opts: opts, socket: socket}
+    data = %__MODULE__{
+      opts: opts,
+      socket: socket,
+      watch_manager: %WatchManager{}
+    }
 
     if opts[:sync_connect] do
       # We don't need to handle a timeout here because we're using a timeout in
@@ -154,9 +157,31 @@ defmodule ExZk.Connection do
   end
 
   # "Connecting" state: the connection is on going and the socket is not alive.
-  def connecting(:info, {:connected, socket, _sock, addr}, %__MODULE__{socket: socket} = data) do
-    data = %{data | backoff_current: nil, reconnect_times: nil, connected_address: addr}
-    {:next_state, :connected, %{data | socket: socket}}
+  def connecting(
+        :info,
+        {:connected, socket, _sock, addr},
+        %__MODULE__{opts: opts, socket: socket, last_zxid: last_zxid} = data
+      ) do
+    :ok = Socket.send_frame(socket, new_connect_request(opts, last_zxid, data.session_id))
+
+    for auth_request <- new_auth_request(opts[:auth_info]) do
+      :ok = Socket.send_frame(socket, auth_request)
+    end
+
+    if !opts[:disable_auto_watch_reset] do
+      for set_watches <- new_set_watches_request(last_zxid, data.watch_manager) do
+        :ok = Socket.send_frame(socket, set_watches)
+      end
+    end
+
+    {:next_state, :connected,
+     %{
+       data
+       | socket: socket,
+         connected_address: addr,
+         backoff_current: nil,
+         reconnect_times: nil
+     }}
   end
 
   def connecting(:info, {:stopped, socket, reason}, %__MODULE__{socket: socket} = data) do
@@ -198,10 +223,24 @@ defmodule ExZk.Connection do
 
   def connected(
         :info,
-        {:frame, socket, %Frame{response: {:notification, zxid, watcher_event}}},
+        {:frame, socket,
+         %Frame{
+           response:
+             {:notification, zxid,
+              %WatcherEvent{
+                type: type,
+                state: state,
+                path: path
+              }}
+         }},
         %__MODULE__{socket: socket} = data
       ) do
-    evt = struct!(%WatchedEvent{zxid: zxid}, Map.from_struct(watcher_event))
+    evt = %WatchedEvent{
+      type: Event.Type.cast!(type),
+      state: Event.KeeperState.cast!(state),
+      path: path,
+      zxid: zxid
+    }
 
     Logger.debug(
       "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
@@ -278,5 +317,74 @@ defmodule ExZk.Connection do
 
   defp queue_event(%__MODULE__{waiting_events: waiting_events} = data, event) do
     %__MODULE__{data | waiting_events: :queue.in(%WatcherSetEvent{event: event}, waiting_events)}
+  end
+
+  defp new_connect_request(opts, last_zxid, session_id) do
+    Frame.new_connect_request(
+      last_zxid || 0,
+      opts[:session_timeout],
+      session_id || opts[:session_id],
+      opts[:password],
+      opts[:readonly]
+    )
+  end
+
+  defp new_auth_request(nil), do: []
+
+  defp new_auth_request(auth_info) when is_list(auth_info) do
+    auth_info |> Enum.flat_map(&new_auth_request(&1))
+  end
+
+  defp new_auth_request({:digest, {username, password}}),
+    do: new_auth_request(Auth.digest(username, password))
+
+  defp new_auth_request({:ip, addr}) when is_binary(addr) or is_tuple(addr),
+    do: new_auth_request(Auth.ip(addr))
+
+  defp new_auth_request({:x509, subject}) when is_binary(subject),
+    do: new_auth_request(Auth.x509(subject))
+
+  defp new_auth_request(%Auth.Info{scheme: scheme, data: data}),
+    do: [Frame.new_auth_request(scheme, data)]
+
+  @set_watches_max_length 128 * 1024
+
+  defp new_set_watches_request(last_zxid, %WatchManager{} = watch_manager) do
+    if(WatchManager.empty?(watch_manager)) do
+      []
+    else
+      watch_manager
+      |> WatchManager.watches()
+      |> Enum.chunk_every(@set_watches_max_length)
+      |> Enum.map(&new_set_watches_request(last_zxid, &1))
+    end
+  end
+
+  defp new_set_watches_request(last_zxid, watches) when is_list(watches) do
+    watches |> Enum.group_by(fn {type, _path} -> type end, fn {_, path} -> path end)
+
+    data_watches = watches[:data] || []
+    exists_watches = watches[:exists] || []
+    child_watches = watches[:child] || []
+    persistent_watches = watches[:persistent] || []
+    persistent_recursive_watches = watches[:persistent_recursive] || []
+
+    if persistent_watches == [] and persistent_recursive_watches == [] do
+      Frame.new_set_watches_request(
+        last_zxid,
+        data_watches,
+        exists_watches,
+        child_watches
+      )
+    else
+      Frame.new_set_watches2_request(
+        last_zxid,
+        data_watches,
+        exists_watches,
+        child_watches,
+        persistent_watches,
+        persistent_recursive_watches
+      )
+    end
   end
 end

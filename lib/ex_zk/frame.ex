@@ -1,27 +1,38 @@
 defmodule ExZk.Frame do
   alias ExZk.Defs.OpCode
-  alias ExZk.Proto.{RequestHeader, ReplyHeader, WatcherEvent}
+
+  alias ExZk.Proto.{
+    AuthPacket,
+    ConnectRequest,
+    RequestHeader,
+    ReplyHeader,
+    SetWatches,
+    SetWatches2,
+    WatcherEvent
+  }
 
   defstruct [:req_hdr, :reply_hdr, :request, :response, :payload]
 
   @type t :: %__MODULE__{
-          req_hdr: RequestHeader.t(),
-          reply_hdr: ReplyHeader.t(),
-          request: request(),
-          response: response(),
-          payload: binary()
+          req_hdr: RequestHeader.t() | nil,
+          reply_hdr: ReplyHeader.t() | nil,
+          request: request() | nil,
+          response: response() | nil,
+          payload: binary() | nil
         }
 
-  @type request :: term()
+  @type request :: ConnectRequest.t() | AuthPacket.t() | SetWatches.t() | SetWatches2.t()
   @type response :: :pong | {:auth_failed, error()} | {:notification, zxid(), WatcherEvent.t()}
   @type error :: integer()
   @type xid :: integer()
   @type zxid :: integer()
+  @type watches :: list(String.t())
 
+  @default_protocol_version 0
   @notification_xid -1
   @ping_xid -2
   @auth_packet_xid -4
-  # @set_watches_xid -8
+  @set_watches_xid -8
 
   ####
   ## Public API
@@ -30,6 +41,87 @@ defmodule ExZk.Frame do
   def new_ping_request() do
     %__MODULE__{
       req_hdr: new_request_header(@ping_xid, :ping)
+    }
+  end
+
+  @spec new_auth_request(scheme :: String.t(), data :: binary()) :: t()
+  def new_auth_request(scheme, data) do
+    %__MODULE__{
+      req_hdr: new_request_header(@auth_packet_xid, :auth),
+      request: %AuthPacket{scheme: scheme, auth: data}
+    }
+  end
+
+  @spec new_connect_request(
+          last_zxid :: zxid(),
+          session_timeout :: timeout(),
+          session_id :: integer(),
+          passwd :: binary(),
+          readonly :: boolean() | nil
+        ) :: t()
+  def new_connect_request(
+        last_zxid \\ 0,
+        session_timeout \\ 0,
+        session_id \\ 0,
+        passwd \\ "",
+        readonly \\ nil
+      ) do
+    %__MODULE__{
+      request: %ConnectRequest{
+        protocol_version: @default_protocol_version,
+        last_zxid_seen: last_zxid || 0,
+        time_out: session_timeout || 0,
+        session_id: session_id || 0,
+        passwd: passwd || "",
+        read_only: readonly
+      }
+    }
+  end
+
+  @spec new_set_watches_request(
+          relative_zxid :: zxid(),
+          data_watches :: watches(),
+          exist_watches :: watches(),
+          child_watches :: watches()
+        ) :: t()
+  def new_set_watches_request(relative_zxid, data_watches, exist_watches, child_watches) do
+    %__MODULE__{
+      req_hdr: new_request_header(@set_watches_xid, :set_watches),
+      request: %SetWatches{
+        relative_zxid: relative_zxid,
+        data_watches: data_watches,
+        exist_watches: exist_watches,
+        child_watches: child_watches
+      }
+    }
+  end
+
+  @spec new_set_watches2_request(
+          relative_zxid :: zxid(),
+          data_watches :: watches(),
+          exist_watches :: watches(),
+          child_watches :: watches(),
+          persistent_watches :: watches(),
+          persistent_recursive_watches :: watches()
+        ) :: t()
+  def new_set_watches2_request(
+        relative_zxid,
+        data_watches,
+        exist_watches,
+        child_watches,
+        persistent_watches,
+        persistent_recursive_watches
+      ) do
+    %__MODULE__{
+      req_hdr: new_request_header(@set_watches_xid, :set_watches2),
+      request: %SetWatches2{
+        relative_zxid: relative_zxid,
+        data_watches: data_watches,
+        exist_watches: exist_watches,
+        child_watches: child_watches,
+        persistent_watches: persistent_watches,
+        persistent_recursive_watches: persistent_recursive_watches
+      }
     }
   end
 
@@ -65,7 +157,8 @@ defmodule ExZk.Frame do
 
   defimpl ExZk.Wire.Pack do
     def pack(%ExZk.Frame{req_hdr: req_hdr, request: request}) do
-      ExZk.Wire.pack([req_hdr, request])
+      buf = ExZk.Wire.pack([req_hdr, request])
+      <<byte_size(buf)::32>> <> buf
     end
   end
 
@@ -74,8 +167,6 @@ defmodule ExZk.Frame do
   ##
 
   defp new_request_header(xid, op_code) do
-    {:ok, type} = OpCode.value(op_code)
-
-    %RequestHeader{xid: xid, type: type}
+    %RequestHeader{xid: xid, type: OpCode.value!(op_code)}
   end
 end

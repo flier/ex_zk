@@ -3,6 +3,7 @@ defmodule ExZk.StartOptions do
 
   @default_port 2181
   @default_timeout 5_000
+  @default_session_timeout 18_000
 
   start_link_opts_schema = [
     host: [
@@ -113,6 +114,37 @@ defmodule ExZk.StartOptions do
       """,
       type_doc: "list of `t::gen_tcp.option/0`",
       type_spec: quote(do: list(:gen_tcp.option()))
+    ],
+    session_timeout: [
+      type: :timeout,
+      default: @default_session_timeout,
+      doc: """
+      Zookeeper session timeout
+      """
+    ],
+    readonly: [
+      type: :boolean,
+      doc: """
+      if `true`, the session will be read-only
+      """
+    ],
+    auth_info: [
+      type: {:custom, __MODULE__, :__validate_auth_info__, []},
+      doc: """
+      authentication information for the session
+      """,
+      type_doc: "list of `t:ExZk.AuthInfo/0`",
+      type_spec: quote(do: list(ExZk.Auth.Info.t()))
+    ],
+    disable_auto_watch_reset: [
+      type: :boolean,
+      default: false,
+      doc: """
+      This controls whether automatic watch resetting is enabled.
+      Clients automatically reset watches during session reconnect,
+      this option allows the client to turn off this behavior
+      by setting the option :disable_auto_watch_reset to true
+      """
     ]
   ]
 
@@ -130,4 +162,20 @@ defmodule ExZk.StartOptions do
   def __validate_name__(name) when is_binary(name), do: {:ok, name}
   def __validate_name__({:global, name}) when is_binary(name), do: {:ok, name}
   def __validate_name__({:via, mod, name}) when is_atom(mod) and is_binary(name), do: {:ok, name}
+
+  def __validate_auth_info__(auth_info) when is_list(auth_info) do
+    if Enum.all?(auth_info, &__validate_auth_info__(&1)) do
+      {:ok, auth_info}
+    else
+      {:error, auth_info}
+    end
+  end
+
+  def __validate_auth_info__({:digest, {username, password}})
+      when is_binary(username) and is_binary(password),
+      do: true
+
+  def __validate_auth_info__({:ip, addr}) when is_binary(addr), do: true
+  def __validate_auth_info__({:ip, addr}) when is_tuple(addr), do: :inet.is_ip_address(addr)
+  def __validate_auth_info__({:x509, subject}) when is_binary(subject), do: true
 end

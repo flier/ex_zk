@@ -40,8 +40,7 @@ defmodule ExZk.Socket do
 
   @spec send_frame(sock :: GenServer.server(), frame :: Frame.t()) :: :ok
   def send_frame(sock, %Frame{} = frame) do
-    buf = ExZk.Wire.pack(frame)
-    GenServer.cast(sock, {:send, <<byte_size(buf)::32>> <> buf})
+    GenServer.cast(sock, {:send, ExZk.Wire.pack(frame)})
   end
 
   ####

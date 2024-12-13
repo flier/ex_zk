@@ -11,8 +11,9 @@ defmodule ConnectionTest do
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
 
   setup_with_mocks([
-    {:inet, [:no_link, :unstick], [setopts: fn _sock, _opts -> :ok end]},
+    {:inet, [:no_link, :unstick, :passthrough], [setopts: fn _sock, _opts -> :ok end]},
     {:ssl, [:no_link], [setopts: fn _sock, _opts -> :ok end]},
+    {:gen_tcp, [:no_link, :unstick], [send: fn _sock, _data -> :ok end]},
     {Connector, [], [connect: fn _pid, _opts -> {:ok, :sock, :addr} end]}
   ]) do
     :ok
@@ -30,6 +31,7 @@ defmodule ConnectionTest do
       assert {:connected, %{addr: :addr}} = Connection.status(conn)
 
       assert_called_exactly(Connector.connect(conn, exit_on_disconnection: true), 1)
+      assert_called_exactly(:gen_tcp.send(:sock, pack(Frame.new_connect_request())), 1)
 
       # stop the connection
       Connection.stop(conn)
@@ -40,6 +42,77 @@ defmodule ConnectionTest do
 
       # the EXIT signal should be received
       assert_received {:EXIT, ^conn, :normal}
+    end
+
+    test "it can be connected with auth" do
+      opts = [exit_on_disconnection: true, auth_info: {:digest, {"username", "password"}}]
+
+      # connect to the server
+      {:ok, conn} = Connection.start_link(opts)
+
+      # it should be connected
+      Process.sleep(100)
+      assert {:connected, %{addr: :addr}} = Connection.status(conn)
+
+      assert_called_exactly(Connector.connect(conn, opts), 1)
+
+      assert_called_exactly(:gen_tcp.send(:sock, pack(Frame.new_connect_request())), 1)
+
+      assert_called_exactly(
+        :gen_tcp.send(:sock, pack(Frame.new_auth_request("digest", "username:password"))),
+        1
+      )
+    end
+
+    test "it can be connected with multiple auth info" do
+      opts = [
+        exit_on_disconnection: true,
+        auth_info: [
+          {:digest, {"username", "password"}},
+          {:ip, {127, 0, 0, 1}},
+          {:ip, ":1"},
+          {:x509, "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"}
+        ]
+      ]
+
+      # connect to the server
+      {:ok, conn} = Connection.start_link(opts)
+
+      # it should be connected
+      Process.sleep(100)
+      assert {:connected, %{addr: :addr}} = Connection.status(conn)
+
+      assert_called_exactly(Connector.connect(conn, opts), 1)
+
+      assert_called_exactly(:gen_tcp.send(:sock, pack(Frame.new_connect_request())), 1)
+
+      assert_called_exactly(
+        :gen_tcp.send(:sock, pack(Frame.new_auth_request("digest", "username:password"))),
+        1
+      )
+
+      assert_called_exactly(
+        :gen_tcp.send(:sock, pack(Frame.new_auth_request("ip", "127.0.0.1"))),
+        1
+      )
+
+      assert_called_exactly(
+        :gen_tcp.send(:sock, pack(Frame.new_auth_request("ip", ":1"))),
+        1
+      )
+
+      assert_called_exactly(
+        :gen_tcp.send(
+          :sock,
+          pack(
+            Frame.new_auth_request(
+              "x509",
+              "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"
+            )
+          )
+        ),
+        1
+      )
     end
 
     test "it should be reconnect when connect failed" do
@@ -141,14 +214,14 @@ defmodule ConnectionTest do
                frame =
                  Frame.unpack(
                    pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
-                     pack(%WatcherEvent{type: 1, state: 3, path: "/test"})
+                     pack(%WatcherEvent{type: 1, state: 2, path: "/test"})
                  )
 
                send(conn, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
              end) ==
-               ~s[Got notification for session id - with event: #{%ExZk.Connection.WatchedEvent{type: 1, state: 3, path: "/test", zxid: 123} |> inspect()}]
+               ~s[Got notification for session id - with event: #{%ExZk.WatchedEvent{type: :node_created, state: :sync_connected, path: "/test", zxid: 123} |> inspect()}]
     end
 
     test "it can send ping" do
@@ -162,8 +235,7 @@ defmodule ConnectionTest do
 
         assert {:connected, %{socket: socket}} = Connection.status(conn)
 
-        {:ok, type} = OpCode.value(:ping)
-        frame = pack(%RequestHeader{xid: @ping_xid, type: type})
+        frame = pack(%RequestHeader{xid: @ping_xid, type: OpCode.value!(:ping)})
 
         assert_called(:gen_tcp.send(:sock, <<byte_size(frame)::32>> <> frame))
 
