@@ -15,6 +15,7 @@ defmodule ExZk.MixProject do
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      aliases: aliases(),
 
       # Tests
       test_coverage: [tool: ExCoveralls],
@@ -48,6 +49,16 @@ defmodule ExZk.MixProject do
         logger: true
       ]
     ]
+  end
+
+  defp aliases do
+    [
+      integration_test: ["test --include zookeeper:true test/integration_test.exs"]
+    ]
+  end
+
+  def cli do
+    [preferred_envs: [integration_test: :test]]
   end
 
   defp package do

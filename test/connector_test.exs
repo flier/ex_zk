@@ -1,0 +1,142 @@
+defmodule ConnectorTest do
+  use ExUnit.Case, async: true
+
+  import Mock
+
+  alias ExZk.{Connector, Frame, Wire}
+  alias ExZk.Proto.ConnectResponse
+
+  @host "localhost"
+  @port 2181
+  @timeout 5000
+
+  @connect_opts [host: @host, port: @port, timeout: @timeout]
+  @inet_opts [:binary, {:active, false}]
+  @ssl_opts @inet_opts ++ [{:cacertfile, CAStore.file_path()}, verify: :verify_peer, depth: 3]
+
+  @connect_response %Frame{
+    response: %ConnectResponse{
+      time_out: 15_000,
+      session_id: 123
+    }
+  }
+
+  setup_with_mocks([
+    {:inet, [:unstick, :passthrough],
+     [
+       getopts: fn :sock, [:sndbuf, :recbuf, :buffer] ->
+         {:ok, [sndbuf: 10240, recbuf: 10240, buffer: 10240]}
+       end,
+       setopts: fn :sock, _opts -> :ok end
+     ]},
+    {:ssl, [],
+     [
+       connect: fn _addr, _port, _opts, _timeout -> {:ok, :ssl} end,
+       getopts: fn :ssl, [:sndbuf, :recbuf, :buffer] ->
+         {:ok, [sndbuf: 10240, recbuf: 10240, buffer: 10240]}
+       end,
+       setopts: fn :ssl, _opts -> :ok end,
+       send: fn :ssl, _data -> :ok end,
+       recv: fn :ssl, 0, _timeout -> {:ok, Wire.pack(@connect_response)} end
+     ]},
+    {:gen_tcp, [:unstick],
+     [
+       connect: fn _addr, _port, _opts, _timeout -> {:ok, :sock} end,
+       send: fn :sock, _data -> :ok end,
+       recv: fn :sock, 0, _timeout -> {:ok, Wire.pack(@connect_response)} end
+     ]}
+  ]) do
+    :ok
+  end
+
+  describe "Given a Connector" do
+    test "it can connect to a server" do
+      assert Connector.connect(self(), @connect_opts) ==
+               {:ok, :sock, "#{@host}:#{@port}"}
+
+      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:inet.getopts(:sock, [:sndbuf, :recbuf, :buffer]))
+      assert_called(:inet.setopts(:sock, buffer: 10240))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
+      assert_called(:gen_tcp.recv(:sock, 0, @timeout))
+    end
+
+    test "it can connect to a server with SSL" do
+      assert Connector.connect(self(), @connect_opts ++ [ssl: true]) ==
+               {:ok, :ssl, "#{@host}:#{@port}"}
+
+      assert_called(:ssl.connect(String.to_charlist(@host), @port, @ssl_opts, @timeout))
+      assert_called(:ssl.getopts(:ssl, [:sndbuf, :recbuf, :buffer]))
+      assert_called(:ssl.setopts(:ssl, buffer: 10240))
+      assert_called(:ssl.send(:ssl, Wire.pack(Frame.new_connect_request())))
+      assert_called(:ssl.recv(:ssl, 0, @timeout))
+    end
+
+    test_with_mock "it may be failed when connect to a server", :gen_tcp, [:unstick],
+      connect: fn _addr, _port, _opts, _timeout -> {:error, :foobar} end do
+      assert Connector.connect(self(), @connect_opts) == {:error, :foobar}
+
+      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+    end
+
+    test_with_mock "it may be failed when send connect request", :gen_tcp, [:unstick],
+      connect: fn _addr, _port, _opts, _timeout -> {:ok, :sock} end,
+      send: fn :sock, _data -> {:error, :foobar} end do
+      assert Connector.connect(self(), @connect_opts) == {:error, :foobar}
+
+      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
+    end
+
+    test "it can connect to a server with auth info" do
+      assert Connector.connect(
+               self(),
+               @connect_opts ++ [auth_info: {:digest, {"username", "password"}}]
+             ) ==
+               {:ok, :sock, "#{@host}:#{@port}"}
+
+      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
+
+      assert_called_exactly(
+        :gen_tcp.send(:sock, Wire.pack(Frame.new_auth_request("digest", "username:password"))),
+        1
+      )
+    end
+
+    test "it can connect to a server with multiple auth info" do
+      assert Connector.connect(
+               self(),
+               @connect_opts ++
+                 [
+                   auth_info: [
+                     {:digest, {"username", "password"}},
+                     {:ip, {127, 0, 0, 1}},
+                     {:ip, ":1"},
+                     {:x509, "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"}
+                   ]
+                 ]
+             ) ==
+               {:ok, :sock, "#{@host}:#{@port}"}
+
+      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
+
+      assert_called_exactly(
+        :gen_tcp.send(
+          :sock,
+          Wire.pack(Frame.new_auth_request("digest", "username:password")) <>
+            Wire.pack(Frame.new_auth_request("ip", "127.0.0.1")) <>
+            Wire.pack(Frame.new_auth_request("ip", ":1")) <>
+            Wire.pack(
+              Frame.new_auth_request(
+                "x509",
+                "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"
+              )
+            )
+        ),
+        1
+      )
+    end
+  end
+end

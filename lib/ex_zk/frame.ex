@@ -4,8 +4,9 @@ defmodule ExZk.Frame do
   alias ExZk.Proto.{
     AuthPacket,
     ConnectRequest,
-    RequestHeader,
+    ConnectResponse,
     ReplyHeader,
+    RequestHeader,
     SetWatches,
     SetWatches2,
     WatcherEvent
@@ -22,7 +23,10 @@ defmodule ExZk.Frame do
         }
 
   @type request :: ConnectRequest.t() | AuthPacket.t() | SetWatches.t() | SetWatches2.t()
-  @type response :: :pong | {:auth_failed, error()} | {:notification, zxid(), WatcherEvent.t()}
+  @type(
+    response :: ConnectResponse.t(),
+    :pong | {:auth_failed, error()} | {:notification, zxid(), WatcherEvent.t()}
+  )
   @type error :: integer()
   @type xid :: integer()
   @type zxid :: integer()
@@ -156,8 +160,14 @@ defmodule ExZk.Frame do
   ##
 
   defimpl ExZk.Wire.Pack do
-    def pack(%ExZk.Frame{req_hdr: req_hdr, request: request}) do
-      buf = ExZk.Wire.pack([req_hdr, request])
+    def pack(%ExZk.Frame{} = frame) do
+      buf =
+        if !is_nil(frame.req_hdr) or !is_nil(frame.request) do
+          ExZk.Wire.pack([frame.req_hdr, frame.request])
+        else
+          ExZk.Wire.pack([frame.reply_hdr, frame.response])
+        end
+
       <<byte_size(buf)::32>> <> buf
     end
   end

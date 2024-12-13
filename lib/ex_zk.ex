@@ -2,6 +2,7 @@ defmodule ExZk do
   @moduledoc """
   This is the documentation for the ExZk project.
   """
+  alias ExZk.StartOptions
 
   use Application
 
@@ -45,23 +46,24 @@ defmodule ExZk do
       iex> is_pid(pid)
       true
 
-      iex> {:ok, pid} = ExZk.start_link(name: :ex_zk)
-      iex> is_pid(pid)
-      true
-
   """
   @spec start_link(binary() | list(option())) :: {:ok, pid()} | :ignore | {:error, term()}
   def start_link(uri_or_options \\ [])
 
   def start_link(uri) when is_binary(uri), do: start_link(uri, [])
-  def start_link(opts) when is_list(opts), do: ExZk.Connection.start_link(opts)
+
+  def start_link(opts) when is_list(opts) do
+    with({:ok, opts} <- StartOptions.validate(opts)) do
+      ExZk.Connection.start_link(opts)
+    end
+  end
 
   @spec start_link(binary(), list(option())) :: {:ok, pid()} | :ignore | {:error, term()}
-  def start_link(uri, other_options)
-
-  def start_link(uri, other_options) when is_binary(uri) and is_list(other_options) do
-    opts = ExZk.URI.to_start_options(uri)
-    start_link(Keyword.merge(opts, other_options))
+  def start_link(uri, opts) when is_binary(uri) and is_list(opts) do
+    uri
+    |> ExZk.URI.to_start_options()
+    |> Keyword.merge(opts)
+    |> start_link()
   end
 
   ####

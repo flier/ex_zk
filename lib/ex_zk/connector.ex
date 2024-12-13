@@ -1,5 +1,6 @@
 defmodule ExZk.Connector do
-  import ExZk.Format
+  alias ExZk.{Format, Frame, Wire, Auth}
+  alias ExZk.Proto.ConnectResponse
 
   ####
   ## Public API
@@ -14,30 +15,37 @@ defmodule ExZk.Connector do
     port = Keyword.fetch!(opts, :port)
 
     transport = if opts[:ssl], do: :ssl, else: :gen_tcp
-    socket_opts = build_socket_opts(transport, opts[:socket_opts])
+    socket_opts = build_socket_opts(transport, Keyword.get(opts, :socket_opts, []))
     timeout = Keyword.fetch!(opts, :timeout)
 
-    with {:ok, socket} <- transport.connect(host, port, socket_opts, timeout),
+    with {:ok, socket} <- transport.connect(String.to_charlist(host), port, socket_opts, timeout),
          :ok <- setup_socket_buffers(transport, socket) do
-      # Here, we should stop if AUTHing or SELECTing a DB fails with a *semantic* error
-      # because disconnecting and retrying doesn't make sense, but we should not
-      # stop if the issue is at the network layer, because it might happen due to
-      # a race condition where the network conn breaks after connecting but before
-      # AUTH/SELECT.
-      case auth(transport, socket, opts, timeout) do
+      case negotiate(transport, socket, opts, timeout) do
         :ok ->
-          {:ok, socket, format_host_and_port(host, port)}
-          # {:error, %ExZk.Error{} = error} -> {:stop, error}
-          # {:error, :extra_bytes_after_reply} -> {:stop, :extra_bytes_after_reply}
-          # {:error, reason} -> {:error, reason}
+          {:ok, socket, Format.format_host_and_port(host, port)}
+
+        {:error, %ExZk.Error{} = error} ->
+          {:stop, error}
+
+        {:error, reason} ->
+          {:error, reason}
       end
     end
   end
 
-  @spec auth(transport :: module(), socket :: ExZk.Socket.socket(), opts :: keyword(), timeout()) ::
-          :ok
-  def auth(_transport, _socket, _opts, _timeout) do
-    :ok
+  @spec negotiate(
+          transport :: module(),
+          socket :: :inet.socket(),
+          opts :: keyword(),
+          timeout()
+        ) ::
+          :ok | {:error, term} | {:stop, term}
+  def negotiate(transport, socket, opts, timeout) do
+    with :ok <- send_connect_request(transport, socket, opts),
+         :ok <- maybe_auth(transport, socket, opts),
+         {:ok, res} <- recv_response(transport, socket, timeout) do
+      :ok
+    end
   end
 
   ####
@@ -75,6 +83,63 @@ defmodule ExZk.Connector do
       recbuf = Keyword.fetch!(opts, :recbuf)
       buffer = Keyword.fetch!(opts, :buffer)
       inet_mod.setopts(socket, buffer: buffer |> max(sndbuf) |> max(recbuf))
+    end
+  end
+
+  defp send_connect_request(transport, socket, opts) do
+    frame =
+      Frame.new_connect_request(
+        opts[:last_zxid] || 0,
+        opts[:session_timeout] || 0,
+        opts[:session_id] || 0,
+        opts[:password] || "",
+        opts[:readonly]
+      )
+
+    data = Wire.pack(frame)
+
+    transport.send(socket, data)
+  end
+
+  defp maybe_auth(transport, socket, opts) do
+    case new_auth_request(opts[:auth_info]) |> Enum.map_join(&Wire.pack(&1)) do
+      "" -> :ok
+      data -> transport.send(socket, data)
+    end
+  end
+
+  defp new_auth_request(nil), do: []
+
+  defp new_auth_request(auth_info) when is_list(auth_info) do
+    auth_info |> Enum.flat_map(&new_auth_request(&1))
+  end
+
+  defp new_auth_request({:digest, {username, password}}),
+    do: new_auth_request(Auth.digest(username, password))
+
+  defp new_auth_request({:ip, addr}) when is_binary(addr) or is_tuple(addr),
+    do: new_auth_request(Auth.ip(addr))
+
+  defp new_auth_request({:x509, subject}) when is_binary(subject),
+    do: new_auth_request(Auth.x509(subject))
+
+  defp new_auth_request(%Auth.Info{scheme: scheme, data: data}),
+    do: [Frame.new_auth_request(scheme, data)]
+
+  defp recv_response(transport, socket, timeout, buffered \\ <<>>) do
+    with {:ok, data} <- transport.recv(socket, 0, timeout) do
+      case buffered <> data do
+        <<sz::32, data::binary-size(sz), rest::binary>> ->
+          if byte_size(rest) == 0 do
+            {:ok, res, _rest} = ConnectResponse.unpack(data)
+            {:ok, res}
+          else
+            {:error, :extra_bytes_after_reply}
+          end
+
+        buffered ->
+          recv_response(transport, socket, timeout, buffered)
+      end
     end
   end
 end

@@ -1,7 +1,7 @@
 defmodule ExZk.Connection do
   require Logger
 
-  alias ExZk.{Auth, Frame, Socket, WatchedEvent, WatchManager}
+  alias ExZk.{Frame, Socket, WatchedEvent, WatchManager}
   alias ExZk.Proto.WatcherEvent
   alias ExZk.Watcher.Event
 
@@ -162,12 +162,6 @@ defmodule ExZk.Connection do
         {:connected, socket, _sock, addr},
         %__MODULE__{opts: opts, socket: socket, last_zxid: last_zxid} = data
       ) do
-    :ok = Socket.send_frame(socket, new_connect_request(opts, last_zxid, data.session_id))
-
-    for auth_request <- new_auth_request(opts[:auth_info]) do
-      :ok = Socket.send_frame(socket, auth_request)
-    end
-
     if !opts[:disable_auto_watch_reset] do
       for set_watches <- new_set_watches_request(last_zxid, data.watch_manager) do
         :ok = Socket.send_frame(socket, set_watches)
@@ -318,34 +312,6 @@ defmodule ExZk.Connection do
   defp queue_event(%__MODULE__{waiting_events: waiting_events} = data, event) do
     %__MODULE__{data | waiting_events: :queue.in(%WatcherSetEvent{event: event}, waiting_events)}
   end
-
-  defp new_connect_request(opts, last_zxid, session_id) do
-    Frame.new_connect_request(
-      last_zxid || 0,
-      opts[:session_timeout],
-      session_id || opts[:session_id],
-      opts[:password],
-      opts[:readonly]
-    )
-  end
-
-  defp new_auth_request(nil), do: []
-
-  defp new_auth_request(auth_info) when is_list(auth_info) do
-    auth_info |> Enum.flat_map(&new_auth_request(&1))
-  end
-
-  defp new_auth_request({:digest, {username, password}}),
-    do: new_auth_request(Auth.digest(username, password))
-
-  defp new_auth_request({:ip, addr}) when is_binary(addr) or is_tuple(addr),
-    do: new_auth_request(Auth.ip(addr))
-
-  defp new_auth_request({:x509, subject}) when is_binary(subject),
-    do: new_auth_request(Auth.x509(subject))
-
-  defp new_auth_request(%Auth.Info{scheme: scheme, data: data}),
-    do: [Frame.new_auth_request(scheme, data)]
 
   @set_watches_max_length 128 * 1024
 
