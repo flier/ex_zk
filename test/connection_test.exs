@@ -6,11 +6,14 @@ defmodule ConnectionTest do
 
   import ExZk.Wire
   alias ExZk.Defs.OpCode
-  alias ExZk.{Connection, Connector, ConnectionError, Frame}
+  alias ExZk.{Connection, Connector, Frame}
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
+
+  @close_session Frame.new_close_session()
 
   setup_with_mocks([
     {:inet, [:no_link, :unstick, :passthrough], [setopts: fn _sock, _opts -> :ok end]},
+    {:gen_tcp, [:unstick], [send: fn :sock, _data -> :ok end]},
     {:ssl, [:no_link], [setopts: fn _sock, _opts -> :ok end]},
     {Connector, [],
      [connect: fn _pid, _opts -> {:ok, :sock, %Connector.Connected{addr: :addr}} end]}
@@ -33,6 +36,8 @@ defmodule ConnectionTest do
 
       # stop the connection
       Connection.stop(conn)
+
+      assert_called_exactly(:gen_tcp.send(:sock, pack(@close_session)), 1)
 
       # it should be terminated
       Process.sleep(100)
@@ -85,7 +90,7 @@ defmodule ConnectionTest do
 
         # connect to the server
         assert Connection.start_link(sync_connect: true) ==
-                 {:error, %ConnectionError{reason: :foobar}}
+                 {:error, %Connection.Error{reason: :foobar}}
 
         assert_called_exactly(
           Connector.connect(:_, sync_connect: true),

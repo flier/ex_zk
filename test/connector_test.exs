@@ -3,6 +3,7 @@ defmodule ConnectorTest do
 
   import Mock
 
+  import ExZk.Frame
   alias ExZk.{Connector, Frame, Wire}
   alias ExZk.Proto.ConnectResponse
 
@@ -62,7 +63,7 @@ defmodule ConnectorTest do
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
       assert_called(:inet.getopts(:sock, [:sndbuf, :recbuf, :buffer]))
       assert_called(:inet.setopts(:sock, buffer: 10240))
-      assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
       assert_called(:gen_tcp.recv(:sock, 0, @timeout))
     end
 
@@ -72,7 +73,7 @@ defmodule ConnectorTest do
       assert_called(:ssl.connect(String.to_charlist(@host), @port, @ssl_opts, @timeout))
       assert_called(:ssl.getopts(:ssl, [:sndbuf, :recbuf, :buffer]))
       assert_called(:ssl.setopts(:ssl, buffer: 10240))
-      assert_called(:ssl.send(:ssl, Wire.pack(Frame.new_connect_request())))
+      assert_called(:ssl.send(:ssl, Wire.pack(new_connect_request())))
       assert_called(:ssl.recv(:ssl, 0, @timeout))
     end
 
@@ -89,7 +90,7 @@ defmodule ConnectorTest do
       assert Connector.connect(self(), @connect_opts) == {:error, :foobar}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
-      assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
     end
 
     test "it can connect to a server with auth info" do
@@ -99,46 +100,41 @@ defmodule ConnectorTest do
              ) == {:ok, :sock, @connected}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
-      assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
 
       assert_called_exactly(
-        :gen_tcp.send(:sock, Wire.pack(Frame.new_auth_request("digest", "username:password"))),
+        :gen_tcp.send(:sock, Wire.pack(new_auth_packet("digest", "username:password"))),
         1
       )
     end
 
     test "it can connect to a server with multiple auth info" do
-      assert Connector.connect(
-               self(),
-               @connect_opts ++
-                 [
-                   auth_info: [
-                     {:digest, {"username", "password"}},
-                     {:ip, {127, 0, 0, 1}},
-                     {:ip, ":1"},
-                     {:x509, "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"}
-                   ]
-                 ]
-             ) == {:ok, :sock, @connected}
+      auth_info = [
+        auth_info: [
+          {:digest, {"username", "password"}},
+          {:ip, {127, 0, 0, 1}},
+          {:ip, ":1"},
+          {:x509, "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"}
+        ]
+      ]
+
+      assert Connector.connect(self(), @connect_opts ++ auth_info) == {:ok, :sock, @connected}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
-      assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
 
-      assert_called_exactly(
-        :gen_tcp.send(
-          :sock,
-          Wire.pack(Frame.new_auth_request("digest", "username:password")) <>
-            Wire.pack(Frame.new_auth_request("ip", "127.0.0.1")) <>
-            Wire.pack(Frame.new_auth_request("ip", ":1")) <>
-            Wire.pack(
-              Frame.new_auth_request(
-                "x509",
-                "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"
-              )
-            )
-        ),
-        1
-      )
+      auth_packets =
+        Wire.pack([
+          new_auth_packet("digest", "username:password"),
+          new_auth_packet("ip", "127.0.0.1"),
+          new_auth_packet("ip", ":1"),
+          new_auth_packet(
+            "x509",
+            "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"
+          )
+        ])
+
+      assert_called_exactly(:gen_tcp.send(:sock, auth_packets), 1)
     end
   end
 end

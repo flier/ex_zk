@@ -1,5 +1,6 @@
 defmodule ExZk.Connector do
-  alias ExZk.{Format, Frame, Wire, Auth}
+  import ExZk.Frame
+  alias ExZk.{Format, Wire, Auth}
   alias ExZk.Proto.ConnectResponse
 
   defmodule Connected do
@@ -110,7 +111,7 @@ defmodule ExZk.Connector do
 
   defp send_connect_request(transport, socket, opts) do
     frame =
-      Frame.new_connect_request(
+      new_connect_request(
         opts[:last_zxid] || 0,
         opts[:session_timeout] || 0,
         opts[:session_id] || 0,
@@ -146,7 +147,7 @@ defmodule ExZk.Connector do
     do: new_auth_request(Auth.x509(subject))
 
   defp new_auth_request(%Auth.Info{scheme: scheme, data: data}),
-    do: [Frame.new_auth_request(scheme, data)]
+    do: [new_auth_packet(scheme, data)]
 
   defp recv_connect_response(transport, socket, timeout, buffered \\ <<>>) do
     with {:ok, data} <- transport.recv(socket, 0, timeout) do

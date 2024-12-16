@@ -1,10 +1,31 @@
 defmodule ExZk.Connection do
   require Logger
 
+  import ExZk.Frame
   alias ExZk.{Frame, Socket, WatchedEvent, WatchManager}
   alias ExZk.Connector.Connected
 
   @behaviour :gen_statem
+
+  defmodule Error do
+    defexception [:reason]
+
+    @type t() :: %__MODULE__{reason: atom}
+
+    @impl true
+    def message(%__MODULE__{reason: reason}) do
+      format_reason(reason)
+    end
+
+    # :inet.format_error/1 doesn't format closed messages.
+    defp format_reason(:tcp_closed), do: "TCP connection closed"
+    defp format_reason(:ssl_closed), do: "SSL connection closed"
+
+    # Manually returned by us when the connection is closed and someone tries to send a command to Zookeeper.
+    defp format_reason(:closed), do: "the connection to Zookeeper is closed"
+
+    defp format_reason(reason), do: reason |> :inet.format_error() |> List.to_string()
+  end
 
   defmodule WatcherSetEvent do
     defstruct [:watchers, :event]
@@ -34,15 +55,16 @@ defmodule ExZk.Connection do
           reconnect_times: integer(),
           session_id: integer(),
           session_timeout: timeout(),
-          last_zxid: Frame.zxid(),
+          last_zxid: zxid(),
           last_ping_sent: Time.t(),
           watch_manager: WatchManager.t(),
           waiting_events: :queue.queue(WatcherSetEvent.t())
         }
 
-  @type option :: {:session_id, integer()} | ExZk.Socket.option() | :gen_statem.start_opt()
+  @type option :: {:session_id, integer()} | Socket.option() | :gen_statem.start_opt()
 
   @type status :: :disconnected | :connecting | :connected
+  @type zxid :: Frame.zxid()
 
   ####
   ## Public API
@@ -98,7 +120,7 @@ defmodule ExZk.Connection do
 
   @impl true
   def init(opts) do
-    {:ok, socket} = ExZk.Socket.start_link(self(), opts)
+    {:ok, socket} = Socket.start_link(self(), opts)
 
     data = %__MODULE__{
       opts: opts,
@@ -114,7 +136,7 @@ defmodule ExZk.Connection do
           {:ok, :connected, on_connected(data, socket, connected)}
 
         {:stopped, ^socket, reason} ->
-          {:stop, %ExZk.ConnectionError{reason: reason}}
+          {:stop, %Error{reason: reason}}
       end
     else
       {:ok, :connecting, data}
@@ -123,8 +145,10 @@ defmodule ExZk.Connection do
 
   @impl true
   def terminate(reason, _state, %__MODULE__{socket: socket}) do
+    :ok = Socket.send_frame(socket, new_close_session())
+
     if Process.alive?(socket) and reason == :normal do
-      :ok = ExZk.Socket.normal_stop(socket)
+      :ok = Socket.normal_stop(socket)
     end
   end
 
@@ -134,7 +158,7 @@ defmodule ExZk.Connection do
 
   # "Disconnected" state: the connection is down and the socket is not alive.
   def disconnected({:timeout, :reconnect}, _timer_info, %__MODULE__{opts: opts} = data) do
-    {:ok, socket} = ExZk.Socket.start_link(self(), opts)
+    {:ok, socket} = Socket.start_link(self(), opts)
 
     {:next_state, :connecting, %{data | socket: socket}}
   end
@@ -225,7 +249,7 @@ defmodule ExZk.Connection do
   end
 
   def connected(:cast, :ping, %__MODULE__{socket: socket} = data) do
-    :ok = Socket.send_frame(socket, Frame.new_ping_request())
+    :ok = Socket.send_frame(socket, new_ping_request())
 
     {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
   end
@@ -254,7 +278,7 @@ defmodule ExZk.Connection do
 
   defp disconnect(%__MODULE__{opts: opts} = data, reason) do
     if opts[:exit_on_disconnection] do
-      {:stop, %ExZk.ConnectionError{reason: reason}}
+      {:stop, %Error{reason: reason}}
     else
       {backoff, data} = next_backoff(data)
 
@@ -328,14 +352,14 @@ defmodule ExZk.Connection do
     persistent_recursive_watches = watches[:persistent_recursive] || []
 
     if persistent_watches == [] and persistent_recursive_watches == [] do
-      Frame.new_set_watches_request(
+      new_set_watches_request(
         last_zxid,
         data_watches,
         exists_watches,
         child_watches
       )
     else
-      Frame.new_set_watches2_request(
+      new_set_watches2_request(
         last_zxid,
         data_watches,
         exists_watches,

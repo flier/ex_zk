@@ -51,8 +51,8 @@ defmodule ExZk.Frame do
     }
   end
 
-  @spec new_auth_request(scheme :: String.t(), data :: binary()) :: t()
-  def new_auth_request(scheme, data) do
+  @spec new_auth_packet(scheme :: String.t(), data :: binary()) :: t()
+  def new_auth_packet(scheme, data) do
     %__MODULE__{
       req_hdr: new_request_header(@auth_packet_xid, :auth),
       request: %AuthPacket{scheme: scheme, auth: data}
@@ -131,6 +131,8 @@ defmodule ExZk.Frame do
       }
     }
   end
+
+  def new_close_session(), do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
 
   def unpack(buf) when is_binary(buf) do
     {:ok, reply_hdr, rest} = ReplyHeader.unpack(buf)
