@@ -1,4 +1,5 @@
 defmodule ExZk.Frame do
+  require Logger
   alias ExZk.Defs.OpCode
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
@@ -157,6 +158,9 @@ defmodule ExZk.Frame do
               path: path,
               zxid: zxid
             }}, rest}
+
+        %ReplyHeader{xid: xid} when xid < 0 ->
+          Logger.warning("Received unknown reply with xid: #{xid}")
 
         _ ->
           {nil, rest}
