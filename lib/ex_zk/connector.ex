@@ -64,8 +64,9 @@ defmodule ExZk.Connector do
           {:ok, ConnectResponse.t()} | {:error, term} | {:stop, term}
   def negotiate(transport, socket, opts, timeout) do
     with :ok <- send_connect_request(transport, socket, opts),
+         {:ok, res} <- recv_connect_response(transport, socket, timeout),
          :ok <- maybe_auth(transport, socket, opts) do
-      recv_connect_response(transport, socket, timeout)
+      {:ok, res}
     end
   end
 
