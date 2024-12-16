@@ -1,15 +1,15 @@
 defmodule ExZk.Connection do
   require Logger
 
-  alias ExZk.{Frame, Socket, WatchManager}
-  alias ExZk.Proto.{ConnectResponse, WatcherEvent}
+  alias ExZk.{Frame, Socket, WatchedEvent, WatchManager}
+  alias ExZk.Connector.Connected
 
   @behaviour :gen_statem
 
   defmodule WatcherSetEvent do
     defstruct [:watchers, :event]
 
-    @type t :: %__MODULE__{watchers: list(), event: WatcherEvent.t()}
+    @type t :: %__MODULE__{watchers: list(), event: WatchedEvent.t()}
   end
 
   defstruct [
@@ -110,12 +110,12 @@ defmodule ExZk.Connection do
       # We don't need to handle a timeout here because we're using a timeout in
       # connect/3 down the pipe.
       receive do
-        {:connected, ^socket, _sock, addr, res} ->
+        {:connected, ^socket, _sock, %Connected{} = res} ->
           {:ok, :connected,
            %__MODULE__{
              data
-             | connected_address: addr,
-               session_timeout: res.time_out,
+             | connected_address: res.addr,
+               session_timeout: res.session_timeout,
                session_id: res.session_id
            }}
 
@@ -166,7 +166,7 @@ defmodule ExZk.Connection do
   # "Connecting" state: the connection is on going and the socket is not alive.
   def connecting(
         :info,
-        {:connected, socket, _sock, addr, %ConnectResponse{} = res},
+        {:connected, socket, _sock, %Connected{} = res},
         %__MODULE__{opts: opts, socket: socket, last_zxid: last_zxid} = data
       ) do
     if !opts[:disable_auto_watch_reset] do
@@ -179,8 +179,8 @@ defmodule ExZk.Connection do
      %{
        data
        | socket: socket,
-         connected_address: addr,
-         session_timeout: res.time_out,
+         connected_address: res.addr,
+         session_timeout: res.session_timeout,
          session_id: res.session_id,
          backoff_current: nil,
          reconnect_times: nil

@@ -5,16 +5,15 @@ defmodule ConnectionTest do
   import Mock
 
   import ExZk.Wire
-  alias ExZk.Proto.ConnectResponse
   alias ExZk.Defs.OpCode
-  alias ExZk.Frame
-  alias ExZk.{Connection, Connector, ConnectionError}
+  alias ExZk.{Connection, Connector, ConnectionError, Frame}
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
 
   setup_with_mocks([
     {:inet, [:no_link, :unstick, :passthrough], [setopts: fn _sock, _opts -> :ok end]},
     {:ssl, [:no_link], [setopts: fn _sock, _opts -> :ok end]},
-    {Connector, [], [connect: fn _pid, _opts -> {:ok, :sock, :addr, %ConnectResponse{}} end]}
+    {Connector, [],
+     [connect: fn _pid, _opts -> {:ok, :sock, %Connector.Connected{addr: :addr}} end]}
   ]) do
     :ok
   end

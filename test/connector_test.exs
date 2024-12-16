@@ -19,6 +19,14 @@ defmodule ConnectorTest do
     session_id: 123
   }
 
+  @connected %Connector.Connected{
+    addr: "#{@host}:#{@port}",
+    session_timeout: @connect_response.time_out,
+    session_id: @connect_response.session_id,
+    passwd: "",
+    readonly: false
+  }
+
   setup_with_mocks([
     {:inet, [:unstick, :passthrough],
      [
@@ -49,8 +57,7 @@ defmodule ConnectorTest do
 
   describe "Given a Connector" do
     test "it can connect to a server" do
-      assert Connector.connect(self(), @connect_opts) ==
-               {:ok, :sock, "#{@host}:#{@port}", @connect_response}
+      assert Connector.connect(self(), @connect_opts) == {:ok, :sock, @connected}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
       assert_called(:inet.getopts(:sock, [:sndbuf, :recbuf, :buffer]))
@@ -60,8 +67,7 @@ defmodule ConnectorTest do
     end
 
     test "it can connect to a server with SSL" do
-      assert Connector.connect(self(), @connect_opts ++ [ssl: true]) ==
-               {:ok, :ssl, "#{@host}:#{@port}", @connect_response}
+      assert Connector.connect(self(), @connect_opts ++ [ssl: true]) == {:ok, :ssl, @connected}
 
       assert_called(:ssl.connect(String.to_charlist(@host), @port, @ssl_opts, @timeout))
       assert_called(:ssl.getopts(:ssl, [:sndbuf, :recbuf, :buffer]))
@@ -90,8 +96,7 @@ defmodule ConnectorTest do
       assert Connector.connect(
                self(),
                @connect_opts ++ [auth_info: {:digest, {"username", "password"}}]
-             ) ==
-               {:ok, :sock, "#{@host}:#{@port}", @connect_response}
+             ) == {:ok, :sock, @connected}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
       assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
@@ -114,8 +119,7 @@ defmodule ConnectorTest do
                      {:x509, "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"}
                    ]
                  ]
-             ) ==
-               {:ok, :sock, "#{@host}:#{@port}", @connect_response}
+             ) == {:ok, :sock, @connected}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
       assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))

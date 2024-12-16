@@ -2,12 +2,34 @@ defmodule ExZk.Connector do
   alias ExZk.{Format, Frame, Wire, Auth}
   alias ExZk.Proto.ConnectResponse
 
+  defmodule Connected do
+    defstruct [:addr, :session_timeout, :session_id, :passwd, :readonly]
+
+    @type t :: %__MODULE__{
+            addr: String.t(),
+            session_timeout: timeout(),
+            session_id: integer(),
+            passwd: binary(),
+            readonly: boolean() | nil
+          }
+
+    def new(addr, res) do
+      %__MODULE__{
+        addr: addr,
+        session_timeout: res.time_out,
+        session_id: res.session_id,
+        passwd: res.passwd,
+        readonly: res.read_only
+      }
+    end
+  end
+
   ####
   ## Public API
   ##
 
   @spec connect(conn :: pid(), opts :: keyword()) ::
-          {:ok, ExZk.Socket.socket(), connected_address :: String.t(), ConnectResponse.t()}
+          {:ok, ExZk.Socket.socket(), Connected.t()}
           | {:error, term}
           | {:stop, term}
   def connect(conn, opts) when is_pid(conn) and is_list(opts) do
@@ -22,7 +44,7 @@ defmodule ExZk.Connector do
          :ok <- setup_socket_buffers(transport, socket) do
       case negotiate(transport, socket, opts, timeout) do
         {:ok, res} ->
-          {:ok, socket, Format.format_host_and_port(host, port), res}
+          {:ok, socket, Connected.new(Format.format_host_and_port(host, port), res)}
 
         {:error, %ExZk.Error{} = error} ->
           {:stop, error}
