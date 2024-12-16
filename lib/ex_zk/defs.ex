@@ -45,4 +45,32 @@ defmodule ExZk.Defs do
     admin: 16,
     all: 31
   )
+
+  defenum(CreateMode,
+    persistent: 0,
+    ephemeral: 1,
+    persistent_sequential: 2,
+    ephemeral_sequential: 3,
+    container: 4,
+    persistent_with_ttl: 5,
+    persistent_sequential_with_ttl: 6
+  )
+
+  @spec is_ephemeral(CreateMode.t()) :: boolean()
+  def is_ephemeral(mode), do: mode in [:ephemeral, :ephemeral_sequential]
+
+  @spec is_sequential(CreateMode.t()) :: boolean()
+  def is_sequential(mode),
+    do:
+      mode in [
+        :persistent_sequential,
+        :ephemeral_sequential,
+        :persistent_sequential_with_ttl
+      ]
+
+  @spec is_container(CreateMode.t()) :: boolean()
+  def is_container(mode), do: mode == :container
+
+  @spec is_ttl(CreateMode.t()) :: boolean()
+  def is_ttl(mode), do: mode in [:persistent_with_ttl, :persistent_sequential_with_ttl]
 end

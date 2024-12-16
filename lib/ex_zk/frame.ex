@@ -1,6 +1,9 @@
 defmodule ExZk.Frame do
   require Logger
-  alias ExZk.Defs.OpCode
+
+  import ExZk.Defs
+  alias ExZk.Data.ACL
+  alias ExZk.Defs.{CreateMode, OpCode}
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
 
@@ -8,6 +11,10 @@ defmodule ExZk.Frame do
     AuthPacket,
     ConnectRequest,
     ConnectResponse,
+    CreateRequest,
+    CreateTTLRequest,
+    Create2Response,
+    CreateResponse,
     ReplyHeader,
     RequestHeader,
     SetWatches,
@@ -25,18 +32,27 @@ defmodule ExZk.Frame do
           payload: binary() | nil
         }
 
-  @type request :: ConnectRequest.t() | AuthPacket.t() | SetWatches.t() | SetWatches2.t()
+  @type request ::
+          ConnectRequest.t()
+          | AuthPacket.t()
+          | SetWatches.t()
+          | SetWatches2.t()
+          | CreateRequest.t()
+          | CreateTTLRequest.t()
   @type response ::
           :pong
           | {:auth_failed, error()}
           | {:notification, zxid(), WatcherEvent.t()}
           | ConnectResponse.t()
+          | CreateResponse.t()
+          | Create2Response.t()
 
   @type error :: integer()
   @type zxid :: integer()
   @type watches :: list(String.t())
 
   @default_protocol_version 0
+
   @notification_xid -1
   @ping_xid -2
   @auth_packet_xid -4
@@ -134,11 +150,54 @@ defmodule ExZk.Frame do
     }
   end
 
+  @type create_option ::
+          {:acl, list(ACL.t())}
+          | {:mode, CreateMode.t()}
+          | {:ttl, integer()}
+
+  @spec new_create_request(path :: String.t(), data :: binary(), opts :: [create_option()]) :: t()
+  def new_create_request(path, data \\ <<>>, opts \\ []) do
+    acl = Keyword.get(opts, :acl, [])
+    mode = Keyword.get(opts, :mode, :persistent)
+    ttl = Keyword.get(opts, :ttl, 0)
+
+    op_code =
+      cond do
+        is_ttl(mode) -> :create_ttl
+        is_container(mode) -> :create_container
+        true -> :create
+      end
+
+    request =
+      if is_ttl(mode) do
+        %CreateTTLRequest{
+          path: path,
+          data: data,
+          acl: acl,
+          flags: CreateMode.value!(mode),
+          ttl: ttl
+        }
+      else
+        %CreateRequest{
+          path: path,
+          data: data,
+          acl: acl,
+          flags: CreateMode.value!(mode)
+        }
+      end
+
+    %__MODULE__{
+      req_hdr: new_request_header(op_code),
+      request: request
+    }
+  end
+
   @spec new_close_session() :: t()
   def new_close_session(), do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
 
-  def unpack(buf) when is_binary(buf) do
-    {:ok, reply_hdr, rest} = ReplyHeader.unpack(buf)
+  @spec unpack(data :: binary()) :: t()
+  def unpack(data) when is_binary(data) do
+    {:ok, reply_hdr, rest} = ReplyHeader.unpack(data)
 
     {response, rest} =
       case reply_hdr do
@@ -183,12 +242,14 @@ defmodule ExZk.Frame do
   ##
 
   defimpl ExZk.Wire.Pack do
-    def pack(%ExZk.Frame{} = frame) do
+    alias ExZk.{Frame, Wire}
+
+    def pack(%Frame{} = frame) do
       buf =
         if !is_nil(frame.req_hdr) or !is_nil(frame.request) do
-          ExZk.Wire.pack([frame.req_hdr, frame.request])
+          Wire.pack([frame.req_hdr, frame.request])
         else
-          ExZk.Wire.pack([frame.reply_hdr, frame.response])
+          Wire.pack([frame.reply_hdr, frame.response])
         end
 
       <<byte_size(buf)::32>> <> buf
@@ -199,7 +260,8 @@ defmodule ExZk.Frame do
   ## Private methods
   ##
 
-  defp new_request_header(xid, op_code) do
-    %RequestHeader{xid: xid, type: OpCode.value!(op_code)}
-  end
+  defp new_request_header(op_code), do: new_request_header(0, op_code)
+
+  defp new_request_header(xid, op_code),
+    do: %RequestHeader{xid: xid, type: OpCode.value!(op_code)}
 end
