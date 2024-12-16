@@ -110,14 +110,8 @@ defmodule ExZk.Connection do
       # We don't need to handle a timeout here because we're using a timeout in
       # connect/3 down the pipe.
       receive do
-        {:connected, ^socket, _sock, %Connected{} = res} ->
-          {:ok, :connected,
-           %__MODULE__{
-             data
-             | connected_address: res.addr,
-               session_timeout: res.session_timeout,
-               session_id: res.session_id
-           }}
+        {:connected, ^socket, _sock, %Connected{} = connected} ->
+          {:ok, :connected, on_connected(data, socket, connected)}
 
         {:stopped, ^socket, reason} ->
           {:stop, %ExZk.ConnectionError{reason: reason}}
@@ -166,25 +160,10 @@ defmodule ExZk.Connection do
   # "Connecting" state: the connection is on going and the socket is not alive.
   def connecting(
         :info,
-        {:connected, socket, _sock, %Connected{} = res},
-        %__MODULE__{opts: opts, socket: socket, last_zxid: last_zxid} = data
+        {:connected, socket, _sock, %Connected{} = connected},
+        %__MODULE__{socket: socket} = data
       ) do
-    if !opts[:disable_auto_watch_reset] do
-      for set_watches <- new_set_watches_request(last_zxid, data.watch_manager) do
-        :ok = Socket.send_frame(socket, set_watches)
-      end
-    end
-
-    {:next_state, :connected,
-     %{
-       data
-       | socket: socket,
-         connected_address: res.addr,
-         session_timeout: res.session_timeout,
-         session_id: res.session_id,
-         backoff_current: nil,
-         reconnect_times: nil
-     }}
+    {:next_state, :connected, on_connected(data, socket, connected)}
   end
 
   def connecting(:info, {:stopped, socket, reason}, %__MODULE__{socket: socket} = data) do
@@ -254,6 +233,24 @@ defmodule ExZk.Connection do
   ####
   ## Private methods
   ##
+
+  defp on_connected(%__MODULE__{opts: opts, last_zxid: last_zxid} = data, socket, connected) do
+    if !opts[:disable_auto_watch_reset] do
+      for set_watches <- new_set_watches_request(last_zxid, data.watch_manager) do
+        :ok = Socket.send_frame(socket, set_watches)
+      end
+    end
+
+    %{
+      data
+      | socket: socket,
+        connected_address: connected.addr,
+        session_timeout: connected.session_timeout,
+        session_id: connected.session_id,
+        backoff_current: nil,
+        reconnect_times: nil
+    }
+  end
 
   defp disconnect(%__MODULE__{opts: opts} = data, reason) do
     if opts[:exit_on_disconnection] do
