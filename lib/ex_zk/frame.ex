@@ -26,12 +26,13 @@ defmodule ExZk.Frame do
         }
 
   @type request :: ConnectRequest.t() | AuthPacket.t() | SetWatches.t() | SetWatches2.t()
-  @type(
-    response :: ConnectResponse.t(),
-    :pong | {:auth_failed, error()} | {:notification, zxid(), WatcherEvent.t()}
-  )
+  @type response ::
+          :pong
+          | {:auth_failed, error()}
+          | {:notification, zxid(), WatcherEvent.t()}
+          | ConnectResponse.t()
+
   @type error :: integer()
-  @type xid :: integer()
   @type zxid :: integer()
   @type watches :: list(String.t())
 
@@ -45,17 +46,18 @@ defmodule ExZk.Frame do
   ## Public API
   ##
 
+  @spec new_ping_request() :: t()
   def new_ping_request() do
     %__MODULE__{
       req_hdr: new_request_header(@ping_xid, :ping)
     }
   end
 
-  @spec new_auth_packet(scheme :: String.t(), data :: binary()) :: t()
-  def new_auth_packet(scheme, data) do
+  @spec new_auth_packet(scheme :: String.t(), auth :: binary()) :: t()
+  def new_auth_packet(scheme, auth) do
     %__MODULE__{
       req_hdr: new_request_header(@auth_packet_xid, :auth),
-      request: %AuthPacket{scheme: scheme, auth: data}
+      request: %AuthPacket{scheme: scheme, auth: auth}
     }
   end
 
@@ -132,6 +134,7 @@ defmodule ExZk.Frame do
     }
   end
 
+  @spec new_close_session() :: t()
   def new_close_session(), do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
 
   def unpack(buf) when is_binary(buf) do
