@@ -1,6 +1,7 @@
 defmodule ExZk.Connection do
   require Logger
 
+  alias ExZk.Proto.ConnectResponse
   alias ExZk.{Frame, Socket, WatchedEvent, WatchManager}
   alias ExZk.Proto.WatcherEvent
   alias ExZk.Watcher.Event
@@ -20,6 +21,7 @@ defmodule ExZk.Connection do
     :backoff_current,
     :reconnect_times,
     :session_id,
+    :session_timeout,
     :last_zxid,
     :last_ping_sent,
     :watch_manager,
@@ -33,6 +35,7 @@ defmodule ExZk.Connection do
           backoff_current: timeout(),
           reconnect_times: integer(),
           session_id: integer(),
+          session_timeout: timeout(),
           last_zxid: Frame.zxid(),
           last_ping_sent: Time.t(),
           watch_manager: WatchManager.t(),
@@ -109,8 +112,14 @@ defmodule ExZk.Connection do
       # We don't need to handle a timeout here because we're using a timeout in
       # connect/3 down the pipe.
       receive do
-        {:connected, ^socket, _sock, address} ->
-          {:ok, :connected, %__MODULE__{data | connected_address: address}}
+        {:connected, ^socket, _sock, addr, res} ->
+          {:ok, :connected,
+           %__MODULE__{
+             data
+             | connected_address: addr,
+               session_timeout: res.time_out,
+               session_id: res.session_id
+           }}
 
         {:stopped, ^socket, reason} ->
           {:stop, %ExZk.ConnectionError{reason: reason}}
@@ -159,7 +168,7 @@ defmodule ExZk.Connection do
   # "Connecting" state: the connection is on going and the socket is not alive.
   def connecting(
         :info,
-        {:connected, socket, _sock, addr},
+        {:connected, socket, _sock, addr, %ConnectResponse{} = res},
         %__MODULE__{opts: opts, socket: socket, last_zxid: last_zxid} = data
       ) do
     if !opts[:disable_auto_watch_reset] do
@@ -173,6 +182,8 @@ defmodule ExZk.Connection do
        data
        | socket: socket,
          connected_address: addr,
+         session_timeout: res.time_out,
+         session_id: res.session_id,
          backoff_current: nil,
          reconnect_times: nil
      }}
@@ -296,8 +307,10 @@ defmodule ExZk.Connection do
      %{data | backoff_current: backoff_current, reconnect_times: reconnect_times + 1}}
   end
 
-  defp session_id(%__MODULE__{session_id: nil}), do: "-"
-  defp session_id(%__MODULE__{session_id: session_id}), do: Base.encode16(session_id)
+  defp session_id(%__MODULE__{session_id: session_id}) when session_id in [nil, 0], do: "-"
+
+  defp session_id(%__MODULE__{session_id: session_id}),
+    do: session_id |> Integer.to_string(16) |> String.pad_leading(8, "0")
 
   defp ping_response_time(%__MODULE__{last_ping_sent: nil}), do: %Duration{}
 

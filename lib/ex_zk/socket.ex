@@ -60,9 +60,9 @@ defmodule ExZk.Socket do
 
   @impl true
   def handle_continue([], %{conn: conn, opts: opts, transport: transport} = state) do
-    with {:ok, socket, address} <- Connector.connect(conn, opts),
+    with {:ok, socket, address, response} <- Connector.connect(conn, opts),
          :ok <- setopts(transport, socket, active: :once) do
-      send(conn, {:connected, self(), socket, address})
+      send(conn, {:connected, self(), socket, address, response})
       {:noreply, %{state | socket: socket}}
     else
       {:error, reason} -> stop(reason, state)

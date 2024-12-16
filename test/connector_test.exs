@@ -14,11 +14,9 @@ defmodule ConnectorTest do
   @inet_opts [:binary, {:active, false}]
   @ssl_opts @inet_opts ++ [{:cacertfile, CAStore.file_path()}, verify: :verify_peer, depth: 3]
 
-  @connect_response %Frame{
-    response: %ConnectResponse{
-      time_out: 15_000,
-      session_id: 123
-    }
+  @connect_response %ConnectResponse{
+    time_out: 15_000,
+    session_id: 123
   }
 
   setup_with_mocks([
@@ -37,13 +35,13 @@ defmodule ConnectorTest do
        end,
        setopts: fn :ssl, _opts -> :ok end,
        send: fn :ssl, _data -> :ok end,
-       recv: fn :ssl, 0, _timeout -> {:ok, Wire.pack(@connect_response)} end
+       recv: fn :ssl, 0, _timeout -> {:ok, Wire.pack(%Frame{response: @connect_response})} end
      ]},
     {:gen_tcp, [:unstick],
      [
        connect: fn _addr, _port, _opts, _timeout -> {:ok, :sock} end,
        send: fn :sock, _data -> :ok end,
-       recv: fn :sock, 0, _timeout -> {:ok, Wire.pack(@connect_response)} end
+       recv: fn :sock, 0, _timeout -> {:ok, Wire.pack(%Frame{response: @connect_response})} end
      ]}
   ]) do
     :ok
@@ -52,7 +50,7 @@ defmodule ConnectorTest do
   describe "Given a Connector" do
     test "it can connect to a server" do
       assert Connector.connect(self(), @connect_opts) ==
-               {:ok, :sock, "#{@host}:#{@port}"}
+               {:ok, :sock, "#{@host}:#{@port}", @connect_response}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
       assert_called(:inet.getopts(:sock, [:sndbuf, :recbuf, :buffer]))
@@ -63,7 +61,7 @@ defmodule ConnectorTest do
 
     test "it can connect to a server with SSL" do
       assert Connector.connect(self(), @connect_opts ++ [ssl: true]) ==
-               {:ok, :ssl, "#{@host}:#{@port}"}
+               {:ok, :ssl, "#{@host}:#{@port}", @connect_response}
 
       assert_called(:ssl.connect(String.to_charlist(@host), @port, @ssl_opts, @timeout))
       assert_called(:ssl.getopts(:ssl, [:sndbuf, :recbuf, :buffer]))
@@ -93,7 +91,7 @@ defmodule ConnectorTest do
                self(),
                @connect_opts ++ [auth_info: {:digest, {"username", "password"}}]
              ) ==
-               {:ok, :sock, "#{@host}:#{@port}"}
+               {:ok, :sock, "#{@host}:#{@port}", @connect_response}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
       assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))
@@ -117,7 +115,7 @@ defmodule ConnectorTest do
                    ]
                  ]
              ) ==
-               {:ok, :sock, "#{@host}:#{@port}"}
+               {:ok, :sock, "#{@host}:#{@port}", @connect_response}
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
       assert_called(:gen_tcp.send(:sock, Wire.pack(Frame.new_connect_request())))

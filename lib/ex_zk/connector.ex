@@ -7,7 +7,7 @@ defmodule ExZk.Connector do
   ##
 
   @spec connect(conn :: pid(), opts :: keyword()) ::
-          {:ok, socket :: ExZk.Socket.socket(), connected_address :: String.t()}
+          {:ok, ExZk.Socket.socket(), connected_address :: String.t(), ConnectResponse.t()}
           | {:error, term}
           | {:stop, term}
   def connect(conn, opts) when is_pid(conn) and is_list(opts) do
@@ -21,8 +21,8 @@ defmodule ExZk.Connector do
     with {:ok, socket} <- transport.connect(String.to_charlist(host), port, socket_opts, timeout),
          :ok <- setup_socket_buffers(transport, socket) do
       case negotiate(transport, socket, opts, timeout) do
-        :ok ->
-          {:ok, socket, Format.format_host_and_port(host, port)}
+        {:ok, res} ->
+          {:ok, socket, Format.format_host_and_port(host, port), res}
 
         {:error, %ExZk.Error{} = error} ->
           {:stop, error}
@@ -39,12 +39,11 @@ defmodule ExZk.Connector do
           opts :: keyword(),
           timeout()
         ) ::
-          :ok | {:error, term} | {:stop, term}
+          {:ok, ConnectResponse.t()} | {:error, term} | {:stop, term}
   def negotiate(transport, socket, opts, timeout) do
     with :ok <- send_connect_request(transport, socket, opts),
-         :ok <- maybe_auth(transport, socket, opts),
-         {:ok, res} <- recv_response(transport, socket, timeout) do
-      :ok
+         :ok <- maybe_auth(transport, socket, opts) do
+      recv_connect_response(transport, socket, timeout)
     end
   end
 
@@ -126,7 +125,7 @@ defmodule ExZk.Connector do
   defp new_auth_request(%Auth.Info{scheme: scheme, data: data}),
     do: [Frame.new_auth_request(scheme, data)]
 
-  defp recv_response(transport, socket, timeout, buffered \\ <<>>) do
+  defp recv_connect_response(transport, socket, timeout, buffered \\ <<>>) do
     with {:ok, data} <- transport.recv(socket, 0, timeout) do
       case buffered <> data do
         <<sz::32, data::binary-size(sz), rest::binary>> ->
@@ -138,7 +137,7 @@ defmodule ExZk.Connector do
           end
 
         buffered ->
-          recv_response(transport, socket, timeout, buffered)
+          recv_connect_response(transport, socket, timeout, buffered)
       end
     end
   end

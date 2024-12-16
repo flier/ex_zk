@@ -5,10 +5,15 @@ defmodule SocketTest do
 
   import ExZk.Wire
   alias ExZk.{Connector, Frame, Socket}
-  alias ExZk.Proto.ReplyHeader
+  alias ExZk.Proto.{ConnectResponse, ReplyHeader}
+
+  @connect_response %ConnectResponse{
+    time_out: 15_000,
+    session_id: 123
+  }
 
   setup_with_mocks([
-    {Connector, [], [connect: fn _pid, _opts -> {:ok, :sock, :addr} end]},
+    {Connector, [], [connect: fn _pid, _opts -> {:ok, :sock, :addr, @connect_response} end]},
     {:inet, [:unstick], [setopts: fn _sock, _opts -> :ok end]},
     {:ssl, [], [setopts: fn _sock, _opts -> :ok end]}
   ]) do
@@ -22,7 +27,7 @@ defmodule SocketTest do
       {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
 
-      assert_receive {:connected, ^sock, :sock, :addr}
+      assert_receive {:connected, ^sock, :sock, :addr, @connect_response}
       assert_called(Connector.connect(self(), []))
       assert_called(:inet.setopts(:sock, active: :once))
 
@@ -36,7 +41,7 @@ defmodule SocketTest do
       {:ok, sock} = Socket.start_link(self(), ssl: true)
       assert is_pid(sock)
 
-      assert_receive {:connected, ^sock, :sock, :addr}
+      assert_receive {:connected, ^sock, :sock, :addr, @connect_response}
       assert_called(Connector.connect(self(), ssl: true))
       assert_called(:ssl.setopts(:sock, active: :once))
 
@@ -79,7 +84,7 @@ defmodule SocketTest do
       {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
 
-      assert_receive {:connected, ^sock, :sock, :addr}
+      assert_receive {:connected, ^sock, :sock, :addr, @connect_response}
 
       reply_hdr = %ReplyHeader{xid: 123, zxid: 456, err: 789}
       buf = pack(reply_hdr)
