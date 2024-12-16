@@ -1,5 +1,7 @@
 defmodule ExZk.Frame do
   alias ExZk.Defs.OpCode
+  alias ExZk.WatchedEvent
+  alias ExZk.Watcher.Event
 
   alias ExZk.Proto.{
     AuthPacket,
@@ -141,8 +143,20 @@ defmodule ExZk.Frame do
           {{:auth_failed, err}, rest}
 
         %ReplyHeader{xid: @notification_xid, zxid: zxid} ->
-          {:ok, watcher_event, rest} = WatcherEvent.unpack(rest)
-          {{:notification, zxid, watcher_event}, rest}
+          {:ok,
+           %WatcherEvent{
+             type: type,
+             state: state,
+             path: path
+           }, rest} = WatcherEvent.unpack(rest)
+
+          {{:notification,
+            %WatchedEvent{
+              type: Event.Type.cast!(type),
+              state: Event.KeeperState.cast!(state),
+              path: path,
+              zxid: zxid
+            }}, rest}
 
         _ ->
           {nil, rest}

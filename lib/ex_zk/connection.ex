@@ -1,10 +1,8 @@
 defmodule ExZk.Connection do
   require Logger
 
-  alias ExZk.Proto.ConnectResponse
-  alias ExZk.{Frame, Socket, WatchedEvent, WatchManager}
-  alias ExZk.Proto.WatcherEvent
-  alias ExZk.Watcher.Event
+  alias ExZk.{Frame, Socket, WatchManager}
+  alias ExZk.Proto.{ConnectResponse, WatcherEvent}
 
   @behaviour :gen_statem
 
@@ -228,25 +226,9 @@ defmodule ExZk.Connection do
 
   def connected(
         :info,
-        {:frame, socket,
-         %Frame{
-           response:
-             {:notification, zxid,
-              %WatcherEvent{
-                type: type,
-                state: state,
-                path: path
-              }}
-         }},
+        {:frame, socket, %Frame{response: {:notification, evt}}},
         %__MODULE__{socket: socket} = data
       ) do
-    evt = %WatchedEvent{
-      type: Event.Type.cast!(type),
-      state: Event.KeeperState.cast!(state),
-      path: path,
-      zxid: zxid
-    }
-
     Logger.debug(
       "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
     )
