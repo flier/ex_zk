@@ -2,7 +2,9 @@ defmodule ExZk.Connection do
   require Logger
 
   import ExZk.Frame
-  alias ExZk.{Frame, Socket, WatchedEvent, WatchManager}
+  alias ExZk.Proto.ReplyHeader
+  alias ExZk.Defs.{OpCode, ErrCode}
+  alias ExZk.{Frame, Framer, Socket, WatchedEvent, WatchManager}
   alias ExZk.Connector.Connected
 
   @behaviour :gen_statem
@@ -41,6 +43,7 @@ defmodule ExZk.Connection do
     :reconnect_times,
     :session_id,
     :session_timeout,
+    :framer,
     :last_zxid,
     :last_ping_sent,
     :watch_manager,
@@ -55,6 +58,7 @@ defmodule ExZk.Connection do
           reconnect_times: integer(),
           session_id: integer(),
           session_timeout: timeout(),
+          framer: Framer.t(),
           last_zxid: zxid(),
           last_ping_sent: Time.t(),
           watch_manager: WatchManager.t(),
@@ -111,6 +115,11 @@ defmodule ExZk.Connection do
     :gen_statem.call(conn, :status)
   end
 
+  @spec send_request(:gen_statem.server_ref(), OpCode.t(), Frame.request()) :: :ok
+  def send_request(conn, opcode, request) do
+    :gen_statem.cast(conn, {:send_request, self(), opcode, request})
+  end
+
   ####
   ## Callbacks
   ##
@@ -132,7 +141,7 @@ defmodule ExZk.Connection do
       # We don't need to handle a timeout here because we're using a timeout in
       # connect/3 down the pipe.
       receive do
-        {:connected, ^socket, _sock, %Connected{} = connected} ->
+        {:connected, ^socket, %Connected{} = connected} ->
           {:ok, :connected, on_connected(data, socket, connected)}
 
         {:stopped, ^socket, reason} ->
@@ -184,7 +193,7 @@ defmodule ExZk.Connection do
   # "Connecting" state: the connection is on going and the socket is not alive.
   def connecting(
         :info,
-        {:connected, socket, _sock, %Connected{} = connected},
+        {:connected, socket, %Connected{} = connected},
         %__MODULE__{socket: socket} = data
       ) do
     {:next_state, :connected, on_connected(data, socket, connected)}
@@ -205,38 +214,8 @@ defmodule ExZk.Connection do
     disconnect(data, reason)
   end
 
-  def connected(
-        :info,
-        {:frame, socket, %Frame{response: :pong}},
-        %__MODULE__{socket: socket} = data
-      ) do
-    Logger.debug(
-      "Got ping response for session id #{session_id(data)} after #{ping_response_time(data) |> Duration.to_iso8601()}"
-    )
-
-    {:keep_state, %__MODULE__{data | last_ping_sent: nil}}
-  end
-
-  def connected(
-        :info,
-        {:frame, socket, %Frame{response: {:auth_failed, err}}},
-        %__MODULE__{socket: socket} = data
-      ) do
-    Logger.debug("Got auth response for session id #{session_id(data)} with err: #{err}")
-
-    :keep_state_and_data
-  end
-
-  def connected(
-        :info,
-        {:frame, socket, %Frame{response: {:notification, evt}}},
-        %__MODULE__{socket: socket} = data
-      ) do
-    Logger.debug(
-      "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
-    )
-
-    {:keep_state, queue_event(data, evt)}
+  def connected(:info, {:frame, socket, frame}, %__MODULE__{socket: socket} = data) do
+    handle_frame(frame, data)
   end
 
   def connected(
@@ -252,6 +231,16 @@ defmodule ExZk.Connection do
     :ok = Socket.send_frame(socket, new_ping_request())
 
     {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
+  end
+
+  def connected(
+        :cast,
+        {:send_request, sender, opcode, request},
+        %__MODULE__{socket: socket, framer: framer} = data
+      ) do
+    {:ok, frame, framer} = Framer.new_frame(framer, opcode, request, sender)
+    :ok = Socket.send_frame(socket, frame)
+    {:keep_state, %{data | framer: framer}}
   end
 
   ####
@@ -271,9 +260,67 @@ defmodule ExZk.Connection do
         connected_address: connected.addr,
         session_timeout: connected.session_timeout,
         session_id: connected.session_id,
+        framer: %Framer{},
         backoff_current: nil,
         reconnect_times: nil
     }
+  end
+
+  defp handle_frame(%Frame{response: :pong}, %__MODULE__{} = data) do
+    Logger.debug(
+      "Got ping response for session id #{session_id(data)} after #{ping_response_time(data) |> Duration.to_iso8601()}"
+    )
+
+    {:keep_state, %__MODULE__{data | last_ping_sent: nil}}
+  end
+
+  defp handle_frame(%Frame{response: {:auth_failed, err}}, %__MODULE__{} = data) do
+    Logger.debug("Got auth response for session id #{session_id(data)} with err: #{err}")
+
+    :keep_state_and_data
+  end
+
+  defp handle_frame(%Frame{response: {:notification, evt}}, %__MODULE__{} = data) do
+    Logger.debug(
+      "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
+    )
+
+    {:keep_state, queue_event(data, evt)}
+  end
+
+  defp handle_frame(%Frame{reply_hdr: %ReplyHeader{xid: xid}}, %__MODULE__{} = data)
+       when xid < 0 do
+    Logger.warning("Got unknown reply for session id #{session_id(data)} with with xid: #{xid}")
+
+    :keep_state_and_data
+  end
+
+  defp handle_frame(
+         %Frame{reply_hdr: %ReplyHeader{zxid: zxid}, payload: payload},
+         %__MODULE__{framer: framer} = data
+       ) do
+    case Framer.parse_frame(framer, payload) do
+      {:ok, frame, sender, framer} ->
+        case frame do
+          %Frame{reply_hdr: %ReplyHeader{err: err}} when err != 0 ->
+            send(
+              sender,
+              {:error,
+               case ErrCode.cast(err) do
+                 {:ok, code} -> code
+                 :error -> err
+               end}
+            )
+
+          %Frame{response: response} ->
+            send(sender, {:ok, response})
+        end
+
+        {:keep_state, %__MODULE__{data | framer: framer, last_zxid: zxid}}
+
+      {:error, reason} ->
+        disconnect(data, reason)
+    end
   end
 
   defp disconnect(%__MODULE__{opts: opts} = data, reason) do

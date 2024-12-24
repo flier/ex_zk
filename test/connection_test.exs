@@ -126,9 +126,9 @@ defmodule ConnectionTest do
       # it should be connected
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
-      assert capture_log([level: :debug, format: "$message"], fn ->
-               frame = Frame.unpack(pack(%ReplyHeader{xid: @auth_packet_xid, err: -1}))
+      frame = Frame.unpack(pack(%ReplyHeader{xid: @auth_packet_xid, err: -1}))
 
+      assert capture_log([level: :debug, format: "$message"], fn ->
                send(conn, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
@@ -142,18 +142,35 @@ defmodule ConnectionTest do
       # it should be connected
       assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
 
-      assert capture_log([level: :debug, format: "$message"], fn ->
-               frame =
-                 Frame.unpack(
-                   pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
-                     pack(%WatcherEvent{type: 1, state: 2, path: "/test"})
-                 )
+      frame =
+        Frame.unpack(
+          pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
+            pack(%WatcherEvent{type: 1, state: 2, path: "/test"})
+        )
 
+      assert capture_log([level: :debug, format: "$message"], fn ->
                send(conn, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
              end) ==
                ~s[Got notification for session id - with event: #{%ExZk.WatchedEvent{type: :node_created, state: :sync_connected, path: "/test", zxid: 123} |> inspect()}]
+    end
+
+    test "it can handle unknown build-in frame" do
+      # connect to the server
+      {:ok, conn} = Connection.start_link(sync_connect: true)
+
+      # it should be connected
+      assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
+
+      xid = -123
+      frame = Frame.unpack(pack(%ReplyHeader{xid: xid}))
+
+      assert capture_log([level: :debug, format: "$message"], fn ->
+               send(conn, {:frame, socket, frame})
+
+               assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+             end) == "Got unknown reply for session id - with with xid: #{xid}"
     end
 
     test "it can send ping" do
@@ -171,10 +188,10 @@ defmodule ConnectionTest do
 
         assert_called(:gen_tcp.send(:sock, <<byte_size(frame)::32>> <> frame))
 
+        frame = Frame.unpack(pack(%ReplyHeader{xid: @ping_xid}))
+
         assert String.starts_with?(
                  capture_log([level: :debug, format: "$message"], fn ->
-                   frame = Frame.unpack(pack(%ReplyHeader{xid: @ping_xid}))
-
                    send(conn, {:frame, socket, frame})
 
                    assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)

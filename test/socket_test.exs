@@ -35,7 +35,7 @@ defmodule SocketTest do
       {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
 
-      assert_receive {:connected, ^sock, :sock, @connected}
+      assert_receive {:connected, ^sock, @connected}
       assert_called(Connector.connect(self(), []))
       assert_called(:inet.setopts(:sock, active: :once))
 
@@ -49,7 +49,7 @@ defmodule SocketTest do
       {:ok, sock} = Socket.start_link(self(), ssl: true)
       assert is_pid(sock)
 
-      assert_receive {:connected, ^sock, :sock, @connected}
+      assert_receive {:connected, ^sock, @connected}
       assert_called(Connector.connect(self(), ssl: true))
       assert_called(:ssl.setopts(:sock, active: :once))
 
@@ -92,7 +92,7 @@ defmodule SocketTest do
       {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
 
-      assert_receive {:connected, ^sock, :sock, @connected}
+      assert_receive {:connected, ^sock, @connected}
 
       reply_hdr = %ReplyHeader{xid: 123, zxid: 456, err: 789}
       buf = pack(reply_hdr)

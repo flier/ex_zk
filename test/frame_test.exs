@@ -5,12 +5,10 @@ defmodule FrameTest do
 
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
-  alias ExZk.Defs.{CreateMode, OpCode}
+  alias ExZk.Defs.OpCode
 
   alias ExZk.Proto.{
     AuthPacket,
-    CreateRequest,
-    CreateTTLRequest,
     ReplyHeader,
     RequestHeader,
     SetWatches,
@@ -26,51 +24,6 @@ defmodule FrameTest do
   @set_watches_xid -8
 
   @path "/foo/bar"
-  @data "hello world"
-
-  describe "it create a create request for" do
-    test "a persistent node" do
-      assert Frame.new_create_request(@path, @data) == %Frame{
-               req_hdr: %RequestHeader{xid: 0, type: OpCode.value!(:create)},
-               request: %CreateRequest{path: @path, data: @data}
-             }
-    end
-
-    test "a persistent sequential mode" do
-      assert Frame.new_create_request(@path, @data, mode: :persistent_sequential) == %Frame{
-               req_hdr: %RequestHeader{xid: 0, type: OpCode.value!(:create)},
-               request: %CreateRequest{
-                 path: @path,
-                 data: @data,
-                 flags: CreateMode.value!(:persistent_sequential)
-               }
-             }
-    end
-
-    test "a container node" do
-      assert Frame.new_create_request(@path, @data, mode: :container) == %Frame{
-               req_hdr: %RequestHeader{xid: 0, type: OpCode.value!(:create_container)},
-               request: %CreateRequest{
-                 path: @path,
-                 data: @data,
-                 flags: CreateMode.value!(:container)
-               }
-             }
-    end
-
-    test "a node with TTL" do
-      assert Frame.new_create_request(@path, @data, mode: :persistent_with_ttl, ttl: 300) ==
-               %Frame{
-                 req_hdr: %RequestHeader{xid: 0, type: OpCode.value!(:create_ttl)},
-                 request: %CreateTTLRequest{
-                   path: @path,
-                   data: @data,
-                   flags: CreateMode.value!(:persistent_with_ttl),
-                   ttl: 300
-                 }
-               }
-    end
-  end
 
   describe "it can create a build-in frame with" do
     test "a ping request" do

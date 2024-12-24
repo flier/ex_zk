@@ -1,9 +1,7 @@
 defmodule ExZk.Frame do
   require Logger
 
-  import ExZk.Defs
-  alias ExZk.Data.ACL
-  alias ExZk.Defs.{CreateMode, OpCode}
+  alias ExZk.Defs.OpCode
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
 
@@ -11,10 +9,13 @@ defmodule ExZk.Frame do
     AuthPacket,
     ConnectRequest,
     ConnectResponse,
-    CreateRequest,
-    CreateTTLRequest,
     Create2Response,
+    CreateRequest,
     CreateResponse,
+    CreateTTLRequest,
+    DeleteRequest,
+    ExistsRequest,
+    ExistsResponse,
     ReplyHeader,
     RequestHeader,
     SetWatches,
@@ -39,6 +40,8 @@ defmodule ExZk.Frame do
           | SetWatches2.t()
           | CreateRequest.t()
           | CreateTTLRequest.t()
+          | DeleteRequest.t()
+          | ExistsRequest.t()
   @type response ::
           :pong
           | {:auth_failed, error()}
@@ -46,8 +49,10 @@ defmodule ExZk.Frame do
           | ConnectResponse.t()
           | CreateResponse.t()
           | Create2Response.t()
+          | ExistsResponse.t()
 
   @type error :: integer()
+  @type xid :: integer()
   @type zxid :: integer()
   @type watches :: list(String.t())
 
@@ -150,48 +155,6 @@ defmodule ExZk.Frame do
     }
   end
 
-  @type create_option ::
-          {:acl, list(ACL.t())}
-          | {:mode, CreateMode.t()}
-          | {:ttl, integer()}
-
-  @spec new_create_request(path :: String.t(), data :: binary(), opts :: [create_option()]) :: t()
-  def new_create_request(path, data \\ <<>>, opts \\ []) do
-    acl = Keyword.get(opts, :acl, [])
-    mode = Keyword.get(opts, :mode, :persistent)
-    ttl = Keyword.get(opts, :ttl, 0)
-
-    op_code =
-      cond do
-        is_ttl(mode) -> :create_ttl
-        is_container(mode) -> :create_container
-        true -> :create
-      end
-
-    request =
-      if is_ttl(mode) do
-        %CreateTTLRequest{
-          path: path,
-          data: data,
-          acl: acl,
-          flags: CreateMode.value!(mode),
-          ttl: ttl
-        }
-      else
-        %CreateRequest{
-          path: path,
-          data: data,
-          acl: acl,
-          flags: CreateMode.value!(mode)
-        }
-      end
-
-    %__MODULE__{
-      req_hdr: new_request_header(op_code),
-      request: request
-    }
-  end
-
   @spec new_close_session() :: t()
   def new_close_session(), do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
 
@@ -224,7 +187,7 @@ defmodule ExZk.Frame do
             }}, rest}
 
         %ReplyHeader{xid: xid} when xid < 0 ->
-          Logger.warning("Received unknown reply with xid: #{xid}")
+          {nil, rest}
 
         _ ->
           {nil, rest}
@@ -236,6 +199,10 @@ defmodule ExZk.Frame do
       payload: rest
     }
   end
+
+  @spec xid(t()) :: xid()
+  def xid(%__MODULE__{req_hdr: %RequestHeader{xid: xid}}), do: xid
+  def xid(%__MODULE__{reply_hdr: %ReplyHeader{xid: xid}}), do: xid
 
   ####
   ## Protocol
@@ -259,8 +226,6 @@ defmodule ExZk.Frame do
   ####
   ## Private methods
   ##
-
-  defp new_request_header(op_code), do: new_request_header(0, op_code)
 
   defp new_request_header(xid, op_code),
     do: %RequestHeader{xid: xid, type: OpCode.value!(op_code)}
