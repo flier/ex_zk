@@ -16,6 +16,10 @@ defmodule ExZk.Session do
     ExistsResponse,
     GetACLRequest,
     GetACLResponse,
+    GetChildren2Request,
+    GetChildren2Response,
+    GetChildrenRequest,
+    GetChildrenResponse,
     GetDataRequest,
     GetDataResponse,
     ReplyHeader,
@@ -137,12 +141,46 @@ defmodule ExZk.Session do
     :gen_statem.call(session, :status)
   end
 
+  @spec get_children(session :: :gen_statem.server_ref(), path) ::
+          {:ok, children :: list(path)} | {:error, reason :: term()}
+        when path: String.t()
+  def get_children(session, path) do
+    request = %GetChildrenRequest{path: path}
+
+    :ok = send_request(session, :get_children, request)
+
+    receive do
+      {:ok, %GetChildrenResponse{children: children}} ->
+        {:ok, children}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @spec get_children2(session :: :gen_statem.server_ref(), path) ::
+          {:ok, children :: list(path), Stat.t()} | {:error, reason :: term()}
+        when path: String.t()
+  def get_children2(session, path) do
+    request = %GetChildren2Request{path: path}
+
+    :ok = send_request(session, :get_children2, request)
+
+    receive do
+      {:ok, %GetChildren2Response{children: children, stat: stat}} ->
+        {:ok, children, stat}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   @spec get_data(session :: :gen_statem.server_ref(), path :: String.t()) ::
           {:ok, data :: binary(), Stat.t()} | {:error, reason :: term()}
   def get_data(session, path) do
     request = %GetDataRequest{path: path}
 
-    :ok = send_request(session, :exists, request)
+    :ok = send_request(session, :get_data, request)
 
     receive do
       {:ok, %GetDataResponse{data: data, stat: stat}} ->
@@ -163,7 +201,7 @@ defmodule ExZk.Session do
   def set_data(session, path, data \\ "", version \\ 0) do
     request = %SetDataRequest{path: path, data: data, version: version}
 
-    :ok = send_request(session, :exists, request)
+    :ok = send_request(session, :set_data, request)
 
     receive do
       {:ok, %SetDataResponse{stat: stat}} ->
@@ -272,7 +310,7 @@ defmodule ExZk.Session do
   def sync(session, path) do
     request = %SyncRequest{path: path}
 
-    :ok = send_request(session, :get_acl, request)
+    :ok = send_request(session, :sync, request)
 
     receive do
       {:ok, %SyncResponse{path: path}} ->

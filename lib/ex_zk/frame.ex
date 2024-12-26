@@ -18,6 +18,10 @@ defmodule ExZk.Frame do
     ExistsResponse,
     GetACLRequest,
     GetACLResponse,
+    GetChildren2Request,
+    GetChildren2Response,
+    GetChildrenRequest,
+    GetChildrenResponse,
     GetDataRequest,
     GetDataResponse,
     ReplyHeader,
@@ -51,6 +55,8 @@ defmodule ExZk.Frame do
           | DeleteRequest.t()
           | ExistsRequest.t()
           | GetACLRequest.t()
+          | GetChildren2Request.t()
+          | GetChildrenRequest.t()
           | GetDataRequest.t()
           | SetACLRequest.t()
           | SetDataRequest.t()
@@ -67,6 +73,8 @@ defmodule ExZk.Frame do
           | CreateResponse.t()
           | ExistsResponse.t()
           | GetACLResponse.t()
+          | GetChildren2Response.t()
+          | GetChildrenResponse.t()
           | GetDataResponse.t()
           | SetACLResponse.t()
           | SetDataResponse.t()
