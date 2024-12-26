@@ -2,6 +2,7 @@ defmodule ExZk.Frame do
   require Logger
 
   alias ExZk.Defs.OpCode
+  alias ExZk.Multi
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
 
@@ -63,6 +64,7 @@ defmodule ExZk.Frame do
           | SetWatches.t()
           | SetWatches2.t()
           | SyncRequest.t()
+          | Multi.request()
 
   @type response ::
           :pong

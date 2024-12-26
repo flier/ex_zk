@@ -1,9 +1,15 @@
 defmodule ExZk.Framer do
   require Logger
 
+  alias ExZk.{
+    Frame,
+    Framer,
+    Multi,
+    Proto
+  }
+
   alias ExZk.Defs.OpCode
   alias ExZk.Proto.{ReplyHeader, RequestHeader}
-  alias ExZk.{Frame, Framer, Proto}
 
   defstruct next_xid: 1,
             requests: %{}
@@ -28,6 +34,8 @@ defmodule ExZk.Framer do
     get_children2: Proto.GetChildren2Response,
     get_data: Proto.GetDataResponse,
     get_ephemerals: Proto.GetEphemeralsResponse,
+    multi: Multi.Response,
+    multi_read: Multi.Response,
     set_acl: Proto.SetACLResponse,
     set_data: Proto.SetDataResponse,
     sync: Proto.SyncResponse

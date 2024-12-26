@@ -20,10 +20,8 @@ defmodule ExZk.Create do
     persistent_sequential_with_ttl: 6
   )
 
-  @type option ::
-          {:acl, list(ACL.t())}
-          | {:mode, Mode.t()}
-          | {:ttl, integer()}
+  @type option :: op_option() | {:ttl, integer()}
+  @type op_option :: {:acl, list(ACL.t())} | {:mode, Mode.t()}
 
   ####
   ## Public API

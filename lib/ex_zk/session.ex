@@ -3,8 +3,17 @@ defmodule ExZk.Session do
 
   import ExZk.Frame
 
+  alias ExZk.{
+    Create,
+    Frame,
+    Framer,
+    Multi,
+    Socket,
+    WatchedEvent,
+    WatchManager
+  }
+
   alias ExZk.Connector.Connected
-  alias ExZk.Create
   alias ExZk.Data.{ACL, Stat}
   alias ExZk.Defs.{ErrCode, OpCode}
 
@@ -30,8 +39,6 @@ defmodule ExZk.Session do
     SyncRequest,
     SyncResponse
   }
-
-  alias ExZk.{Frame, Framer, Socket, WatchedEvent, WatchManager}
 
   @behaviour :gen_statem
 
@@ -96,6 +103,8 @@ defmodule ExZk.Session do
   @type status :: :disconnected | :connecting | :connected
   @type zxid :: Frame.zxid()
 
+  @default_timeout 5000
+
   ####
   ## Public API
   ##
@@ -141,10 +150,10 @@ defmodule ExZk.Session do
     :gen_statem.call(session, :status)
   end
 
-  @spec get_children(session :: :gen_statem.server_ref(), path) ::
+  @spec get_children(session :: :gen_statem.server_ref(), path, timeout()) ::
           {:ok, children :: list(path)} | {:error, reason :: term()}
         when path: String.t()
-  def get_children(session, path) do
+  def get_children(session, path, timeout \\ @default_timeout) do
     request = %GetChildrenRequest{path: path}
 
     :ok = send_request(session, :get_children, request)
@@ -155,13 +164,15 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
-  @spec get_children2(session :: :gen_statem.server_ref(), path) ::
+  @spec get_children2(session :: :gen_statem.server_ref(), path, timeout()) ::
           {:ok, children :: list(path), Stat.t()} | {:error, reason :: term()}
         when path: String.t()
-  def get_children2(session, path) do
+  def get_children2(session, path, timeout \\ @default_timeout) do
     request = %GetChildren2Request{path: path}
 
     :ok = send_request(session, :get_children2, request)
@@ -172,12 +183,14 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
-  @spec get_data(session :: :gen_statem.server_ref(), path :: String.t()) ::
+  @spec get_data(session :: :gen_statem.server_ref(), path :: String.t(), timeout()) ::
           {:ok, data :: binary(), Stat.t()} | {:error, reason :: term()}
-  def get_data(session, path) do
+  def get_data(session, path, timeout \\ @default_timeout) do
     request = %GetDataRequest{path: path}
 
     :ok = send_request(session, :get_data, request)
@@ -188,6 +201,8 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
@@ -195,10 +210,11 @@ defmodule ExZk.Session do
           session :: :gen_statem.server_ref(),
           path :: String.t(),
           data :: binary(),
-          version :: integer()
+          version :: integer(),
+          timeout()
         ) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
-  def set_data(session, path, data \\ "", version \\ 0) do
+  def set_data(session, path, data \\ "", version \\ 0, timeout \\ @default_timeout) do
     request = %SetDataRequest{path: path, data: data, version: version}
 
     :ok = send_request(session, :set_data, request)
@@ -209,6 +225,8 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
@@ -216,10 +234,11 @@ defmodule ExZk.Session do
           session :: :gen_statem.server_ref(),
           path,
           data :: binary(),
-          opts :: [option()]
+          opts :: [option()],
+          timeout()
         ) :: {:ok, path, Stat.t() | nil} | {:error, reason :: term()}
         when path: String.t()
-  def create(session, path, data \\ "", opts \\ []) do
+  def create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout) do
     {opcode, request} = Create.new_request(path, data, opts)
     :ok = send_request(session, opcode, request)
 
@@ -232,12 +251,19 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
-  @spec delete(session :: :gen_statem.server_ref(), path :: String.t(), version :: integer() | 0) ::
+  @spec delete(
+          session :: :gen_statem.server_ref(),
+          path :: String.t(),
+          version :: integer(),
+          timeout()
+        ) ::
           :ok | {:error, reason :: term()}
-  def delete(session, path, version \\ 0) do
+  def delete(session, path, version \\ 0, timeout \\ @default_timeout) do
     request = %DeleteRequest{path: path, version: version}
 
     :ok = send_request(session, :delete, request)
@@ -248,12 +274,14 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
-  @spec exists(session :: :gen_statem.server_ref(), path :: String.t()) ::
+  @spec exists(session :: :gen_statem.server_ref(), path :: String.t(), timeout()) ::
           {:ok, boolean(), Stat.t()} | {:error, reason :: term()}
-  def exists(session, path) do
+  def exists(session, path, timeout \\ @default_timeout) do
     request = %ExistsRequest{path: path}
 
     :ok = send_request(session, :exists, request)
@@ -264,12 +292,14 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
-  @spec get_acl(session :: :gen_statem.server_ref(), path :: String.t()) ::
+  @spec get_acl(session :: :gen_statem.server_ref(), path :: String.t(), timeout()) ::
           {:ok, list(ACL.t()), Stat.t()} | {:error, reason :: term()}
-  def get_acl(session, path) do
+  def get_acl(session, path, timeout \\ @default_timeout) do
     request = %GetACLRequest{path: path}
 
     :ok = send_request(session, :get_acl, request)
@@ -280,6 +310,8 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
@@ -287,10 +319,11 @@ defmodule ExZk.Session do
           session :: :gen_statem.server_ref(),
           path :: String.t(),
           acl :: [ACL.t()],
-          version :: integer()
+          version :: integer(),
+          timeout()
         ) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
-  def set_acl(session, path, acl, version \\ 0) do
+  def set_acl(session, path, acl, version \\ 0, timeout \\ @default_timeout) do
     request = %SetACLRequest{path: path, acl: acl, version: version}
 
     :ok = send_request(session, :get_acl, request)
@@ -301,13 +334,15 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
-  @spec sync(session :: :gen_statem.server_ref(), path) ::
+  @spec sync(session :: :gen_statem.server_ref(), path, timeout()) ::
           {:ok, path} | {:error, reason :: term()}
         when path: String.t()
-  def sync(session, path) do
+  def sync(session, path, timeout \\ @default_timeout) do
     request = %SyncRequest{path: path}
 
     :ok = send_request(session, :sync, request)
@@ -318,6 +353,25 @@ defmodule ExZk.Session do
 
       {:error, reason} ->
         {:error, reason}
+    after
+      timeout -> {:error, :timeout}
+    end
+  end
+
+  @spec multi(session :: :gen_statem.server_ref(), ops :: [Multi.Op.t()], timeout()) ::
+          {:ok, [Multi.Result.t()]} | {:error, reason :: term()}
+  def multi(session, ops, timeout \\ @default_timeout) do
+    request = Multi.new_request(ops)
+    :ok = send_request(session, :multi, request)
+
+    receive do
+      {:ok, %Multi.Response{results: results}} ->
+        {:ok, results}
+
+      {:error, reason} ->
+        {:error, reason}
+    after
+      timeout -> {:error, :timeout}
     end
   end
 
