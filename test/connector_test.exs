@@ -4,12 +4,13 @@ defmodule ConnectorTest do
   import Mock
 
   import ExZk.Frame
-  alias ExZk.{Connector, Frame, Wire}
   alias ExZk.Proto.ConnectResponse
+  alias ExZk.{Connector, Frame, Wire}
 
   @host "localhost"
   @port 2181
   @timeout 5000
+  @bufsize 10_240
 
   @connect_opts [host: @host, port: @port, timeout: @timeout]
   @inet_opts [:binary, {:active, false}]
@@ -32,7 +33,7 @@ defmodule ConnectorTest do
     {:inet, [:unstick, :passthrough],
      [
        getopts: fn :sock, [:sndbuf, :recbuf, :buffer] ->
-         {:ok, [sndbuf: 10240, recbuf: 10240, buffer: 10240]}
+         {:ok, [sndbuf: @bufsize, recbuf: @bufsize, buffer: @bufsize]}
        end,
        setopts: fn :sock, _opts -> :ok end
      ]},
@@ -40,7 +41,7 @@ defmodule ConnectorTest do
      [
        connect: fn _addr, _port, _opts, _timeout -> {:ok, :ssl} end,
        getopts: fn :ssl, [:sndbuf, :recbuf, :buffer] ->
-         {:ok, [sndbuf: 10240, recbuf: 10240, buffer: 10240]}
+         {:ok, [sndbuf: @bufsize, recbuf: @bufsize, buffer: @bufsize]}
        end,
        setopts: fn :ssl, _opts -> :ok end,
        send: fn :ssl, _data -> :ok end,
@@ -62,7 +63,7 @@ defmodule ConnectorTest do
 
       assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
       assert_called(:inet.getopts(:sock, [:sndbuf, :recbuf, :buffer]))
-      assert_called(:inet.setopts(:sock, buffer: 10240))
+      assert_called(:inet.setopts(:sock, buffer: @bufsize))
       assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
       assert_called(:gen_tcp.recv(:sock, 0, @timeout))
     end
@@ -72,7 +73,7 @@ defmodule ConnectorTest do
 
       assert_called(:ssl.connect(String.to_charlist(@host), @port, @ssl_opts, @timeout))
       assert_called(:ssl.getopts(:ssl, [:sndbuf, :recbuf, :buffer]))
-      assert_called(:ssl.setopts(:ssl, buffer: 10240))
+      assert_called(:ssl.setopts(:ssl, buffer: @bufsize))
       assert_called(:ssl.send(:ssl, Wire.pack(new_connect_request())))
       assert_called(:ssl.recv(:ssl, 0, @timeout))
     end

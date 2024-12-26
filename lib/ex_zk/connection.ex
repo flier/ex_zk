@@ -2,10 +2,10 @@ defmodule ExZk.Connection do
   require Logger
 
   import ExZk.Frame
-  alias ExZk.Proto.ReplyHeader
-  alias ExZk.Defs.{OpCode, ErrCode}
-  alias ExZk.{Frame, Framer, Socket, WatchedEvent, WatchManager}
   alias ExZk.Connector.Connected
+  alias ExZk.Defs.{ErrCode, OpCode}
+  alias ExZk.Proto.ReplyHeader
+  alias ExZk.{Frame, Framer, Socket, WatchedEvent, WatchManager}
 
   @behaviour :gen_statem
 
@@ -379,7 +379,7 @@ defmodule ExZk.Connection do
   @set_watches_max_length 128 * 1024
 
   defp new_set_watches_request(last_zxid, %WatchManager{} = watch_manager) do
-    if(WatchManager.empty?(watch_manager)) do
+    if WatchManager.empty?(watch_manager) do
       []
     else
       watch_manager

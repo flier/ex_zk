@@ -87,16 +87,16 @@ defmodule ExZk.Defs do
     @doc """
     This Id represents anyone.
     """
-    @spec anyone_id() :: Id.t()
-    def anyone_id(), do: %Id{scheme: "world", id: "anyone"}
+    @spec anyone_id :: Id.t()
+    def anyone_id, do: %Id{scheme: "world", id: "anyone"}
 
     @doc """
     This Id is only usable to set ACLs.
 
     It will get substituted with the Id's the client authenticated with.
     """
-    @spec auth_ids() :: Id.t()
-    def auth_ids(), do: %Id{scheme: "auth"}
+    @spec auth_ids :: Id.t()
+    def auth_ids, do: %Id{scheme: "auth"}
 
     @doc """
     Create a new Id.
@@ -107,20 +107,20 @@ defmodule ExZk.Defs do
     @doc """
     This is a completely open ACL.
     """
-    @spec open_acl() :: ACL.t()
-    def open_acl(), do: acl({:all, anyone_id()})
+    @spec open_acl :: ACL.t()
+    def open_acl, do: acl({:all, anyone_id()})
 
     @doc """
     This ACL gives the creators authentication id's all permissions.
     """
-    @spec creator_all_acl() :: ACL.t()
-    def creator_all_acl(), do: acl({:all, auth_ids()})
+    @spec creator_all_acl :: ACL.t()
+    def creator_all_acl, do: acl({:all, auth_ids()})
 
     @doc """
     This ACL gives the world the ability to read.
     """
-    @spec read_acl() :: ACL.t()
-    def read_acl(), do: acl({:read, anyone_id()})
+    @spec read_acl :: ACL.t()
+    def read_acl, do: acl({:read, anyone_id()})
 
     @doc """
     Create a new ACL.

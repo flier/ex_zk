@@ -94,7 +94,7 @@ defmodule ExZk.Wire do
     if Pack.impl_for(value) do
       Pack.pack(value)
     else
-      apply(mod, :pack, [value])
+      mod.pack(value)
     end
   end
 
@@ -171,10 +171,11 @@ defmodule ExZk.Wire do
     end
   end
 
-  def unpack(buf, mod) when is_binary(buf) and is_atom(mod), do: apply(mod, :unpack, [buf])
+  def unpack(buf, mod) when is_binary(buf) and is_atom(mod), do: mod.unpack(buf)
 
   def unpack(buf, type) when is_binary(buf) and is_binary(type) do
-    apply(type |> String.to_atom(), :unpack, [buf])
+    mod = type |> String.to_atom()
+    mod.unpack(buf)
   end
 
   def unpack(buf, types) when is_binary(buf) and is_list(types) do

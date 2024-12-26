@@ -1,8 +1,7 @@
 defmodule ExZk.Socket do
   use GenServer
 
-  alias ExZk.Frame
-  alias ExZk.Connector
+  alias ExZk.{Connector, Frame}
 
   defstruct [
     :conn,
@@ -133,7 +132,7 @@ defmodule ExZk.Socket do
   defp setopts(:gen_tcp, socket, opts), do: :inet.setopts(socket, opts)
   defp setopts(:ssl, socket, opts), do: :ssl.setopts(socket, opts)
 
-  defp new_data(state, _data = ""), do: state
+  defp new_data(%__MODULE__{} = state, "" = _data), do: state
 
   defp new_data(
          %__MODULE__{conn: conn, buffered: nil} = state,

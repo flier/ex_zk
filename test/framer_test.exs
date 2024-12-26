@@ -2,7 +2,7 @@ defmodule FramerTest do
   use ExUnit.Case, async: true
 
   import ExZk.Wire
-  alias ExZk.Proto.{CreateRequest, CreateResponse, DeleteRequest, RequestHeader, ReplyHeader}
+  alias ExZk.Proto.{CreateRequest, CreateResponse, DeleteRequest, ReplyHeader, RequestHeader}
   alias ExZk.{Frame, Framer}
 
   @path "/foobar"

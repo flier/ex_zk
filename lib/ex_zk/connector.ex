@@ -1,7 +1,7 @@
 defmodule ExZk.Connector do
   import ExZk.Frame
-  alias ExZk.{Format, Wire, Auth}
   alias ExZk.Proto.ConnectResponse
+  alias ExZk.{Auth, Format, Wire}
 
   defmodule Connected do
     defstruct [:addr, :session_timeout, :session_id, :passwd, :readonly]

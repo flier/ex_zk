@@ -1,10 +1,9 @@
 defmodule ExZk.Framer do
   require Logger
 
-  alias ExZk.Proto
-  alias ExZk.{Frame, Framer}
-  alias ExZk.Proto.{RequestHeader, ReplyHeader}
   alias ExZk.Defs.OpCode
+  alias ExZk.Proto.{ReplyHeader, RequestHeader}
+  alias ExZk.{Frame, Framer, Proto}
 
   defstruct next_xid: 1,
             requests: %{}
@@ -94,5 +93,5 @@ defmodule ExZk.Framer do
   defp parse_reply(frame, framer), do: {:ok, frame, nil, framer}
 
   defp parse_response(nil, payload), do: {:ok, nil, payload}
-  defp parse_response(res_type, payload), do: apply(res_type, :unpack, [payload])
+  defp parse_response(mod, payload), do: mod.unpack(payload)
 end

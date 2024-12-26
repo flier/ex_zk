@@ -1,6 +1,8 @@
 defmodule ExZk.StartOptions do
   @moduledoc false
 
+  alias ExZk.Auth
+
   @default_host "localhost"
   @default_port 2181
   @default_timeout 5_000
@@ -140,7 +142,7 @@ defmodule ExZk.StartOptions do
       authentication information for the session
       """,
       type_doc: "list of `t:ExZk.Auth.Info.t/0`",
-      type_spec: quote(do: list(ExZk.Auth.Info.t()))
+      type_spec: quote(do: list(Auth.Info.t()))
     ],
     disable_auto_watch_reset: [
       type: :boolean,

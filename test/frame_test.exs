@@ -3,9 +3,9 @@ defmodule FrameTest do
 
   import ExZk.Wire
 
+  alias ExZk.Defs.OpCode
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
-  alias ExZk.Defs.OpCode
 
   alias ExZk.Proto.{
     AuthPacket,

@@ -91,6 +91,7 @@ defmodule ExZk.MixProject do
       # Dev and test dependencies
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:eunomo, "~> 3.0", only: :dev},
       {:ex_doc, "~> 0.35", only: [:dev, :doc]},
       {:excoveralls, "~> 0.18", only: :test},
       {:mock, "~> 0.3", only: :test},

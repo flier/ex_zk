@@ -140,8 +140,8 @@ defmodule ExZk.TypedEnum.Use do
       end
 
       # # Reflection
-      def __enum_map__(), do: unquote(opts)
-      def __valid_values__(), do: @valid_values
+      def __enum_map__, do: unquote(opts)
+      def __valid_values__, do: @valid_values
     end
   end
 end

@@ -3,8 +3,8 @@ defmodule TaskTest do
 
   import ExZk.Defs.Ids
 
-  alias ExZk.Task.Create
   alias ExZk.Proto.{CreateRequest, CreateTTLRequest}
+  alias ExZk.Task.Create
 
   @path "/foo/bar"
   @data "hello world"

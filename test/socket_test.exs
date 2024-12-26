@@ -4,8 +4,8 @@ defmodule SocketTest do
   import Mock
 
   import ExZk.Wire
-  alias ExZk.{Connector, Frame, Socket}
   alias ExZk.Proto.{ConnectResponse, ReplyHeader}
+  alias ExZk.{Connector, Frame, Socket}
 
   @connect_response %ConnectResponse{
     time_out: 15_000,

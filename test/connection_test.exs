@@ -6,8 +6,8 @@ defmodule ConnectionTest do
 
   import ExZk.Wire
   alias ExZk.Defs.OpCode
-  alias ExZk.{Connection, Connector, Frame}
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
+  alias ExZk.{Connection, Connector, Frame}
 
   @close_session Frame.new_close_session()
 

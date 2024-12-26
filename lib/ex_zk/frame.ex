@@ -67,8 +67,8 @@ defmodule ExZk.Frame do
   ## Public API
   ##
 
-  @spec new_ping_request() :: t()
-  def new_ping_request() do
+  @spec new_ping_request :: t()
+  def new_ping_request do
     %__MODULE__{
       req_hdr: new_request_header(@ping_xid, :ping)
     }
@@ -155,8 +155,8 @@ defmodule ExZk.Frame do
     }
   end
 
-  @spec new_close_session() :: t()
-  def new_close_session(), do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
+  @spec new_close_session :: t()
+  def new_close_session, do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
 
   @spec unpack(data :: binary()) :: t()
   def unpack(data) when is_binary(data) do
