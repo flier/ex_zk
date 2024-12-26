@@ -1,8 +1,6 @@
 defmodule ExZk.Frame do
   require Logger
 
-  alias ExZk.Proto.SyncResponse
-  alias ExZk.Proto.SyncRequest
   alias ExZk.Defs.OpCode
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
@@ -20,12 +18,18 @@ defmodule ExZk.Frame do
     ExistsResponse,
     GetACLRequest,
     GetACLResponse,
+    GetDataRequest,
+    GetDataResponse,
     ReplyHeader,
     RequestHeader,
     SetACLRequest,
     SetACLResponse,
+    SetDataRequest,
+    SetDataResponse,
     SetWatches,
     SetWatches2,
+    SyncRequest,
+    SyncResponse,
     WatcherEvent
   }
 
@@ -47,7 +51,9 @@ defmodule ExZk.Frame do
           | DeleteRequest.t()
           | ExistsRequest.t()
           | GetACLRequest.t()
+          | GetDataRequest.t()
           | SetACLRequest.t()
+          | SetDataRequest.t()
           | SetWatches.t()
           | SetWatches2.t()
           | SyncRequest.t()
@@ -61,7 +67,9 @@ defmodule ExZk.Frame do
           | CreateResponse.t()
           | ExistsResponse.t()
           | GetACLResponse.t()
+          | GetDataResponse.t()
           | SetACLResponse.t()
+          | SetDataResponse.t()
           | SyncResponse.t()
 
   @type error :: integer()

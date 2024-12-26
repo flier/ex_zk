@@ -3,13 +3,10 @@ defmodule ExZk.Session do
 
   import ExZk.Frame
 
-  alias ExZk.Defs.OpCode
-  alias ExZk.Proto.SyncResponse
-  alias ExZk.Proto.SyncRequest
   alias ExZk.Connector.Connected
   alias ExZk.Create
   alias ExZk.Data.{ACL, Stat}
-  alias ExZk.Defs.ErrCode
+  alias ExZk.Defs.{ErrCode, OpCode}
 
   alias ExZk.Proto.{
     Create2Response,
@@ -19,9 +16,15 @@ defmodule ExZk.Session do
     ExistsResponse,
     GetACLRequest,
     GetACLResponse,
+    GetDataRequest,
+    GetDataResponse,
     ReplyHeader,
     SetACLRequest,
-    SetACLResponse
+    SetACLResponse,
+    SetDataRequest,
+    SetDataResponse,
+    SyncRequest,
+    SyncResponse
   }
 
   alias ExZk.{Frame, Framer, Socket, WatchedEvent, WatchManager}
@@ -132,6 +135,43 @@ defmodule ExZk.Session do
   @spec status(session :: :gen_statem.server_ref()) :: status()
   def status(session) do
     :gen_statem.call(session, :status)
+  end
+
+  @spec get_data(session :: :gen_statem.server_ref(), path :: String.t()) ::
+          {:ok, data :: binary(), Stat.t()} | {:error, reason :: term()}
+  def get_data(session, path) do
+    request = %GetDataRequest{path: path}
+
+    :ok = send_request(session, :exists, request)
+
+    receive do
+      {:ok, %GetDataResponse{data: data, stat: stat}} ->
+        {:ok, data, stat}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @spec set_data(
+          session :: :gen_statem.server_ref(),
+          path :: String.t(),
+          data :: binary(),
+          version :: integer()
+        ) ::
+          {:ok, Stat.t()} | {:error, reason :: term()}
+  def set_data(session, path, data \\ "", version \\ 0) do
+    request = %SetDataRequest{path: path, data: data, version: version}
+
+    :ok = send_request(session, :exists, request)
+
+    receive do
+      {:ok, %SetDataResponse{stat: stat}} ->
+        {:ok, stat}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @spec create(
