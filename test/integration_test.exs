@@ -12,7 +12,7 @@ defmodule IntegrationTest do
       {:ok, conn} = ExZk.start_link(zk_uri, sync_connect: true)
       assert is_pid(conn)
 
-      assert {:connected, %{socket: _socket}} = ExZk.Connection.status(conn)
+      assert {:connected, %{socket: _socket}} = ExZk.Session.status(conn)
     end
   end
 end

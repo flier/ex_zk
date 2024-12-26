@@ -7,7 +7,7 @@ defmodule ExZk do
   use Application
 
   @typedoc """
-  Options that can be passed to starts a connection to Zookeeper (see `start_link/1`).
+  Options that can be passed to starts a session to Zookeeper (see `start_link/1`).
 
   #{ExZk.StartOptions.options_docs(:ex_zk)}
   """
@@ -54,7 +54,7 @@ defmodule ExZk do
 
   def start_link(opts) when is_list(opts) do
     with({:ok, opts} <- StartOptions.validate(opts)) do
-      ExZk.Connection.start_link(opts)
+      ExZk.Session.start_link(opts)
     end
   end
 

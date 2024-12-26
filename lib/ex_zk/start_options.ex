@@ -53,7 +53,7 @@ defmodule ExZk.StartOptions do
       type: :timeout,
       default: @default_timeout,
       doc: """
-      connection timeout (in milliseconds) directly passed to the network layer.
+      connect timeout (in milliseconds) directly passed to the network layer.
       """
     ],
     sync_connect: [

@@ -4,7 +4,7 @@ defmodule ExZk.Socket do
   alias ExZk.{Connector, Frame}
 
   defstruct [
-    :conn,
+    :session,
     :opts,
     :transport,
     :socket,
@@ -12,7 +12,7 @@ defmodule ExZk.Socket do
   ]
 
   @type t :: %__MODULE__{
-          conn: pid(),
+          session: Process.dest(),
           opts: [option()],
           transport: module(),
           socket: socket(),
@@ -27,9 +27,9 @@ defmodule ExZk.Socket do
   ## Public API
   ##
 
-  @spec start_link(conn :: pid(), [option()]) :: GenServer.on_start()
-  def start_link(conn, opts) do
-    GenServer.start_link(__MODULE__, {conn, opts}, [])
+  @spec start_link(session :: Process.dest(), [option()]) :: GenServer.on_start()
+  def start_link(session, opts) do
+    GenServer.start_link(__MODULE__, {session, opts}, [])
   end
 
   @spec normal_stop(sock :: GenServer.server()) :: :ok
@@ -47,9 +47,9 @@ defmodule ExZk.Socket do
   ##
 
   @impl true
-  def init({conn, opts}) do
+  def init({session, opts}) do
     state = %__MODULE__{
-      conn: conn,
+      session: session,
       opts: opts,
       transport: if(opts[:ssl], do: :ssl, else: :gen_tcp)
     }
@@ -58,10 +58,10 @@ defmodule ExZk.Socket do
   end
 
   @impl true
-  def handle_continue([], %{conn: conn, opts: opts, transport: transport} = state) do
-    with {:ok, socket, connected} <- Connector.connect(conn, opts),
+  def handle_continue([], %{session: session, opts: opts, transport: transport} = state) do
+    with {:ok, socket, connected} <- Connector.connect(session, opts),
          :ok <- setopts(transport, socket, active: :once) do
-      send(conn, {:connected, self(), connected})
+      send(session, {:connected, self(), connected})
       {:noreply, %{state | socket: socket}}
     else
       {:error, reason} -> stop(reason, state)
@@ -103,7 +103,7 @@ defmodule ExZk.Socket do
   @impl true
   def handle_cast(
         {:send, packet},
-        %__MODULE__{conn: conn, transport: transport, socket: socket} = state
+        %__MODULE__{session: session, transport: transport, socket: socket} = state
       ) do
     case transport.send(socket, packet) do
       :ok ->
@@ -112,7 +112,7 @@ defmodule ExZk.Socket do
       {:error, reason} ->
         :ok = transport.close(socket)
 
-        send(conn, {:stopped, self(), reason})
+        send(session, {:stopped, self(), reason})
 
         error =
           case transport do
@@ -135,12 +135,12 @@ defmodule ExZk.Socket do
   defp new_data(%__MODULE__{} = state, "" = _data), do: state
 
   defp new_data(
-         %__MODULE__{conn: conn, buffered: nil} = state,
+         %__MODULE__{session: session, buffered: nil} = state,
          <<sz::32, data::binary-size(sz), rest::binary>> = _data
        ) do
     frame = Frame.unpack(data)
 
-    send(conn, {:frame, self(), frame})
+    send(session, {:frame, self(), frame})
 
     new_data(state, rest)
   end
@@ -153,8 +153,8 @@ defmodule ExZk.Socket do
     new_data(%__MODULE__{state | buffered: nil}, buffered <> data)
   end
 
-  defp stop(reason, %__MODULE__{conn: conn} = state) do
-    send(conn, {:stopped, self(), reason})
+  defp stop(reason, %__MODULE__{session: session} = state) do
+    send(session, {:stopped, self(), reason})
     {:stop, :normal, state}
   end
 end

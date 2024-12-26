@@ -6,7 +6,7 @@ defmodule ExZk.Task do
 
     alias ExZk.Data.{ACL, Stat}
     alias ExZk.Defs.OpCode
-    alias ExZk.{Connection, Frame}
+    alias ExZk.{Frame, Session}
 
     alias ExZk.Proto.{
       Create2Response,
@@ -35,14 +35,14 @@ defmodule ExZk.Task do
     ##
 
     @spec start_link(
-            :gen_statem.server_ref(),
+            session :: :gen_statem.server_ref(),
             path :: String.t(),
             data :: binary(),
             opts :: [option()]
           ) ::
             {:ok, pid()}
-    def start_link(conn, path, data \\ <<>>, opts \\ []) do
-      Task.start_link(__MODULE__, :run, [conn, path, data, opts])
+    def start_link(session, path, data \\ <<>>, opts \\ []) do
+      Task.start_link(__MODULE__, :run, [session, path, data, opts])
     end
 
     @spec ephemeral?(Mode.t()) :: boolean()
@@ -64,15 +64,15 @@ defmodule ExZk.Task do
     def ttl?(mode), do: mode in [:persistent_with_ttl, :persistent_sequential_with_ttl]
 
     @spec run(
-            conn :: :gen_statem.server_ref(),
+            session :: :gen_statem.server_ref(),
             path,
             data :: binary(),
             opts :: [option()]
           ) :: {:ok, path, Stat.t() | nil} | {:error, reason :: term()}
           when path: String.t()
-    def run(conn, path, data, opts) do
+    def run(session, path, data, opts) do
       {opcode, request} = new_request(path, data, opts)
-      :ok = Connection.send_request(conn, opcode, request)
+      :ok = Session.send_request(session, opcode, request)
 
       receive do
         {:ok, %CreateResponse{path: path}} ->
@@ -125,29 +125,29 @@ defmodule ExZk.Task do
   defmodule Delete do
     use Task
 
-    alias ExZk.Connection
     alias ExZk.Proto.DeleteRequest
+    alias ExZk.Session
 
     ####
     ## Public API
     ##
 
     @spec start_link(
-            conn :: :gen_statem.server_ref(),
+            session :: :gen_statem.server_ref(),
             path :: String.t(),
             version :: integer()
           ) ::
             {:ok, pid()}
-    def start_link(conn, path, version \\ 0) do
-      Task.start_link(__MODULE__, :run, [conn, path, version])
+    def start_link(session, path, version \\ 0) do
+      Task.start_link(__MODULE__, :run, [session, path, version])
     end
 
-    @spec run(conn :: :gen_statem.server_ref(), path :: String.t(), version :: integer() | nil) ::
+    @spec run(session :: :gen_statem.server_ref(), path :: String.t(), version :: integer() | nil) ::
             :ok | {:error, reason :: term()}
-    def run(conn, path, version) do
+    def run(session, path, version) do
       request = %DeleteRequest{path: path, version: version}
 
-      :ok = Connection.send_request(conn, :delete, request)
+      :ok = Session.send_request(session, :delete, request)
 
       receive do
         {:ok, nil} ->
@@ -162,25 +162,25 @@ defmodule ExZk.Task do
   defmodule Exists do
     use Task
 
-    alias ExZk.Connection
     alias ExZk.Data.Stat
     alias ExZk.Proto.{ExistsRequest, ExistsResponse}
+    alias ExZk.Session
 
     ####
     ## Public API
     ##
 
-    @spec start_link(conn :: :gen_statem.server_ref(), path :: String.t()) :: {:ok, pid()}
-    def start_link(conn, path) do
-      Task.start_link(__MODULE__, :run, [conn, path])
+    @spec start_link(session :: :gen_statem.server_ref(), path :: String.t()) :: {:ok, pid()}
+    def start_link(session, path) do
+      Task.start_link(__MODULE__, :run, [session, path])
     end
 
-    @spec run(conn :: :gen_statem.server_ref(), path :: String.t()) ::
+    @spec run(session :: :gen_statem.server_ref(), path :: String.t()) ::
             {:ok, boolean(), Stat.t()} | {:error, reason :: term()}
-    def run(conn, path) do
+    def run(session, path) do
       request = %ExistsRequest{path: path}
 
-      :ok = Connection.send_request(conn, :exists, request)
+      :ok = Session.send_request(session, :exists, request)
 
       receive do
         {:ok, %ExistsResponse{stat: stat}} ->

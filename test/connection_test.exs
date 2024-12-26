@@ -7,7 +7,7 @@ defmodule ConnectionTest do
   import ExZk.Wire
   alias ExZk.Defs.OpCode
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
-  alias ExZk.{Connection, Connector, Frame}
+  alias ExZk.{Connector, Frame, Session}
 
   @close_session Frame.new_close_session()
 
@@ -21,30 +21,30 @@ defmodule ConnectionTest do
     :ok
   end
 
-  describe "Given a Connection" do
+  describe "Given a Session" do
     test "it can be connected" do
       Process.flag(:trap_exit, true)
 
       # connect to the server
-      {:ok, conn} = Connection.start_link(exit_on_disconnection: true)
+      {:ok, session} = Session.start_link(exit_on_disconnection: true)
 
       # it should be connected
       Process.sleep(100)
-      assert {:connected, %{addr: :addr}} = Connection.status(conn)
+      assert {:connected, %{addr: :addr}} = Session.status(session)
 
-      assert_called_exactly(Connector.connect(conn, exit_on_disconnection: true), 1)
+      assert_called_exactly(Connector.connect(session, exit_on_disconnection: true), 1)
 
-      # stop the connection
-      Connection.stop(conn)
+      # stop the session
+      Session.stop(session)
 
       assert_called_exactly(:gen_tcp.send(:sock, pack(@close_session)), 1)
 
       # it should be terminated
       Process.sleep(100)
-      assert !Process.alive?(conn)
+      assert !Process.alive?(session)
 
       # the EXIT signal should be received
-      assert_received {:EXIT, ^conn, :normal}
+      assert_received {:EXIT, ^session, :normal}
     end
 
     test "it should be reconnect when connect failed" do
@@ -54,16 +54,16 @@ defmodule ConnectionTest do
         Process.flag(:trap_exit, true)
 
         # connect to the server
-        {:ok, conn} = Connection.start_link(backoff_initial: 10, backoff_max: 50)
+        {:ok, session} = Session.start_link(backoff_initial: 10, backoff_max: 50)
 
         # it should be connected
         Process.sleep(100)
 
-        assert Connection.status(conn) ==
+        assert Session.status(session) ==
                  {:disconnected, %{backoff_current: 50, reconnect_times: 5}}
 
         assert_called_exactly(
-          Connector.connect(conn, backoff_initial: 10, backoff_max: 50),
+          Connector.connect(session, backoff_initial: 10, backoff_max: 50),
           5
         )
       end
@@ -71,13 +71,13 @@ defmodule ConnectionTest do
 
     test "it can be sync connected" do
       # connect to the server
-      {:ok, conn} = Connection.start_link(sync_connect: true)
+      {:ok, session} = Session.start_link(sync_connect: true)
 
       # it should be connected
-      assert {:connected, %{addr: :addr}} = Connection.status(conn)
+      assert {:connected, %{addr: :addr}} = Session.status(session)
 
       assert_called_exactly(
-        Connector.connect(conn, sync_connect: true),
+        Connector.connect(session, sync_connect: true),
         1
       )
     end
@@ -89,8 +89,8 @@ defmodule ConnectionTest do
         Process.flag(:trap_exit, true)
 
         # connect to the server
-        assert Connection.start_link(sync_connect: true) ==
-                 {:error, %Connection.Error{reason: :foobar}}
+        assert Session.start_link(sync_connect: true) ==
+                 {:error, %Session.Error{reason: :foobar}}
 
         assert_called_exactly(
           Connector.connect(:_, sync_connect: true),
@@ -105,42 +105,42 @@ defmodule ConnectionTest do
 
     test "it can handle ping response" do
       # connect to the server
-      {:ok, conn} = Connection.start_link(sync_connect: true)
+      {:ok, session} = Session.start_link(sync_connect: true)
 
       # it should be connected
-      assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
+      assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
       assert capture_log([level: :debug, format: "$message"], fn ->
                frame = Frame.unpack(pack(%ReplyHeader{xid: @ping_xid}))
 
-               send(conn, {:frame, socket, frame})
+               send(session, {:frame, socket, frame})
 
-               assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+               assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
              end) == "Got ping response for session id - after PT0S"
     end
 
     test "it can handle auth packet response" do
       # connect to the server
-      {:ok, conn} = Connection.start_link(sync_connect: true)
+      {:ok, session} = Session.start_link(sync_connect: true)
 
       # it should be connected
-      assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
+      assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
       frame = Frame.unpack(pack(%ReplyHeader{xid: @auth_packet_xid, err: -1}))
 
       assert capture_log([level: :debug, format: "$message"], fn ->
-               send(conn, {:frame, socket, frame})
+               send(session, {:frame, socket, frame})
 
-               assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+               assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
              end) == "Got auth response for session id - with err: -1"
     end
 
     test "it can handle notification" do
       # connect to the server
-      {:ok, conn} = Connection.start_link(sync_connect: true)
+      {:ok, session} = Session.start_link(sync_connect: true)
 
       # it should be connected
-      assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
+      assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
       frame =
         Frame.unpack(
@@ -149,27 +149,27 @@ defmodule ConnectionTest do
         )
 
       assert capture_log([level: :debug, format: "$message"], fn ->
-               send(conn, {:frame, socket, frame})
+               send(session, {:frame, socket, frame})
 
-               assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+               assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
              end) ==
                ~s[Got notification for session id - with event: #{%ExZk.WatchedEvent{type: :node_created, state: :sync_connected, path: "/test", zxid: 123} |> inspect()}]
     end
 
     test "it can handle unknown build-in frame" do
       # connect to the server
-      {:ok, conn} = Connection.start_link(sync_connect: true)
+      {:ok, session} = Session.start_link(sync_connect: true)
 
       # it should be connected
-      assert {:connected, %{socket: socket, addr: :addr}} = Connection.status(conn)
+      assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
       xid = -123
       frame = Frame.unpack(pack(%ReplyHeader{xid: xid}))
 
       assert capture_log([level: :debug, format: "$message"], fn ->
-               send(conn, {:frame, socket, frame})
+               send(session, {:frame, socket, frame})
 
-               assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+               assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
              end) == "Got unknown reply for session id - with with xid: #{xid}"
     end
 
@@ -178,11 +178,11 @@ defmodule ConnectionTest do
         {:gen_tcp, [:unstick], [send: fn _socket, _data -> :ok end]}
       ]) do
         # connect to the server
-        {:ok, conn} = Connection.start_link(sync_connect: true)
+        {:ok, session} = Session.start_link(sync_connect: true)
 
-        assert :gen_statem.cast(conn, :ping) == :ok
+        assert :gen_statem.cast(session, :ping) == :ok
 
-        assert {:connected, %{socket: socket}} = Connection.status(conn)
+        assert {:connected, %{socket: socket}} = Session.status(session)
 
         frame = pack(%RequestHeader{xid: @ping_xid, type: OpCode.value!(:ping)})
 
@@ -192,9 +192,9 @@ defmodule ConnectionTest do
 
         assert String.starts_with?(
                  capture_log([level: :debug, format: "$message"], fn ->
-                   send(conn, {:frame, socket, frame})
+                   send(session, {:frame, socket, frame})
 
-                   assert {:connected, %{socket: ^socket, addr: :addr}} = Connection.status(conn)
+                   assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
                  end),
                  "Got ping response for session id - after PT"
                )

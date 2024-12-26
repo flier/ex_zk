@@ -29,11 +29,11 @@ defmodule ExZk.Connector do
   ## Public API
   ##
 
-  @spec connect(conn :: pid(), opts :: keyword()) ::
+  @spec connect(session :: Process.dest(), opts :: keyword()) ::
           {:ok, ExZk.Socket.socket(), Connected.t()}
           | {:error, term}
           | {:stop, term}
-  def connect(conn, opts) when is_pid(conn) and is_list(opts) do
+  def connect(session, opts) when is_pid(session) and is_list(opts) do
     host = Keyword.fetch!(opts, :host)
     port = Keyword.fetch!(opts, :port)
 
