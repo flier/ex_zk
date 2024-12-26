@@ -2,9 +2,25 @@ defmodule ExZk.Session do
   require Logger
 
   import ExZk.Frame
+
   alias ExZk.Connector.Connected
-  alias ExZk.Defs.{ErrCode, OpCode}
-  alias ExZk.Proto.ReplyHeader
+  alias ExZk.Create
+  alias ExZk.Data.{ACL, Stat}
+  alias ExZk.Defs.ErrCode
+
+  alias ExZk.Proto.{
+    Create2Response,
+    CreateResponse,
+    DeleteRequest,
+    ExistsRequest,
+    ExistsResponse,
+    GetACLRequest,
+    GetACLResponse,
+    ReplyHeader,
+    SetACLRequest,
+    SetACLResponse
+  }
+
   alias ExZk.{Frame, Framer, Socket, WatchedEvent, WatchManager}
 
   @behaviour :gen_statem
@@ -105,19 +121,106 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec stop(:gen_statem.server_ref(), timeout()) :: :ok
+  @spec stop(session :: :gen_statem.server_ref(), timeout()) :: :ok
   def stop(session, timeout \\ :infinity) do
     :gen_statem.stop(session, :normal, timeout)
   end
 
-  @spec status(:gen_statem.server_ref()) :: status()
+  @spec status(session :: :gen_statem.server_ref()) :: status()
   def status(session) do
     :gen_statem.call(session, :status)
   end
 
-  @spec send_request(:gen_statem.server_ref(), OpCode.t(), Frame.request()) :: :ok
-  def send_request(session, opcode, request) do
-    :gen_statem.cast(session, {:send_request, self(), opcode, request})
+  @spec create(
+          session :: :gen_statem.server_ref(),
+          path,
+          data :: binary(),
+          opts :: [option()]
+        ) :: {:ok, path, Stat.t() | nil} | {:error, reason :: term()}
+        when path: String.t()
+  def create(session, path, data \\ "", opts \\ []) do
+    {opcode, request} = Create.new_request(path, data, opts)
+    :ok = send_request(session, opcode, request)
+
+    receive do
+      {:ok, %CreateResponse{path: path}} ->
+        {:ok, path, nil}
+
+      {:ok, %Create2Response{path: path, stat: stat}} ->
+        {:ok, path, stat}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @spec delete(session :: :gen_statem.server_ref(), path :: String.t(), version :: integer() | 0) ::
+          :ok | {:error, reason :: term()}
+  def delete(session, path, version \\ 0) do
+    request = %DeleteRequest{path: path, version: version}
+
+    :ok = send_request(session, :delete, request)
+
+    receive do
+      {:ok, nil} ->
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @spec exists(session :: :gen_statem.server_ref(), path :: String.t()) ::
+          {:ok, boolean(), Stat.t()} | {:error, reason :: term()}
+  def exists(session, path) do
+    request = %ExistsRequest{path: path}
+
+    :ok = send_request(session, :exists, request)
+
+    receive do
+      {:ok, %ExistsResponse{stat: stat}} ->
+        {:ok, true, stat}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @spec get_acl(session :: :gen_statem.server_ref(), path :: String.t()) ::
+          {:ok, list(ACL.t()), Stat.t()} | {:error, reason :: term()}
+  def get_acl(session, path) do
+    request = %GetACLRequest{path: path}
+
+    :ok = send_request(session, :get_acl, request)
+
+    receive do
+      {:ok, %GetACLResponse{acl: acl, stat: stat}} ->
+        {:ok, acl, stat}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @spec set_acl(
+          session :: :gen_statem.server_ref(),
+          path :: String.t(),
+          acl :: [ACL.t()],
+          version :: integer()
+        ) ::
+          {:ok, Stat.t()} | {:error, reason :: term()}
+  def set_acl(session, path, acl, version \\ 0) do
+    request = %SetACLRequest{path: path, acl: acl, version: version}
+
+    :ok = send_request(session, :get_acl, request)
+
+    receive do
+      {:ok, %SetACLResponse{stat: stat}} ->
+        {:ok, stat}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   ####
@@ -415,5 +518,9 @@ defmodule ExZk.Session do
         persistent_recursive_watches
       )
     end
+  end
+
+  defp send_request(session, opcode, request) do
+    :gen_statem.cast(session, {:send_request, self(), opcode, request})
   end
 end

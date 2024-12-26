@@ -1,10 +1,10 @@
-defmodule TaskTest do
+defmodule CreateTest do
   use ExUnit.Case, async: true
 
   import ExZk.Defs.Ids
 
+  alias ExZk.Create
   alias ExZk.Proto.{CreateRequest, CreateTTLRequest}
-  alias ExZk.Task.Create
 
   @path "/foo/bar"
   @data "hello world"
