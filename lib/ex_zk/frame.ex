@@ -1,6 +1,8 @@
 defmodule ExZk.Frame do
   require Logger
 
+  alias ExZk.Proto.SyncResponse
+  alias ExZk.Proto.SyncRequest
   alias ExZk.Defs.OpCode
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
@@ -40,25 +42,27 @@ defmodule ExZk.Frame do
   @type request ::
           ConnectRequest.t()
           | AuthPacket.t()
-          | SetWatches.t()
-          | SetWatches2.t()
           | CreateRequest.t()
           | CreateTTLRequest.t()
           | DeleteRequest.t()
           | ExistsRequest.t()
           | GetACLRequest.t()
           | SetACLRequest.t()
+          | SetWatches.t()
+          | SetWatches2.t()
+          | SyncRequest.t()
 
   @type response ::
           :pong
           | {:auth_failed, error()}
           | {:notification, zxid(), WatcherEvent.t()}
           | ConnectResponse.t()
-          | CreateResponse.t()
           | Create2Response.t()
+          | CreateResponse.t()
           | ExistsResponse.t()
           | GetACLResponse.t()
           | SetACLResponse.t()
+          | SyncResponse.t()
 
   @type error :: integer()
   @type xid :: integer()

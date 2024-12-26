@@ -3,6 +3,9 @@ defmodule ExZk.Session do
 
   import ExZk.Frame
 
+  alias ExZk.Defs.OpCode
+  alias ExZk.Proto.SyncResponse
+  alias ExZk.Proto.SyncRequest
   alias ExZk.Connector.Connected
   alias ExZk.Create
   alias ExZk.Data.{ACL, Stat}
@@ -221,6 +224,32 @@ defmodule ExZk.Session do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @spec sync(session :: :gen_statem.server_ref(), path) ::
+          {:ok, path} | {:error, reason :: term()}
+        when path: String.t()
+  def sync(session, path) do
+    request = %SyncRequest{path: path}
+
+    :ok = send_request(session, :get_acl, request)
+
+    receive do
+      {:ok, %SyncResponse{path: path}} ->
+        {:ok, path}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  @spec send_request(
+          session :: :gen_statem.server_ref(),
+          opcode :: OpCode.t(),
+          request :: Frame.request()
+        ) :: :ok
+  def send_request(session, opcode, request) do
+    :gen_statem.cast(session, {:send_request, self(), opcode, request})
   end
 
   ####
@@ -518,9 +547,5 @@ defmodule ExZk.Session do
         persistent_recursive_watches
       )
     end
-  end
-
-  defp send_request(session, opcode, request) do
-    :gen_statem.cast(session, {:send_request, self(), opcode, request})
   end
 end
