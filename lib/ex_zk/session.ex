@@ -144,7 +144,7 @@ defmodule ExZk.Session do
         {:connected, ^socket, %Connected{} = connected} ->
           {:ok, :connected, on_connected(data, socket, connected)}
 
-        {:stopped, ^socket, reason} ->
+        {:disconnected, ^socket, reason} ->
           {:stop, %Error{reason: reason}}
       end
     else
@@ -172,7 +172,7 @@ defmodule ExZk.Session do
     {:next_state, :connecting, %{data | socket: socket}}
   end
 
-  def disconnected(:info, {:stopped, socket, reason}, %__MODULE__{socket: socket} = data) do
+  def disconnected(:info, {:disconnected, socket, reason}, %__MODULE__{socket: socket} = data) do
     data = %{data | connected_address: nil}
     disconnect(data, reason)
   end
@@ -199,7 +199,7 @@ defmodule ExZk.Session do
     {:next_state, :connected, on_connected(data, socket, connected)}
   end
 
-  def connecting(:info, {:stopped, socket, reason}, %__MODULE__{socket: socket} = data) do
+  def connecting(:info, {:disconnected, socket, reason}, %__MODULE__{socket: socket} = data) do
     disconnect(data, reason)
   end
 
@@ -209,7 +209,7 @@ defmodule ExZk.Session do
   end
 
   # "Connected" state: the session is up and the socket is alive.
-  def connected(:info, {:stopped, socket, reason}, %__MODULE__{socket: socket} = data) do
+  def connected(:info, {:disconnected, socket, reason}, %__MODULE__{socket: socket} = data) do
     data = %{data | connected_address: nil}
     disconnect(data, reason)
   end
