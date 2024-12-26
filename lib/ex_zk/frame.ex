@@ -16,8 +16,12 @@ defmodule ExZk.Frame do
     DeleteRequest,
     ExistsRequest,
     ExistsResponse,
+    GetACLRequest,
+    GetACLResponse,
     ReplyHeader,
     RequestHeader,
+    SetACLRequest,
+    SetACLResponse,
     SetWatches,
     SetWatches2,
     WatcherEvent
@@ -42,6 +46,9 @@ defmodule ExZk.Frame do
           | CreateTTLRequest.t()
           | DeleteRequest.t()
           | ExistsRequest.t()
+          | GetACLRequest.t()
+          | SetACLRequest.t()
+
   @type response ::
           :pong
           | {:auth_failed, error()}
@@ -50,6 +57,8 @@ defmodule ExZk.Frame do
           | CreateResponse.t()
           | Create2Response.t()
           | ExistsResponse.t()
+          | GetACLResponse.t()
+          | SetACLResponse.t()
 
   @type error :: integer()
   @type xid :: integer()

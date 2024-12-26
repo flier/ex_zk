@@ -1,7 +1,5 @@
 defmodule ExZk.Task do
   defmodule Create do
-    use Task
-
     import ExZk.TypedEnum
 
     alias ExZk.Data.{ACL, Stat}
@@ -34,35 +32,6 @@ defmodule ExZk.Task do
     ## Public API
     ##
 
-    @spec start_link(
-            session :: :gen_statem.server_ref(),
-            path :: String.t(),
-            data :: binary(),
-            opts :: [option()]
-          ) ::
-            {:ok, pid()}
-    def start_link(session, path, data \\ <<>>, opts \\ []) do
-      Task.start_link(__MODULE__, :run, [session, path, data, opts])
-    end
-
-    @spec ephemeral?(Mode.t()) :: boolean()
-    def ephemeral?(mode), do: mode in [:ephemeral, :ephemeral_sequential]
-
-    @spec sequential?(Mode.t()) :: boolean()
-    def sequential?(mode),
-      do:
-        mode in [
-          :persistent_sequential,
-          :ephemeral_sequential,
-          :persistent_sequential_with_ttl
-        ]
-
-    @spec container?(Mode.t()) :: boolean()
-    def container?(mode), do: mode == :container
-
-    @spec ttl?(Mode.t()) :: boolean()
-    def ttl?(mode), do: mode in [:persistent_with_ttl, :persistent_sequential_with_ttl]
-
     @spec run(
             session :: :gen_statem.server_ref(),
             path,
@@ -70,7 +39,7 @@ defmodule ExZk.Task do
             opts :: [option()]
           ) :: {:ok, path, Stat.t() | nil} | {:error, reason :: term()}
           when path: String.t()
-    def run(session, path, data, opts) do
+    def run(session, path, data \\ "", opts \\ []) do
       {opcode, request} = new_request(path, data, opts)
       :ok = Session.send_request(session, opcode, request)
 
@@ -88,7 +57,7 @@ defmodule ExZk.Task do
 
     @spec new_request(path :: String.t(), data :: binary(), opts :: [option()]) ::
             {OpCode.t(), Frame.request()}
-    def new_request(path, data, opts \\ []) do
+    def new_request(path, data \\ "", opts \\ []) do
       acl = Keyword.get(opts, :acl, [])
       mode = Keyword.get(opts, :mode, :persistent)
       ttl = Keyword.get(opts, :ttl, 0)
@@ -120,11 +89,27 @@ defmodule ExZk.Task do
 
       {opcode, request}
     end
+
+    @spec ephemeral?(Mode.t()) :: boolean()
+    def ephemeral?(mode), do: mode in [:ephemeral, :ephemeral_sequential]
+
+    @spec sequential?(Mode.t()) :: boolean()
+    def sequential?(mode),
+      do:
+        mode in [
+          :persistent_sequential,
+          :ephemeral_sequential,
+          :persistent_sequential_with_ttl
+        ]
+
+    @spec container?(Mode.t()) :: boolean()
+    def container?(mode), do: mode == :container
+
+    @spec ttl?(Mode.t()) :: boolean()
+    def ttl?(mode), do: mode in [:persistent_with_ttl, :persistent_sequential_with_ttl]
   end
 
   defmodule Delete do
-    use Task
-
     alias ExZk.Proto.DeleteRequest
     alias ExZk.Session
 
@@ -132,19 +117,9 @@ defmodule ExZk.Task do
     ## Public API
     ##
 
-    @spec start_link(
-            session :: :gen_statem.server_ref(),
-            path :: String.t(),
-            version :: integer()
-          ) ::
-            {:ok, pid()}
-    def start_link(session, path, version \\ 0) do
-      Task.start_link(__MODULE__, :run, [session, path, version])
-    end
-
-    @spec run(session :: :gen_statem.server_ref(), path :: String.t(), version :: integer() | nil) ::
+    @spec run(session :: :gen_statem.server_ref(), path :: String.t(), version :: integer() | 0) ::
             :ok | {:error, reason :: term()}
-    def run(session, path, version) do
+    def run(session, path, version \\ 0) do
       request = %DeleteRequest{path: path, version: version}
 
       :ok = Session.send_request(session, :delete, request)
@@ -160,8 +135,6 @@ defmodule ExZk.Task do
   end
 
   defmodule Exists do
-    use Task
-
     alias ExZk.Data.Stat
     alias ExZk.Proto.{ExistsRequest, ExistsResponse}
     alias ExZk.Session
@@ -169,11 +142,6 @@ defmodule ExZk.Task do
     ####
     ## Public API
     ##
-
-    @spec start_link(session :: :gen_statem.server_ref(), path :: String.t()) :: {:ok, pid()}
-    def start_link(session, path) do
-      Task.start_link(__MODULE__, :run, [session, path])
-    end
 
     @spec run(session :: :gen_statem.server_ref(), path :: String.t()) ::
             {:ok, boolean(), Stat.t()} | {:error, reason :: term()}
@@ -185,6 +153,32 @@ defmodule ExZk.Task do
       receive do
         {:ok, %ExistsResponse{stat: stat}} ->
           {:ok, true, stat}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    end
+  end
+
+  defmodule GetACL do
+    alias ExZk.Data.{ACL, Stat}
+    alias ExZk.Proto.{GetACLRequest, GetACLResponse}
+    alias ExZk.Session
+
+    ####
+    ## Public API
+    ##
+
+    @spec run(session :: :gen_statem.server_ref(), path :: String.t()) ::
+            {:ok, list(ACL.t()), Stat.t()} | {:error, reason :: term()}
+    def run(session, path) do
+      request = %GetACLRequest{path: path}
+
+      :ok = Session.send_request(session, :get_acl, request)
+
+      receive do
+        {:ok, %GetACLResponse{acl: acl, stat: stat}} ->
+          {:ok, acl, stat}
 
         {:error, reason} ->
           {:error, reason}
