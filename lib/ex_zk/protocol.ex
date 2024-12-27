@@ -5,7 +5,7 @@ defmodule ExZk.Data do
     defstruct scheme: "",
               id: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             scheme: String.t(),
             id: String.t()
           }
@@ -39,7 +39,7 @@ defmodule ExZk.Data do
     defstruct perms: 0,
               id: %Id{}
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             perms: integer(),
             id: Id.t()
           }
@@ -82,7 +82,7 @@ defmodule ExZk.Data do
               num_children: 0,
               pzxid: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             czxid: integer(),
             mzxid: integer(),
             ctime: integer(),
@@ -159,7 +159,7 @@ defmodule ExZk.Data do
               ephemeral_owner: 0,
               pzxid: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             czxid: integer(),
             mzxid: integer(),
             ctime: integer(),
@@ -221,7 +221,7 @@ defmodule ExZk.Data do
     defstruct auth_scheme: "",
               user: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             auth_scheme: String.t(),
             user: String.t()
           }
@@ -263,7 +263,7 @@ defmodule ExZk.Proto do
               passwd: <<>>,
               read_only: false
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             protocol_version: integer(),
             last_zxid_seen: integer(),
             time_out: integer(),
@@ -316,7 +316,7 @@ defmodule ExZk.Proto do
               passwd: <<>>,
               read_only: false
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             protocol_version: integer(),
             time_out: integer(),
             session_id: integer(),
@@ -364,7 +364,7 @@ defmodule ExZk.Proto do
               exist_watches: [],
               child_watches: []
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             relative_zxid: integer(),
             data_watches: list(String.t()),
             exist_watches: list(String.t()),
@@ -410,7 +410,7 @@ defmodule ExZk.Proto do
               persistent_watches: [],
               persistent_recursive_watches: []
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             relative_zxid: integer(),
             data_watches: list(String.t()),
             exist_watches: list(String.t()),
@@ -460,7 +460,7 @@ defmodule ExZk.Proto do
     defstruct xid: 0,
               type: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             xid: integer(),
             type: integer()
           }
@@ -495,7 +495,7 @@ defmodule ExZk.Proto do
               done: false,
               err: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             type: integer(),
             done: boolean(),
             err: integer()
@@ -534,7 +534,7 @@ defmodule ExZk.Proto do
               scheme: "",
               auth: <<>>
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             type: integer(),
             scheme: String.t(),
             auth: binary()
@@ -573,7 +573,7 @@ defmodule ExZk.Proto do
               zxid: 0,
               err: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             xid: integer(),
             zxid: integer(),
             err: integer()
@@ -611,7 +611,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               watch: false
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             watch: boolean()
           }
@@ -646,7 +646,7 @@ defmodule ExZk.Proto do
               data: <<>>,
               version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
             version: integer()
@@ -686,7 +686,7 @@ defmodule ExZk.Proto do
               new_members: "",
               cur_config_id: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             joining_servers: String.t(),
             leaving_servers: String.t(),
             new_members: String.t(),
@@ -727,7 +727,7 @@ defmodule ExZk.Proto do
   defmodule SetDataResponse do
     defstruct stat: %ExZk.Data.Stat{}
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             stat: ExZk.Data.Stat.t()
           }
 
@@ -756,7 +756,7 @@ defmodule ExZk.Proto do
   defmodule GetSASLRequest do
     defstruct token: <<>>
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             token: binary()
           }
 
@@ -785,7 +785,7 @@ defmodule ExZk.Proto do
   defmodule SetSASLRequest do
     defstruct token: <<>>
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             token: binary()
           }
 
@@ -814,7 +814,7 @@ defmodule ExZk.Proto do
   defmodule SetSASLResponse do
     defstruct token: <<>>
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             token: binary()
           }
 
@@ -846,7 +846,7 @@ defmodule ExZk.Proto do
               acl: [],
               flags: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
             acl: list(ExZk.Data.ACL.t()),
@@ -891,7 +891,7 @@ defmodule ExZk.Proto do
               flags: 0,
               ttl: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
             acl: list(ExZk.Data.ACL.t()),
@@ -937,7 +937,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             version: integer()
           }
@@ -971,7 +971,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               watch: false
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             watch: boolean()
           }
@@ -1004,7 +1004,7 @@ defmodule ExZk.Proto do
   defmodule GetAllChildrenNumberRequest do
     defstruct path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t()
           }
 
@@ -1034,7 +1034,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               watch: false
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             watch: boolean()
           }
@@ -1068,7 +1068,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             version: integer()
           }
@@ -1101,7 +1101,7 @@ defmodule ExZk.Proto do
   defmodule GetMaxChildrenRequest do
     defstruct path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t()
           }
 
@@ -1130,7 +1130,7 @@ defmodule ExZk.Proto do
   defmodule GetMaxChildrenResponse do
     defstruct max: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             max: integer()
           }
 
@@ -1160,7 +1160,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               max: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             max: integer()
           }
@@ -1193,7 +1193,7 @@ defmodule ExZk.Proto do
   defmodule SyncRequest do
     defstruct path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t()
           }
 
@@ -1222,7 +1222,7 @@ defmodule ExZk.Proto do
   defmodule SyncResponse do
     defstruct path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t()
           }
 
@@ -1251,7 +1251,7 @@ defmodule ExZk.Proto do
   defmodule GetACLRequest do
     defstruct path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t()
           }
 
@@ -1282,7 +1282,7 @@ defmodule ExZk.Proto do
               acl: [],
               version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             acl: list(ExZk.Data.ACL.t()),
             version: integer()
@@ -1319,7 +1319,7 @@ defmodule ExZk.Proto do
   defmodule SetACLResponse do
     defstruct stat: %ExZk.Data.Stat{}
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             stat: ExZk.Data.Stat.t()
           }
 
@@ -1349,7 +1349,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               mode: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             mode: integer()
           }
@@ -1384,7 +1384,7 @@ defmodule ExZk.Proto do
               state: 0,
               path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             type: integer(),
             state: integer(),
             path: String.t()
@@ -1421,7 +1421,7 @@ defmodule ExZk.Proto do
   defmodule ErrorResponse do
     defstruct err: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             err: integer()
           }
 
@@ -1450,7 +1450,7 @@ defmodule ExZk.Proto do
   defmodule CreateResponse do
     defstruct path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t()
           }
 
@@ -1480,7 +1480,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               stat: %ExZk.Data.Stat{}
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             stat: ExZk.Data.Stat.t()
           }
@@ -1514,7 +1514,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               watch: false
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             watch: boolean()
           }
@@ -1547,7 +1547,7 @@ defmodule ExZk.Proto do
   defmodule ExistsResponse do
     defstruct stat: %ExZk.Data.Stat{}
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             stat: ExZk.Data.Stat.t()
           }
 
@@ -1577,7 +1577,7 @@ defmodule ExZk.Proto do
     defstruct data: <<>>,
               stat: %ExZk.Data.Stat{}
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             data: binary(),
             stat: ExZk.Data.Stat.t()
           }
@@ -1610,7 +1610,7 @@ defmodule ExZk.Proto do
   defmodule GetChildrenResponse do
     defstruct children: []
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             children: list(String.t())
           }
 
@@ -1639,7 +1639,7 @@ defmodule ExZk.Proto do
   defmodule GetAllChildrenNumberResponse do
     defstruct total_number: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             total_number: integer()
           }
 
@@ -1669,7 +1669,7 @@ defmodule ExZk.Proto do
     defstruct children: [],
               stat: %ExZk.Data.Stat{}
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             children: list(String.t()),
             stat: ExZk.Data.Stat.t()
           }
@@ -1703,7 +1703,7 @@ defmodule ExZk.Proto do
     defstruct acl: [],
               stat: %ExZk.Data.Stat{}
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             acl: list(ExZk.Data.ACL.t()),
             stat: ExZk.Data.Stat.t()
           }
@@ -1737,7 +1737,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               type: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             type: integer()
           }
@@ -1771,7 +1771,7 @@ defmodule ExZk.Proto do
     defstruct path: "",
               type: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             type: integer()
           }
@@ -1804,7 +1804,7 @@ defmodule ExZk.Proto do
   defmodule GetEphemeralsRequest do
     defstruct prefix_path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             prefix_path: String.t()
           }
 
@@ -1833,7 +1833,7 @@ defmodule ExZk.Proto do
   defmodule GetEphemeralsResponse do
     defstruct ephemerals: []
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             ephemerals: list(String.t())
           }
 
@@ -1862,7 +1862,7 @@ defmodule ExZk.Proto do
   defmodule WhoAmIResponse do
     defstruct client_info: []
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             client_info: list(ExZk.Data.ClientInfo.t())
           }
 
@@ -1896,7 +1896,7 @@ defmodule ExZk.Txn do
     defstruct version: 0,
               tree_digest: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             version: integer(),
             tree_digest: integer()
           }
@@ -1933,7 +1933,7 @@ defmodule ExZk.Txn do
               time: 0,
               type: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             client_id: integer(),
             cxid: integer(),
             zxid: integer(),
@@ -1981,7 +1981,7 @@ defmodule ExZk.Txn do
               acl: [],
               ephemeral: false
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
             acl: list(ExZk.Data.ACL.t()),
@@ -2026,7 +2026,7 @@ defmodule ExZk.Txn do
               ephemeral: false,
               parent_c_version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
             acl: list(ExZk.Data.ACL.t()),
@@ -2075,7 +2075,7 @@ defmodule ExZk.Txn do
               parent_c_version: 0,
               ttl: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
             acl: list(ExZk.Data.ACL.t()),
@@ -2123,7 +2123,7 @@ defmodule ExZk.Txn do
               acl: [],
               parent_c_version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
             acl: list(ExZk.Data.ACL.t()),
@@ -2164,7 +2164,7 @@ defmodule ExZk.Txn do
   defmodule DeleteTxn do
     defstruct path: ""
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t()
           }
 
@@ -2195,7 +2195,7 @@ defmodule ExZk.Txn do
               data: <<>>,
               version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
             version: integer()
@@ -2233,7 +2233,7 @@ defmodule ExZk.Txn do
     defstruct path: "",
               version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             version: integer()
           }
@@ -2268,7 +2268,7 @@ defmodule ExZk.Txn do
               acl: [],
               version: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             acl: list(ExZk.Data.ACL.t()),
             version: integer()
@@ -2306,7 +2306,7 @@ defmodule ExZk.Txn do
     defstruct path: "",
               max: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             path: String.t(),
             max: integer()
           }
@@ -2339,7 +2339,7 @@ defmodule ExZk.Txn do
   defmodule CreateSessionTxn do
     defstruct time_out: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             time_out: integer()
           }
 
@@ -2368,7 +2368,7 @@ defmodule ExZk.Txn do
   defmodule CloseSessionTxn do
     defstruct paths2_delete: []
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             paths2_delete: list(String.t())
           }
 
@@ -2397,7 +2397,7 @@ defmodule ExZk.Txn do
   defmodule ErrorTxn do
     defstruct err: 0
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             err: integer()
           }
 
@@ -2427,7 +2427,7 @@ defmodule ExZk.Txn do
     defstruct type: 0,
               data: <<>>
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             type: integer(),
             data: binary()
           }
@@ -2460,7 +2460,7 @@ defmodule ExZk.Txn do
   defmodule MultiTxn do
     defstruct txns: []
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             txns: list(ExZk.Txn.Txn.t())
           }
 

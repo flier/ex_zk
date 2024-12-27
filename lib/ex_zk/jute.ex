@@ -4,7 +4,7 @@ defmodule ExZk.Jute do
 
     defstruct [:name, :classes]
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             name: String.t(),
             classes: [Class.t()]
           }
@@ -19,7 +19,7 @@ defmodule ExZk.Jute do
 
     defstruct [:name, :fields, doc: nil]
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             name: String.t(),
             fields: [Field.t()],
             doc: String.t() | nil
@@ -33,7 +33,7 @@ defmodule ExZk.Jute do
   defmodule Field do
     defstruct [:name, :type, doc: nil]
 
-    @type t() :: %__MODULE__{
+    @type t :: %__MODULE__{
             name: String.t(),
             type: ExZk.Wire.type(),
             doc: String.t() | nil
