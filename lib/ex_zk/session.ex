@@ -101,7 +101,6 @@ defmodule ExZk.Session do
   @type option :: {:session_id, integer()} | Socket.option() | :gen_statem.start_opt()
 
   @type session :: :gen_statem.server_ref()
-  @type path :: String.t()
   @type status :: :disconnected | :connecting | :connected
   @type zxid :: Frame.zxid()
 
@@ -153,10 +152,10 @@ defmodule ExZk.Session do
     :gen_statem.call(session, :status)
   end
 
-  @spec get_children(session(), path(), timeout()) ::
-          {:ok, children :: list(path())} | {:error, reason :: term()}
+  @spec get_children(session(), Path.t(), timeout()) ::
+          {:ok, children :: list(Path.t())} | {:error, reason :: term()}
   def get_children(session, path, timeout \\ @default_timeout) do
-    request = %GetChildrenRequest{path: path}
+    request = %GetChildrenRequest{path: IO.chardata_to_string(path)}
 
     with {:ok, %GetChildrenResponse{children: children}} <-
            send_request(session, :get_children, request, timeout) do
@@ -164,10 +163,10 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec get_children2(session(), path(), timeout()) ::
-          {:ok, children :: list(path()), Stat.t()} | {:error, reason :: term()}
+  @spec get_children2(session(), Path.t(), timeout()) ::
+          {:ok, children :: list(Path.t()), Stat.t()} | {:error, reason :: term()}
   def get_children2(session, path, timeout \\ @default_timeout) do
-    request = %GetChildren2Request{path: path}
+    request = %GetChildren2Request{path: IO.chardata_to_string(path)}
 
     with {:ok, %GetChildren2Response{children: children, stat: stat}} <-
            send_request(session, :get_children2, request, timeout) do
@@ -175,10 +174,10 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec get_data(session(), path(), timeout()) ::
+  @spec get_data(session(), Path.t(), timeout()) ::
           {:ok, data :: binary(), Stat.t()} | {:error, reason :: term()}
   def get_data(session, path, timeout \\ @default_timeout) do
-    request = %GetDataRequest{path: path}
+    request = %GetDataRequest{path: IO.chardata_to_string(path)}
 
     with {:ok, %GetDataResponse{data: data, stat: stat}} <-
            send_request(session, :get_data, request, timeout) do
@@ -188,14 +187,14 @@ defmodule ExZk.Session do
 
   @spec set_data(
           session(),
-          path(),
+          Path.t(),
           data :: binary(),
           version :: integer(),
           timeout()
         ) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
   def set_data(session, path, data \\ "", version \\ @no_version, timeout \\ @default_timeout) do
-    request = %SetDataRequest{path: path, data: data, version: version}
+    request = %SetDataRequest{path: IO.chardata_to_string(path), data: data, version: version}
 
     with {:ok, %SetDataResponse{stat: stat}} <- send_request(session, :set_data, request, timeout) do
       {:ok, stat}
@@ -204,13 +203,13 @@ defmodule ExZk.Session do
 
   @spec create(
           session(),
-          path(),
+          Path.t(),
           data :: binary(),
           opts :: [option()],
           timeout()
-        ) :: {:ok, path(), Stat.t() | nil} | {:error, reason :: term()}
+        ) :: {:ok, Path.t(), Stat.t() | nil} | {:error, reason :: term()}
   def create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout) do
-    {opcode, request} = Create.new_request(path, data, opts)
+    {opcode, request} = Create.new_request(IO.chardata_to_string(path), data, opts)
 
     case send_request(session, opcode, request, timeout) do
       {:ok, %CreateResponse{path: path}} ->
@@ -226,31 +225,31 @@ defmodule ExZk.Session do
 
   @spec delete(
           session(),
-          path(),
+          Path.t(),
           version :: integer(),
           timeout()
         ) ::
           :ok | {:error, reason :: term()}
   def delete(session, path, version \\ @no_version, timeout \\ @default_timeout) do
-    request = %DeleteRequest{path: path, version: version}
+    request = %DeleteRequest{path: IO.chardata_to_string(path), version: version}
 
     send_request(session, :delete, request, timeout)
   end
 
-  @spec exists(session(), path(), timeout()) ::
+  @spec exists(session(), Path.t(), timeout()) ::
           {:ok, boolean(), Stat.t()} | {:error, reason :: term()}
   def exists(session, path, timeout \\ @default_timeout) do
-    request = %ExistsRequest{path: path}
+    request = %ExistsRequest{path: IO.chardata_to_string(path)}
 
     with {:ok, %ExistsResponse{stat: stat}} <- send_request(session, :exists, request, timeout) do
       {:ok, true, stat}
     end
   end
 
-  @spec get_acl(session(), path(), timeout()) ::
+  @spec get_acl(session(), Path.t(), timeout()) ::
           {:ok, list(ACL.t()), Stat.t()} | {:error, reason :: term()}
   def get_acl(session, path, timeout \\ @default_timeout) do
-    request = %GetACLRequest{path: path}
+    request = %GetACLRequest{path: IO.chardata_to_string(path)}
 
     with {:ok, %GetACLResponse{acl: acl, stat: stat}} <-
            send_request(session, :get_acl, request, timeout) do
@@ -258,19 +257,19 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec set_acl(session(), path(), acl :: [ACL.t()], version :: integer(), timeout()) ::
+  @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version :: integer(), timeout()) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
   def set_acl(session, path, acl, version \\ @no_version, timeout \\ @default_timeout) do
-    request = %SetACLRequest{path: path, acl: acl, version: version}
+    request = %SetACLRequest{path: IO.chardata_to_string(path), acl: acl, version: version}
 
     with {:ok, %SetACLResponse{stat: stat}} <- send_request(session, :get_acl, request, timeout) do
       {:ok, stat}
     end
   end
 
-  @spec sync(session(), path(), timeout()) :: {:ok, path()} | {:error, reason :: term()}
+  @spec sync(session(), Path.t(), timeout()) :: {:ok, Path.t()} | {:error, reason :: term()}
   def sync(session, path, timeout \\ @default_timeout) do
-    request = %SyncRequest{path: path}
+    request = %SyncRequest{path: IO.chardata_to_string(path)}
 
     with {:ok, %SyncResponse{path: path}} <- send_request(session, :sync, request, timeout) do
       {:ok, path}

@@ -24,7 +24,6 @@ defmodule ExZk do
   @type name :: atom() | {:global, name :: term()} | {:via, mod :: module(), name :: term()}
 
   @type session :: Session.session()
-  @type path :: Session.path()
 
   @default_timeout 5000
   @no_version -1
@@ -72,21 +71,21 @@ defmodule ExZk do
     |> start_link()
   end
 
-  @spec get_children(session(), path(), timeout()) ::
-          {:ok, children :: list(path())} | {:error, reason :: term()}
+  @spec get_children(session(), Path.t(), timeout()) ::
+          {:ok, children :: list(Path.t())} | {:error, reason :: term()}
   defdelegate get_children(session, path, timeout \\ @default_timeout), to: Session
 
-  @spec get_children2(session(), path(), timeout()) ::
-          {:ok, children :: list(path()), Stat.t()} | {:error, reason :: term()}
+  @spec get_children2(session(), Path.t(), timeout()) ::
+          {:ok, children :: list(Path.t()), Stat.t()} | {:error, reason :: term()}
   defdelegate get_children2(session, path, timeout \\ @default_timeout), to: Session
 
-  @spec get_data(session(), path(), timeout()) ::
+  @spec get_data(session(), Path.t(), timeout()) ::
           {:ok, data :: binary(), Stat.t()} | {:error, reason :: term()}
   defdelegate get_data(session, path, timeout \\ @default_timeout), to: Session
 
   @spec set_data(
           session(),
-          path(),
+          Path.t(),
           data :: binary(),
           version :: integer(),
           timeout()
@@ -103,17 +102,17 @@ defmodule ExZk do
 
   @spec create(
           session(),
-          path(),
+          Path.t(),
           data :: binary(),
           opts :: [option()],
           timeout()
-        ) :: {:ok, path(), Stat.t() | nil} | {:error, reason :: term()}
+        ) :: {:ok, Path.t(), Stat.t() | nil} | {:error, reason :: term()}
   defdelegate create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout),
     to: Session
 
   @spec delete(
           session(),
-          path(),
+          Path.t(),
           version :: integer(),
           timeout()
         ) ::
@@ -121,17 +120,17 @@ defmodule ExZk do
   defdelegate delete(session, path, version \\ @no_version, timeout \\ @default_timeout),
     to: Session
 
-  @spec exists(session(), path(), timeout()) ::
+  @spec exists(session(), Path.t(), timeout()) ::
           {:ok, boolean(), Stat.t()} | {:error, reason :: term()}
   defdelegate exists(session, path, timeout \\ @default_timeout), to: Session
 
-  @spec get_acl(session(), path(), timeout()) ::
+  @spec get_acl(session(), Path.t(), timeout()) ::
           {:ok, list(ACL.t()), Stat.t()} | {:error, reason :: term()}
   defdelegate get_acl(session, path, timeout \\ @default_timeout), to: Session
 
   @spec set_acl(
           session(),
-          path(),
+          Path.t(),
           acl :: [ACL.t()],
           version :: integer(),
           timeout()
@@ -140,8 +139,8 @@ defmodule ExZk do
   defdelegate set_acl(session, path, acl, version \\ @no_version, timeout \\ @default_timeout),
     to: Session
 
-  @spec sync(session(), path(), timeout()) ::
-          {:ok, path()} | {:error, reason :: term()}
+  @spec sync(session(), Path.t(), timeout()) ::
+          {:ok, Path.t()} | {:error, reason :: term()}
   defdelegate sync(session, path, timeout \\ @default_timeout), to: Session
 
   @spec multi(session(), ops :: [Multi.Op.t()], timeout()) ::

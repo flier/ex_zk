@@ -24,12 +24,12 @@ defmodule ExZk.Multi do
     }
 
     @type t ::
-            {:create, path :: String.t(), data :: binary(), opts :: [Create.option()]}
-            | {:check, path :: String.t(), version :: integer()}
-            | {:delete, path :: String.t(), version :: integer()}
-            | {:get_children, path :: String.t()}
-            | {:get_data, path :: String.t()}
-            | {:set_data, path :: String.t(), data :: binary(), version :: integer()}
+            {:create, Path.t(), data :: binary(), opts :: [Create.option()]}
+            | {:check, Path.t(), version :: integer()}
+            | {:delete, Path.t(), version :: integer()}
+            | {:get_children, Path.t()}
+            | {:get_data, Path.t()}
+            | {:set_data, Path.t(), data :: binary(), version :: integer()}
 
     @type request ::
             CreateRequest.t()
@@ -50,20 +50,25 @@ defmodule ExZk.Multi do
 
     @spec new_request(t()) :: {OpCode.t(), request()}
 
-    def new_request({:create, path, data, ops}), do: Create.new_request(path, data, ops)
+    def new_request({:create, path, data, ops}),
+      do: Create.new_request(path, data, ops)
 
     def new_request({:check, path, version}),
-      do: {:check, %CheckVersionRequest{path: path, version: version}}
+      do: {:check, %CheckVersionRequest{path: IO.chardata_to_string(path), version: version}}
 
     def new_request({:delete, path, version}),
-      do: {:delete, %DeleteRequest{path: path, version: version}}
+      do: {:delete, %DeleteRequest{path: IO.chardata_to_string(path), version: version}}
 
-    def new_request({:get_children, path}), do: {:get_children, %GetChildrenRequest{path: path}}
+    def new_request({:get_children, path}),
+      do: {:get_children, %GetChildrenRequest{path: IO.chardata_to_string(path)}}
 
-    def new_request({:get_data, path}), do: {:get_data, %GetDataRequest{path: path}}
+    def new_request({:get_data, path}),
+      do: {:get_data, %GetDataRequest{path: IO.chardata_to_string(path)}}
 
     def new_request({:set_data, path, data, version}),
-      do: {:set_data, %SetDataRequest{path: path, data: data, version: version}}
+      do:
+        {:set_data,
+         %SetDataRequest{path: IO.chardata_to_string(path), data: data, version: version}}
   end
 
   defmodule Result do
@@ -79,7 +84,7 @@ defmodule ExZk.Multi do
     }
 
     @type t ::
-            {:create, path :: String.t(), Stat.t()}
+            {:create, Path.t(), Stat.t()}
             | {:check, :ok}
             | {:delete, :ok}
             | {:error, ErrCode.t()}
@@ -182,22 +187,22 @@ defmodule ExZk.Multi do
     |> Enum.into([])
   end
 
-  @spec create(path :: String.t(), data :: binary(), opts :: [Create.option()]) :: Op.t()
+  @spec create(Path.t(), data :: binary(), opts :: [Create.option()]) :: Op.t()
   def create(path, data \\ "", opts \\ []), do: {:create, path, data, opts}
 
-  @spec check_version(path :: String.t(), version :: integer()) :: Op.t()
+  @spec check_version(Path.t(), version :: integer()) :: Op.t()
   def check_version(path, version \\ 0), do: {:check, path, version}
 
-  @spec delete(path :: String.t(), version :: integer()) :: Op.t()
+  @spec delete(Path.t(), version :: integer()) :: Op.t()
   def delete(path, version \\ 0), do: {:delete, path, version}
 
-  @spec get_children(path :: String.t()) :: Op.t()
+  @spec get_children(Path.t()) :: Op.t()
   def get_children(path), do: {:get_children, path}
 
-  @spec get_data(path :: String.t()) :: Op.t()
+  @spec get_data(Path.t()) :: Op.t()
   def get_data(path), do: {:get_data, path}
 
-  @spec set_data(path :: String.t(), data :: binary(), version :: integer()) :: Op.t()
+  @spec set_data(Path.t(), data :: binary(), version :: integer()) :: Op.t()
   def set_data(path, data, version \\ 0), do: {:set_data, path, data, version}
 
   ####

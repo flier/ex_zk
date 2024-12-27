@@ -48,7 +48,7 @@ defmodule ExZk.WatchedEvent do
   @type t :: %__MODULE__{
           state: KeeperState.t(),
           type: Type.t(),
-          path: String.t(),
+          path: Path.t(),
           zxid: integer()
         }
 end
