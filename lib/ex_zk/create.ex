@@ -27,7 +27,7 @@ defmodule ExZk.Create do
   ## Public API
   ##
 
-  @spec new_request(Path.t(), data :: binary(), opts :: [option()]) ::
+  @spec new_request(Path.t(), iodata(), opts :: [option()]) ::
           {OpCode.t(), Frame.request()}
   def new_request(path, data \\ "", opts \\ []) do
     acl = Keyword.get(opts, :acl, [])
@@ -45,7 +45,7 @@ defmodule ExZk.Create do
       if ttl?(mode) do
         %CreateTTLRequest{
           path: IO.chardata_to_string(path),
-          data: data,
+          data: IO.iodata_to_binary(data),
           acl: acl,
           flags: Mode.value!(mode),
           ttl: ttl
@@ -53,7 +53,7 @@ defmodule ExZk.Create do
       else
         %CreateRequest{
           path: IO.chardata_to_string(path),
-          data: data,
+          data: IO.iodata_to_binary(data),
           acl: acl,
           flags: Mode.value!(mode)
         }

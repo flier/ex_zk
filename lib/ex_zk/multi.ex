@@ -35,12 +35,12 @@ defmodule ExZk.Multi do
     }
 
     @type t ::
-            {:create, Path.t(), data :: binary(), opts :: [Create.option()]}
+            {:create, Path.t(), iodata(), opts :: [Create.option()]}
             | {:check, Path.t(), version()}
             | {:delete, Path.t(), version()}
             | {:get_children, Path.t()}
             | {:get_data, Path.t()}
-            | {:set_data, Path.t(), data :: binary(), version()}
+            | {:set_data, Path.t(), iodata(), version()}
 
     @type version :: integer()
 
@@ -66,7 +66,7 @@ defmodule ExZk.Multi do
     @doc """
     Constructs a create operation with data and options.
     """
-    @spec create(Path.t(), data :: binary(), opts :: [Create.option()]) :: Op.t()
+    @spec create(Path.t(), iodata(), opts :: [Create.option()]) :: Op.t()
     def create(path, data, opts) when is_binary(data) and is_list(opts),
       do: {:create, path, data, opts}
 
@@ -112,7 +112,7 @@ defmodule ExZk.Multi do
     @doc """
     Constructs a set_data operation.
     """
-    @spec set_data(Path.t(), data :: binary(), version()) :: Op.t()
+    @spec set_data(Path.t(), iodata(), version()) :: Op.t()
     def set_data(path, data, version \\ @any_version), do: {:set_data, path, data, version}
 
     @doc """
@@ -138,7 +138,11 @@ defmodule ExZk.Multi do
     def to_request({:set_data, path, data, version}),
       do:
         {:set_data,
-         %SetDataRequest{path: IO.chardata_to_string(path), data: data, version: version}}
+         %SetDataRequest{
+           path: IO.chardata_to_string(path),
+           data: IO.iodata_to_binary(data),
+           version: version
+         }}
   end
 
   defmodule Result do
@@ -163,13 +167,13 @@ defmodule ExZk.Multi do
             | {:delete, :ok}
             | {:error, ErrCode.t() | integer()}
             | {:get_children, children :: [Path.t()]}
-            | {:get_data, data :: binary(), Stat.t()}
+            | {:get_data, iodata(), Stat.t()}
             | {:set_data, Stat.t()}
 
     @doc """
     Unpacks a multi operation result.
     """
-    @spec unpack(OpCode.t(), data :: binary()) ::
+    @spec unpack(OpCode.t(), iodata()) ::
             {:ok, t(), binary()} | {:error, reason :: term()}
     def unpack(opcode, data)
 
@@ -237,7 +241,7 @@ defmodule ExZk.Multi do
     @doc """
     Unpacks a multi operation response.
     """
-    @spec unpack(data :: binary()) :: {:ok, t()} | {:error, :nomatch}
+    @spec unpack(iodata()) :: {:ok, t()} | {:error, :nomatch}
     def unpack(data) when is_binary(data) do
       with {:ok, hdr, rest} <- MultiHeader.unpack(data),
            {:ok, results, rest} <- unpack_results(hdr, rest, []) do

@@ -175,7 +175,7 @@ defmodule ExZk.Session do
   end
 
   @spec get_data(session(), Path.t(), timeout()) ::
-          {:ok, data :: binary(), Stat.t()} | {:error, reason :: term()}
+          {:ok, iodata(), Stat.t()} | {:error, reason :: term()}
   def get_data(session, path, timeout \\ @default_timeout) do
     request = %GetDataRequest{path: IO.chardata_to_string(path)}
 
@@ -188,13 +188,17 @@ defmodule ExZk.Session do
   @spec set_data(
           session(),
           Path.t(),
-          data :: binary(),
+          iodata(),
           version :: integer(),
           timeout()
         ) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
   def set_data(session, path, data \\ "", version \\ @no_version, timeout \\ @default_timeout) do
-    request = %SetDataRequest{path: IO.chardata_to_string(path), data: data, version: version}
+    request = %SetDataRequest{
+      path: IO.chardata_to_string(path),
+      data: IO.iodata_to_binary(data),
+      version: version
+    }
 
     with {:ok, %SetDataResponse{stat: stat}} <- send_request(session, :set_data, request, timeout) do
       {:ok, stat}
@@ -204,12 +208,12 @@ defmodule ExZk.Session do
   @spec create(
           session(),
           Path.t(),
-          data :: binary(),
+          iodata(),
           opts :: [option()],
           timeout()
         ) :: {:ok, Path.t(), Stat.t() | nil} | {:error, reason :: term()}
   def create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout) do
-    {opcode, request} = Create.new_request(IO.chardata_to_string(path), data, opts)
+    {opcode, request} = Create.new_request(path, data, opts)
 
     case send_request(session, opcode, request, timeout) do
       {:ok, %CreateResponse{path: path}} ->
