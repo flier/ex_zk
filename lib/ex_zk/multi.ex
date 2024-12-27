@@ -1,9 +1,20 @@
 defmodule ExZk.Multi do
+  @moduledoc """
+  A multi-operation transaction.
+  """
+
   alias ExZk.Create
   alias ExZk.Defs.{ErrCode, OpCode}
   alias ExZk.Proto.MultiHeader
 
   defmodule Op do
+    @moduledoc """
+    Represents a single operation in a multi-operation transaction.
+
+    Each operation can be a `create/3`, `set_data/2`, `delete/1`, a version `check/2`
+    or just read operations like `get_children/1` or `get_data/1`.
+    """
+
     alias ExZk.Data.Stat
     alias ExZk.Defs.OpCode
 
@@ -25,11 +36,13 @@ defmodule ExZk.Multi do
 
     @type t ::
             {:create, Path.t(), data :: binary(), opts :: [Create.option()]}
-            | {:check, Path.t(), version :: integer()}
-            | {:delete, Path.t(), version :: integer()}
+            | {:check, Path.t(), version()}
+            | {:delete, Path.t(), version()}
             | {:get_children, Path.t()}
             | {:get_data, Path.t()}
-            | {:set_data, Path.t(), data :: binary(), version :: integer()}
+            | {:set_data, Path.t(), data :: binary(), version()}
+
+    @type version :: integer()
 
     @type request ::
             CreateRequest.t()
@@ -48,48 +61,91 @@ defmodule ExZk.Multi do
             | GetChildrenResponse.t()
             | GetDataResponse.t()
 
+    @any_version -1
+
+    @doc """
+    Constructs a create operation with data and options.
+    """
     @spec create(Path.t(), data :: binary(), opts :: [Create.option()]) :: Op.t()
-    def create(path, data \\ "", opts \\ []), do: {:create, path, data, opts}
+    def create(path, data, opts) when is_binary(data) and is_list(opts),
+      do: {:create, path, data, opts}
 
-    @spec check_version(Path.t(), version :: integer()) :: Op.t()
-    def check_version(path, version \\ 0), do: {:check, path, version}
+    @doc """
+    Constructs a create operation with data or options.
+    """
+    @spec create(Path.t(), data_or_opts :: binary() | [Create.option()]) :: Op.t()
+    def create(path, data_or_opts)
 
-    @spec delete(Path.t(), version :: integer()) :: Op.t()
-    def delete(path, version \\ 0), do: {:delete, path, version}
+    def create(path, data) when is_binary(data), do: {:create, path, data, []}
+    def create(path, opts) when is_list(opts), do: {:create, path, "", opts}
 
+    @doc """
+    Constructs a create operation without data.
+    """
+    @spec create(Path.t()) :: Op.t()
+    def create(path), do: {:create, path, "", []}
+
+    @doc """
+    Constructs an version check operation.
+    """
+    @spec check(Path.t(), version()) :: Op.t()
+    def check(path, version \\ @any_version), do: {:check, path, version}
+
+    @doc """
+    Constructs a delete operation.
+    """
+    @spec delete(Path.t(), version()) :: Op.t()
+    def delete(path, version \\ @any_version), do: {:delete, path, version}
+
+    @doc """
+    Constructs a get_children operation.
+    """
     @spec get_children(Path.t()) :: Op.t()
     def get_children(path), do: {:get_children, path}
 
+    @doc """
+    Constructs a get_data operation.
+    """
     @spec get_data(Path.t()) :: Op.t()
     def get_data(path), do: {:get_data, path}
 
-    @spec set_data(Path.t(), data :: binary(), version :: integer()) :: Op.t()
-    def set_data(path, data, version \\ 0), do: {:set_data, path, data, version}
+    @doc """
+    Constructs a set_data operation.
+    """
+    @spec set_data(Path.t(), data :: binary(), version()) :: Op.t()
+    def set_data(path, data, version \\ @any_version), do: {:set_data, path, data, version}
 
-    @spec new_request(t()) :: {OpCode.t(), request()}
+    @doc """
+    Converts a multi operation to a request.
+    """
+    @spec to_request(Op.t()) :: {OpCode.t(), request()}
+    def to_request(op)
 
-    def new_request({:create, path, data, ops}),
-      do: Create.new_request(path, data, ops)
+    def to_request({:create, path, data, opts}), do: Create.new_request(path, data, opts)
 
-    def new_request({:check, path, version}),
+    def to_request({:check, path, version}),
       do: {:check, %CheckVersionRequest{path: IO.chardata_to_string(path), version: version}}
 
-    def new_request({:delete, path, version}),
+    def to_request({:delete, path, version}),
       do: {:delete, %DeleteRequest{path: IO.chardata_to_string(path), version: version}}
 
-    def new_request({:get_children, path}),
+    def to_request({:get_children, path}),
       do: {:get_children, %GetChildrenRequest{path: IO.chardata_to_string(path)}}
 
-    def new_request({:get_data, path}),
+    def to_request({:get_data, path}),
       do: {:get_data, %GetDataRequest{path: IO.chardata_to_string(path)}}
 
-    def new_request({:set_data, path, data, version}),
+    def to_request({:set_data, path, data, version}),
       do:
         {:set_data,
          %SetDataRequest{path: IO.chardata_to_string(path), data: data, version: version}}
   end
 
   defmodule Result do
+    @moduledoc """
+    Result of a single operation in a multi-operation transaction.
+    """
+
     alias ExZk.Data.Stat
 
     alias ExZk.Proto.{
@@ -102,72 +158,90 @@ defmodule ExZk.Multi do
     }
 
     @type t ::
-            {:create, Path.t(), Stat.t()}
+            {:create, Path.t(), Stat.t() | nil}
             | {:check, :ok}
             | {:delete, :ok}
-            | {:error, ErrCode.t()}
-            | {:get_children, children :: [String.t()]}
+            | {:error, ErrCode.t() | integer()}
+            | {:get_children, children :: [Path.t()]}
             | {:get_data, data :: binary(), Stat.t()}
             | {:set_data, Stat.t()}
 
+    @doc """
+    Unpacks a multi operation result.
+    """
     @spec unpack(OpCode.t(), data :: binary()) ::
             {:ok, t(), binary()} | {:error, reason :: term()}
     def unpack(opcode, data)
 
-    def unpack(:create, data) do
+    def unpack(:create, data) when is_binary(data) do
       with {:ok, %CreateResponse{path: path}, rest} <- CreateResponse.unpack(data) do
         {:ok, {:create, path, nil}, rest}
       end
     end
 
-    def unpack(:create2, data) do
+    def unpack(:create2, data) when is_binary(data) do
       with {:ok, %Create2Response{path: path, stat: stat}, rest} <- Create2Response.unpack(data) do
         {:ok, {:create, path, stat}, rest}
       end
     end
 
-    def unpack(:delete, data), do: {:ok, nil, data}
+    def unpack(:delete, data) when is_binary(data), do: {:ok, {:delete, :ok}, data}
 
-    def unpack(:set_data, data) do
+    def unpack(:set_data, data) when is_binary(data) do
       with {:ok, %SetDataResponse{stat: stat}, rest} <- SetDataResponse.unpack(data) do
         {:ok, {:set_data, stat}, rest}
       end
     end
 
-    def unpack(:check, data), do: {:ok, nil, data}
+    def unpack(:check, data) when is_binary(data), do: {:ok, {:check, :ok}, data}
 
-    def unpack(:get_children, data) do
+    def unpack(:get_children, data) when is_binary(data) do
       with {:ok, %GetChildrenResponse{children: children}, rest} <-
              GetChildrenResponse.unpack(data) do
         {:ok, {:get_children, children}, rest}
       end
     end
 
-    def unpack(:get_data, data) do
+    def unpack(:get_data, data) when is_binary(data) do
       with {:ok, %GetDataResponse{data: data, stat: stat}, rest} <- GetDataResponse.unpack(data) do
         {:ok, {:get_data, data, stat}, rest}
       end
     end
 
-    def unpack(:error, data) do
+    def unpack(:error, data) when is_binary(data) do
       with {:ok, %ErrorResponse{err: err}, rest} <- ErrorResponse.unpack(data) do
+        err =
+          case ErrCode.cast(err) do
+            {:ok, err} -> err
+            :error -> err
+          end
+
         {:ok, {:error, err}, rest}
       end
     end
+
+    def unpack(opcode, _data), do: {:error, {:unexpected_opcode, opcode}}
   end
 
   defmodule Response do
-    defstruct [:results]
+    @moduledoc """
+    Response of a multi-operation transaction.
+    """
+
+    defstruct results: []
 
     @type t :: %__MODULE__{
             results: [Result.t()]
           }
 
-    @spec unpack(buf :: binary()) :: {:ok, t()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, hdr, rest} <- MultiHeader.unpack(buf),
-           {:ok, results, _rest} <- unpack_results(hdr, rest, []) do
-        {:ok, %__MODULE__{results: results}}
+    @doc """
+    Unpacks a multi operation response.
+    """
+    @spec unpack(data :: binary()) :: {:ok, t()} | {:error, :nomatch}
+    def unpack(data) when is_binary(data) do
+      with {:ok, hdr, rest} <- MultiHeader.unpack(data),
+           {:ok, results, rest} <- unpack_results(hdr, rest, []) do
+        {:ok, %__MODULE__{results: results}, rest}
       end
     end
 
@@ -187,27 +261,26 @@ defmodule ExZk.Multi do
   end
 
   @type request :: [MultiHeader.t() | Op.request()]
+  @type response :: [MultiHeader.t() | Op.response()]
+
+  @done %MultiHeader{type: -1, done: true, err: -1}
 
   ####
   ## Public API
   ##
 
-  @spec new_request([Op.t()]) :: request()
-  def new_request(ops) do
+  @doc """
+  Converts a list of operations to a multi request.
+  """
+  @spec to_request([Op.t()]) :: request()
+  def to_request(ops) do
     ops
     |> Stream.flat_map(fn op ->
-      {opcode, request} = Op.new_request(op)
+      {opcode, request} = Op.to_request(op)
 
-      [%MultiHeader{type: opcode, done: false, err: ErrCode.value!(:system_error)}, request]
+      [%MultiHeader{type: OpCode.value!(opcode), done: false, err: -1}, request]
     end)
-    |> Stream.concat([done()])
+    |> Stream.concat([@done])
     |> Enum.into([])
   end
-
-  ####
-  ## Private methods
-  ##
-
-  defp done,
-    do: %MultiHeader{type: OpCode.value!(:error), done: true, err: ErrCode.value!(:system_error)}
 end

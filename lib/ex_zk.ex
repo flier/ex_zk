@@ -2,7 +2,9 @@ defmodule ExZk do
   @moduledoc """
   This is the documentation for the ExZk project.
   """
-  alias ExZk.{Session, StartOptions}
+
+  alias ExZk.Data.{ACL, Stat}
+  alias ExZk.{Multi, Session, StartOptions}
 
   use Application
 

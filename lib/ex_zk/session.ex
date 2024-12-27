@@ -279,7 +279,7 @@ defmodule ExZk.Session do
   @spec multi(session(), ops :: [Multi.Op.t()], timeout()) ::
           {:ok, [Multi.Result.t()]} | {:error, reason :: term()}
   def multi(session, ops, timeout \\ @default_timeout) do
-    request = Multi.new_request(ops)
+    request = Multi.to_request(ops)
 
     with {:ok, %Multi.Response{results: results}} <-
            send_request(session, :multi, request, timeout) do
