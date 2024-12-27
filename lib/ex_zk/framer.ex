@@ -41,13 +41,13 @@ defmodule ExZk.Framer do
     sync: Proto.SyncResponse
   ]
 
-  @spec new_frame(t(), OpCode.t(), Frame.request(), sender :: pid() | nil) ::
+  @spec new_frame(t(), OpCode.t(), Frame.request(), from :: :gen_statem.from() | nil) ::
           {:ok, Frame.t(), t()} | {:error, reason :: term()}
   def new_frame(
         %__MODULE__{next_xid: next_xid, requests: requests} = framer,
         opcode,
         request,
-        sender \\ nil
+        from \\ nil
       ) do
     with {:ok, type} <- OpCode.value(opcode) do
       frame = %Frame{
@@ -55,7 +55,7 @@ defmodule ExZk.Framer do
         request: request
       }
 
-      requests = Map.put(requests, next_xid, {frame, sender})
+      requests = Map.put(requests, next_xid, {frame, from})
       framer = %{framer | next_xid: next_xid + 1, requests: requests}
 
       {:ok, frame, framer}
@@ -63,7 +63,7 @@ defmodule ExZk.Framer do
   end
 
   @spec parse_frame(t(), data :: binary()) ::
-          {:ok, Frame.t(), sender :: pid(), t()} | {:error, reason :: term()}
+          {:ok, Frame.t(), from :: :gen_statem.from(), t()} | {:error, reason :: term()}
   def parse_frame(%__MODULE__{} = framer, data) do
     data |> Frame.unpack() |> parse_reply(framer)
   end
@@ -77,8 +77,7 @@ defmodule ExZk.Framer do
       {nil, _} ->
         {:error, :unexpected_xid}
 
-      {{%Frame{req_hdr: %RequestHeader{type: type}, request: request} = req_hdr, sender},
-       requests} ->
+      {{%Frame{req_hdr: %RequestHeader{type: type}, request: request} = req_hdr, from}, requests} ->
         with {:ok, op_code} <- OpCode.cast(type),
              {:ok, res_type} <- Keyword.fetch(@response_types, op_code),
              {:ok, response, rest} <- parse_response(res_type, payload) do
@@ -90,7 +89,7 @@ defmodule ExZk.Framer do
               payload: rest
           }
 
-          {:ok, frame, sender, %Framer{framer | requests: requests}}
+          {:ok, frame, from, %Framer{framer | requests: requests}}
         else
           :error -> {:error, :unexpected_opcode}
           {:error, reason} -> {:error, reason}
