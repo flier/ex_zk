@@ -26,6 +26,7 @@ defmodule ExZk do
   @type name :: atom() | {:global, name :: term()} | {:via, mod :: module(), name :: term()}
 
   @type session :: Session.session()
+  @type version :: Session.version()
 
   @default_timeout 5000
   @no_version -1
@@ -82,16 +83,10 @@ defmodule ExZk do
   defdelegate get_children2(session, path, timeout \\ @default_timeout), to: Session
 
   @spec get_data(session(), Path.t(), timeout()) ::
-          {:ok, data :: binary(), Stat.t()} | {:error, reason :: term()}
+          {:ok, iodata(), Stat.t()} | {:error, reason :: term()}
   defdelegate get_data(session, path, timeout \\ @default_timeout), to: Session
 
-  @spec set_data(
-          session(),
-          Path.t(),
-          data :: binary(),
-          version :: integer(),
-          timeout()
-        ) ::
+  @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
   defdelegate set_data(
                 session,
@@ -102,22 +97,12 @@ defmodule ExZk do
               ),
               to: Session
 
-  @spec create(
-          session(),
-          Path.t(),
-          data :: binary(),
-          opts :: [option()],
-          timeout()
-        ) :: {:ok, Path.t(), Stat.t() | nil} | {:error, reason :: term()}
+  @spec create(session(), Path.t(), iodata(), opts :: [option()], timeout()) ::
+          {:ok, Path.t(), Stat.t() | nil} | {:error, reason :: term()}
   defdelegate create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout),
     to: Session
 
-  @spec delete(
-          session(),
-          Path.t(),
-          version :: integer(),
-          timeout()
-        ) ::
+  @spec delete(session(), Path.t(), version(), timeout()) ::
           :ok | {:error, reason :: term()}
   defdelegate delete(session, path, version \\ @no_version, timeout \\ @default_timeout),
     to: Session
@@ -130,13 +115,7 @@ defmodule ExZk do
           {:ok, list(ACL.t()), Stat.t()} | {:error, reason :: term()}
   defdelegate get_acl(session, path, timeout \\ @default_timeout), to: Session
 
-  @spec set_acl(
-          session(),
-          Path.t(),
-          acl :: [ACL.t()],
-          version :: integer(),
-          timeout()
-        ) ::
+  @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
   defdelegate set_acl(session, path, acl, version \\ @no_version, timeout \\ @default_timeout),
     to: Session

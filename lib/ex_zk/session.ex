@@ -101,6 +101,7 @@ defmodule ExZk.Session do
   @type option :: {:session_id, integer()} | Socket.option() | :gen_statem.start_opt()
 
   @type session :: :gen_statem.server_ref()
+  @type version :: integer()
   @type status :: :disconnected | :connecting | :connected
   @type zxid :: Frame.zxid()
 
@@ -185,13 +186,7 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec set_data(
-          session(),
-          Path.t(),
-          iodata(),
-          version :: integer(),
-          timeout()
-        ) ::
+  @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
   def set_data(session, path, data \\ "", version \\ @no_version, timeout \\ @default_timeout) do
     request = %SetDataRequest{
@@ -205,13 +200,8 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec create(
-          session(),
-          Path.t(),
-          iodata(),
-          opts :: [option()],
-          timeout()
-        ) :: {:ok, Path.t(), Stat.t() | nil} | {:error, reason :: term()}
+  @spec create(session(), Path.t(), iodata(), opts :: [option()], timeout()) ::
+          {:ok, Path.t(), Stat.t() | nil} | {:error, reason :: term()}
   def create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout) do
     {opcode, request} = Create.new_request(path, data, opts)
 
@@ -227,12 +217,7 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec delete(
-          session(),
-          Path.t(),
-          version :: integer(),
-          timeout()
-        ) ::
+  @spec delete(session(), Path.t(), version(), timeout()) ::
           :ok | {:error, reason :: term()}
   def delete(session, path, version \\ @no_version, timeout \\ @default_timeout) do
     request = %DeleteRequest{path: IO.chardata_to_string(path), version: version}
@@ -261,7 +246,7 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version :: integer(), timeout()) ::
+  @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
           {:ok, Stat.t()} | {:error, reason :: term()}
   def set_acl(session, path, acl, version \\ @no_version, timeout \\ @default_timeout) do
     request = %SetACLRequest{path: IO.chardata_to_string(path), acl: acl, version: version}
