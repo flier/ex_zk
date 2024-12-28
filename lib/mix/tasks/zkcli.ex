@@ -155,9 +155,5 @@ defmodule Mix.Tasks.Zkcli do
   end
 
   def help(_ctx), do: IO.puts(@command)
-
-  def help(_ctx, cmd) do
-    mod = Module.concat(__MODULE__, cmd |> String.capitalize())
-    mod.usage()
-  end
+  def help(_ctx, cmd), do: Module.concat(__MODULE__, cmd |> String.capitalize()).usage()
 end
