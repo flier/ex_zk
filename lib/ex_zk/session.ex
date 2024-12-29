@@ -273,7 +273,7 @@ defmodule ExZk.Session do
   end
 
   @spec exists(session(), Path.t(), timeout()) ::
-          {:ok, boolean(), Stat.t()} | {:error, ExZk.Error.t()}
+          {:ok, boolean(), Stat.t() | nil} | {:error, ExZk.Error.t()}
   def exists(session, path, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :exists],
@@ -284,6 +284,9 @@ defmodule ExZk.Session do
         case send_request(session, :exists, request, timeout) do
           {:ok, %ExistsResponse{stat: stat}} ->
             {{:ok, true, stat}, %{stat: stat}}
+
+          {:error, :no_node} ->
+            {{:ok, false, nil}, %{}}
 
           {:error, err} ->
             {{:error, ExZk.Error.new(err, path)}, %{error: err}}

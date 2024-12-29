@@ -56,5 +56,5 @@ defmodule Mix.Tasks.Zkcli.Ls do
   defp print_children(children),
     do: "[#{children |> Enum.sort() |> Enum.join(", ")}]" |> IO.puts()
 
-  defp print_stat(stat), do: stat |> Stat.Printer.new() |> to_string() |> IO.puts()
+  defp print_stat(stat), do: stat |> Stat.Printer.new() |> IO.puts()
 end

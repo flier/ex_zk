@@ -111,7 +111,7 @@ defmodule ExZk do
     to: Session
 
   @spec exists(session(), Path.t(), timeout()) ::
-          {:ok, boolean(), Stat.t()} | {:error, reason :: term()}
+          {:ok, boolean(), Stat.t() | nil} | {:error, reason :: term()}
   defdelegate exists(session, path, timeout \\ @default_timeout), to: Session
 
   @spec get_acl(session(), Path.t(), timeout()) ::
