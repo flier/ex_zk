@@ -1,6 +1,8 @@
 defmodule Mix.Tasks.ZkCli do
   use Mix.Task
 
+  import IO.ANSI
+
   require Logger
 
   alias ExZk.Session
@@ -150,7 +152,7 @@ defmodule Mix.Tasks.ZkCli do
 
     case history |> Enum.find(fn {idx, _} -> idx == id end) do
       nil ->
-        IO.puts("Command index out of range")
+        print_error("Command index out of range")
 
       {_, cmd} ->
         eval({ctx, cmd})
@@ -165,7 +167,7 @@ defmodule Mix.Tasks.ZkCli do
   def sync(%Context{session: session}, path) do
     case ExZk.sync(session, path) do
       {:ok, ^path} -> IO.puts("Sync is OK")
-      {:error, err} -> IO.puts("Sync has failed. Error: #{err}")
+      {:error, err} -> print_error("Sync has failed. Error: #{err}")
     end
   end
 
@@ -206,7 +208,7 @@ defmodule Mix.Tasks.ZkCli do
         usage()
 
       invalid != [] ->
-        IO.puts(
+        print_error(
           "Invalid options: #{invalid |> Enum.map_join(", ", fn
             {key, nil} -> key
             {key, value} -> "#{key} #{value}"
@@ -231,12 +233,12 @@ defmodule Mix.Tasks.ZkCli do
     secure = Keyword.get(opts, :secure)
     wait_for_connection = Keyword.get(opts, :wait_for_connection, false)
 
-    IO.puts("Connecting to #{server}")
+    print_progress("Connecting to #{server}")
 
     scheme = if Keyword.get(opts, :secure), do: "ssl", else: "zk"
 
     if secure do
-      IO.puts("Secure connection is enabled")
+      print_progress("Secure connection is enabled")
     end
 
     {:ok, session} =
@@ -251,7 +253,7 @@ defmodule Mix.Tasks.ZkCli do
     ctx = %Context{host: server, session: session}
 
     if args == [] do
-      IO.puts("Welcome to ZooKeeper!")
+      print_progress("Welcome to ZooKeeper!")
 
       loop(ctx)
     else
@@ -289,7 +291,7 @@ defmodule Mix.Tasks.ZkCli do
           nil
 
         {:error, reason} ->
-          IO.puts("#{reason}")
+          print_error(reason)
       end
 
       %{ctx | history: [{count, [cmd | args]} | history], count: count + 1}
@@ -297,7 +299,7 @@ defmodule Mix.Tasks.ZkCli do
       ArgumentError ->
         help(ctx)
 
-        IO.puts("Command not found: #{cmd}")
+        print_error("Command not found: #{cmd}")
 
         ctx
     end
@@ -323,6 +325,10 @@ defmodule Mix.Tasks.ZkCli do
   defp log_level(%{critical: true}), do: :critical
   defp log_level(%{log_level: level}) when is_binary(level), do: String.to_existing_atom(level)
   defp log_level(_), do: Logger.level()
+
+  defp print_progress(msg) when is_binary(msg), do: IO.puts(msg)
+  defp print_error(msg) when is_binary(msg), do: IO.puts(light_red() <> msg <> reset())
+  defp print_error(arg), do: print_error(to_string(arg))
 
   defp usage, do: IO.puts(@usage)
 end
