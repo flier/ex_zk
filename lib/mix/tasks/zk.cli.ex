@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Zkcli do
+defmodule Mix.Tasks.ZkCli do
   use Mix.Task
 
   require Logger
@@ -45,7 +45,7 @@ defmodule Mix.Tasks.Zkcli do
   """
 
   @usage """
-  Usage: mix zkcli [options] [command] [args]
+  Usage: mix zk_cli [options] [command] [args]
 
   Options:
     -h, --help                Print this help

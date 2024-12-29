@@ -1,11 +1,11 @@
-defmodule Mix.Tasks.Zkcli.Ls do
+defmodule Mix.Tasks.ZkCli.Ls do
   @moduledoc """
   List all nodes
   """
 
-  @behaviour Mix.Tasks.Zkcli.Command
+  @behaviour Mix.Tasks.ZkCli.Command
 
-  alias Mix.Tasks.Zkcli.{Context, Stat}
+  alias Mix.Tasks.ZkCli.{Context, Stat}
 
   @usage """
   Usage: ls [options] <path>

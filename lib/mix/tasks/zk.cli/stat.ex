@@ -1,12 +1,12 @@
-defmodule Mix.Tasks.Zkcli.Stat do
+defmodule Mix.Tasks.ZkCli.Stat do
   @moduledoc """
   Showing the stat/metadata of one node.
   """
 
-  @behaviour Mix.Tasks.Zkcli.Command
+  @behaviour Mix.Tasks.ZkCli.Command
 
   alias ExZk.Error
-  alias Mix.Tasks.Zkcli.{Context, Stat}
+  alias Mix.Tasks.ZkCli.{Context, Stat}
 
   @usage """
   Usage: stat [options] <path>
@@ -49,7 +49,7 @@ defmodule Mix.Tasks.Zkcli.Stat do
   defp print_stat(stat), do: stat |> Stat.Printer.new() |> IO.puts()
 end
 
-defmodule Mix.Tasks.Zkcli.Stat.Printer do
+defmodule Mix.Tasks.ZkCli.Stat.Printer do
   alias ExZk.Data.Stat
 
   @enforce_keys [:stat]
@@ -63,7 +63,7 @@ defmodule Mix.Tasks.Zkcli.Stat.Printer do
   def new(stat), do: %__MODULE__{stat: stat}
 
   defimpl String.Chars do
-    alias Mix.Tasks.Zkcli.Stat.Printer
+    alias Mix.Tasks.ZkCli.Stat.Printer
 
     def to_string(%Printer{
           stat: %Stat{
