@@ -198,6 +198,10 @@ defmodule ExZk.Wire do
     end
   end
 
+  defp unpack_type({name, _type}, {acc, ""}) do
+    {:cont, {[{name, nil} | acc], ""}}
+  end
+
   defp unpack_type({name, type}, {acc, buf}) do
     case unpack(buf, type) do
       {:ok, v, rest} -> {:cont, {[{name, v} | acc], rest}}

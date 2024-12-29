@@ -148,7 +148,7 @@ defmodule ExZk.Session do
     :gen_statem.stop(session, :normal, timeout)
   end
 
-  @spec status(session()) :: status()
+  @spec status(session()) :: {status(), metadata :: %{}}
   def status(session) do
     :gen_statem.call(session, :status)
   end

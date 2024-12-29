@@ -86,6 +86,7 @@ defmodule ExZk.MixProject do
     [
       {:castore, "~> 1.0", optional: true},
       {:nimble_options, "~> 1.0"},
+      {:prompt, "~> 0.10"},
       {:telemetry, "~> 1.3"},
 
       # Dev and test dependencies

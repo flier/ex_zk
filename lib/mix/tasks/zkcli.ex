@@ -1,14 +1,18 @@
 defmodule Mix.Tasks.Zkcli do
+  alias ExZk.Session
   use Mix.Task
 
-  import Logger
+  require Logger
 
   defmodule Context do
-    defstruct [:session, :command]
+    @enforce_keys [:host, :session]
+    defstruct [:host, :session, :command, count: 0]
 
     @type t :: %__MODULE__{
+            host: String.t(),
             session: pid(),
-            command: atom()
+            command: atom(),
+            count: integer()
           }
   end
 
@@ -24,12 +28,13 @@ defmodule Mix.Tasks.Zkcli do
   @default_server "localhost:2181"
   @default_timeout 300_000
 
-  @command """
+  @commands """
     help [command]            Print this help
     ls <path>                 List all nodes
     close                     Close the current session
     connect <host:port>       Connect to a different server
     addauth <scheme> <auth>   Add authentication
+    quit                      QUit the CLI
   """
 
   @usage """
@@ -44,12 +49,15 @@ defmodule Mix.Tasks.Zkcli do
     -w, --warn                Enable warning logging
     -e, --error               Enable error logging
     --critical                Enable critical logging
-    --log-level <level>       Enable logging at the given level (default: #{level()})
+    --log-level <level>       Enable logging at the given level (default: #{Logger.level()})
+    -r, --readonly            Enable read-only mode
+    -S, --secure              Enable secure mode
     -c, --client-configuration <path>
                               Path to a client configuration file
+    -W, --wait-for-connection Wait for Zookeeper connection to be established
 
   Commands:
-  #{@command}
+  #{@commands}
   """
 
   @opts [
@@ -62,7 +70,10 @@ defmodule Mix.Tasks.Zkcli do
     warn: :boolean,
     error: :boolean,
     critical: :boolean,
-    client_configuration: :string
+    readonly: :boolean,
+    secure: :boolean,
+    client_configuration: :string,
+    wait_for_connection: :boolean
   ]
 
   @aliases [
@@ -73,8 +84,26 @@ defmodule Mix.Tasks.Zkcli do
     v: :verbose,
     w: :warn,
     e: :error,
-    c: :client_configuration
+    r: :readonly,
+    S: :secure,
+    c: :client_configuration,
+    W: :wait_for_connection
   ]
+
+  ####
+  ## Commands
+  ##
+
+  @spec help(%Context{}) :: :ok
+  def help(_ctx), do: IO.puts(@commands)
+  def help(_ctx, cmd), do: module(cmd).usage()
+
+  @spec quit(%Context{}) :: no_return()
+  def quit(_ctx), do: System.halt(1)
+
+  ####
+  ## Callbacks
+  ##
 
   @impl true
   def run(args) do
@@ -82,61 +111,113 @@ defmodule Mix.Tasks.Zkcli do
 
     Logger.configure(level: log_level(parsed))
 
-    debug(parsed: parsed, args: args, invalid: invalid)
+    Logger.debug(parsed: parsed, args: args, invalid: invalid)
 
-    if Keyword.get(parsed, :help) do
-      usage()
+    cond do
+      Keyword.get(parsed, :help) ->
+        usage()
+
+      invalid != [] ->
+        IO.puts(
+          "Invalid options: #{invalid |> Enum.map_join(", ", fn
+            {key, nil} -> key
+            {key, value} -> "#{key} #{value}"
+          end)}"
+        )
+
+        usage()
+
+      true ->
+        start(args, parsed)
     end
+  end
 
-    if length(invalid) > 0 do
-      IO.puts(
-        "Invalid options: #{invalid |> Enum.map_join(", ", fn
-          {key, nil} -> key
-          {key, value} -> "#{key} #{value}"
-        end)}"
-      )
+  ####
+  ## Private methods
+  ##
 
-      usage()
-    end
-
-    server = Keyword.get(parsed, :server, @default_server)
-    timeout = Keyword.get(parsed, :timeout, @default_timeout)
-
-    debug(pid: self(), server: server, timeout: timeout)
+  defp start(args, opts) do
+    server = Keyword.get(opts, :server, @default_server)
+    timeout = Keyword.get(opts, :timeout, @default_timeout)
+    readonly = Keyword.get(opts, :readonly, false)
+    secure = Keyword.get(opts, :secure)
+    wait_for_connection = Keyword.get(opts, :wait_for_connection, false)
 
     IO.puts("Connecting to #{server}")
 
-    # children = [
-    #   %{
-    #     id: Session,
-    #     start: {ExZk, :start_link, ["zk://#{server}/", [sync_connect: true, timeout: timeout]]}
-    #   }
-    # ]
+    scheme = if Keyword.get(opts, :secure), do: "ssl", else: "zk"
 
-    # {:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
+    if secure do
+      IO.puts("Secure connection is enabled")
+    end
 
-    # debug(sup: sup, session: Process.whereis(Session))
+    {:ok, session} =
+      ExZk.start_link("#{scheme}://#{server}/",
+        sync_connect: wait_for_connection,
+        timeout: timeout,
+        readonly: readonly
+      )
 
-    session = nil
+    Logger.debug(cli: self(), session: session, status: Session.status(session))
 
-    case args do
-      [] ->
-        nil
+    ctx = %Context{host: server, session: session}
 
-      [cmd | args] when is_binary(cmd) ->
-        debug(cmd: cmd, args: args)
+    if args == [] do
+      IO.puts("Welcome to ZooKeeper!")
 
-        ctx = %Context{session: session, command: String.to_existing_atom(cmd)}
-
-        if function_exported?(__MODULE__, String.to_existing_atom(cmd), length(args) + 1) do
-          apply(__MODULE__, String.to_existing_atom(cmd), [ctx | args])
-        else
-          mod = Module.concat(__MODULE__, cmd |> String.capitalize())
-
-          Task.async(mod, :run, [ctx, args]) |> Task.await()
-        end
+      loop(ctx)
+    else
+      eval({ctx, args})
     end
   end
+
+  defp loop(ctx), do: ctx |> read() |> eval() |> loop()
+
+  defp read(%Context{host: host, session: session, count: count} = ctx) do
+    line =
+      Prompt.text("[zk: #{host}(#{session |> state()}) #{count}]",
+        color: :light_black,
+        trim: true
+      )
+
+    {ctx, line |> String.split()}
+  end
+
+  defp state(session) do
+    {state, %{}} = Session.status(session)
+    state |> Atom.to_string() |> String.upcase()
+  end
+
+  defp eval({%Context{} = ctx, []}), do: ctx
+
+  defp eval({%Context{count: count} = ctx, [cmd | args]}) do
+    Logger.debug(ctx: ctx, cmd: cmd, args: args)
+
+    try do
+      ctx = %{ctx | command: String.to_existing_atom(cmd)}
+
+      :ok = run(ctx, cmd, args)
+
+      %{ctx | count: count + 1}
+    rescue
+      ArgumentError ->
+        help(ctx)
+
+        IO.puts("Command not found: #{cmd}")
+
+        ctx
+    end
+  end
+
+  defp run(ctx, cmd, args) do
+    if function_exported?(__MODULE__, String.to_existing_atom(cmd), length(args) + 1) do
+      apply(__MODULE__, String.to_existing_atom(cmd), [ctx | args])
+    else
+      module(cmd) |> Task.async(:run, [ctx, args]) |> Task.await()
+    end
+  end
+
+  defp module(cmd), do: Module.concat(__MODULE__, cmd |> String.capitalize())
 
   defp log_level(opts) when is_list(opts), do: log_level(Enum.into(opts, %{}))
   defp log_level(%{debug: true}), do: :debug
@@ -147,13 +228,7 @@ defmodule Mix.Tasks.Zkcli do
   defp log_level(%{error: true}), do: :error
   defp log_level(%{critical: true}), do: :critical
   defp log_level(%{log_level: level}) when is_binary(level), do: String.to_existing_atom(level)
-  defp log_level(_), do: level()
+  defp log_level(_), do: Logger.level()
 
-  defp usage() do
-    IO.puts(@usage)
-    Process.exit(self(), :normal)
-  end
-
-  def help(_ctx), do: IO.puts(@command)
-  def help(_ctx, cmd), do: Module.concat(__MODULE__, cmd |> String.capitalize()).usage()
+  defp usage, do: IO.puts(@usage)
 end
