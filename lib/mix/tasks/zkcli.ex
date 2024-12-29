@@ -6,12 +6,13 @@ defmodule Mix.Tasks.Zkcli do
 
   defmodule Context do
     @enforce_keys [:host, :session]
-    defstruct [:host, :session, :command, count: 0]
+    defstruct [:host, :session, :command, history: [], count: 0]
 
     @type t :: %__MODULE__{
             host: String.t(),
             session: pid(),
             command: atom(),
+            history: [{integer(), [String.t()]}],
             count: integer()
           }
   end
@@ -34,6 +35,8 @@ defmodule Mix.Tasks.Zkcli do
     close                     Close the current session
     connect <host:port>       Connect to a different server
     addauth <scheme> <auth>   Add authentication
+    history                   Showing the history about the recent commands that you have executed
+    redo <index>              Redo the cmd with the index from history.
     quit                      QUit the CLI
   """
 
@@ -108,6 +111,29 @@ defmodule Mix.Tasks.Zkcli do
     ExZk.close(session)
 
     System.halt(1)
+  end
+
+  @spec history(Context.t()) :: :ok
+  def history(%Context{history: history}) do
+    for {id, cmd} <- history |> Stream.take(10) |> Enum.reverse() do
+      IO.puts("#{id} - #{cmd |> Enum.join(" ")}")
+    end
+
+    :ok
+  end
+
+  @spec redo(Context.t(), index :: binary()) :: :ok
+  def redo(%Context{history: history} = ctx, index) do
+    id = index |> String.to_integer()
+
+    case history |> Enum.find(fn {idx, _} -> idx == id end) do
+      nil ->
+        IO.puts("Command index out of range")
+
+      {_, cmd} ->
+        eval({ctx, cmd})
+        :ok
+    end
   end
 
   ####
@@ -203,7 +229,7 @@ defmodule Mix.Tasks.Zkcli do
 
   defp eval({%Context{} = ctx, []}), do: ctx
 
-  defp eval({%Context{count: count} = ctx, [cmd | args]}) do
+  defp eval({%Context{history: history, count: count} = ctx, [cmd | args]}) do
     Logger.debug(ctx: ctx, cmd: cmd, args: args)
 
     try do
@@ -217,7 +243,7 @@ defmodule Mix.Tasks.Zkcli do
           IO.puts("#{reason}")
       end
 
-      %{ctx | count: count + 1}
+      %{ctx | history: [{count, [cmd | args]} | history], count: count + 1}
     rescue
       ArgumentError ->
         help(ctx)
