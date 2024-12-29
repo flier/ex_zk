@@ -32,10 +32,11 @@ defmodule ExZk.Framer do
     multi_read: Multi.Response,
     set_acl: Proto.SetACLResponse,
     set_data: Proto.SetDataResponse,
-    sync: Proto.SyncResponse
+    sync: Proto.SyncResponse,
+    who_am_i: Proto.WhoAmIResponse
   ]
 
-  @spec new_frame(t(), OpCode.t(), Frame.request(), from :: :gen_statem.from() | nil) ::
+  @spec new_frame(t(), OpCode.t(), Frame.request() | nil, from :: :gen_statem.from() | nil) ::
           {:ok, Frame.t(), t()} | {:error, reason :: term()}
   def new_frame(
         %__MODULE__{next_xid: next_xid, requests: requests} = framer,
@@ -43,17 +44,15 @@ defmodule ExZk.Framer do
         request,
         from \\ nil
       ) do
-    with {:ok, type} <- OpCode.value(opcode) do
-      frame = %Frame{
-        req_hdr: %RequestHeader{xid: next_xid, type: type},
-        request: request
-      }
+    frame = %Frame{
+      req_hdr: %RequestHeader{xid: next_xid, type: OpCode.value!(opcode)},
+      request: request
+    }
 
-      requests = Map.put(requests, next_xid, {frame, from})
-      framer = %{framer | next_xid: next_xid + 1, requests: requests}
+    requests = Map.put(requests, next_xid, {frame, from})
+    framer = %{framer | next_xid: next_xid + 1, requests: requests}
 
-      {:ok, frame, framer}
-    end
+    {:ok, frame, framer}
   end
 
   @spec parse_frame(t(), data :: binary()) ::

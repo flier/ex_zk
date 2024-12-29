@@ -35,7 +35,7 @@ defmodule ConnectionTest do
       assert_called_exactly(Connector.connect(session, exit_on_disconnection: true), 1)
 
       # stop the session
-      Session.stop(session)
+      Session.close(session)
 
       assert_called_exactly(:gen_tcp.send(:sock, pack(@close_session)), 1)
 

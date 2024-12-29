@@ -21,47 +21,38 @@ defmodule ExZk.Error do
   end
 
   defimpl String.Chars do
-    def to_string(%ExZk.Error{err: err, path: path}) do
-      case err do
-        :no_node ->
-          "Node does not exist: #{path}"
+    def to_string(%ExZk.Error{err: :no_node, path: path}), do: "Node does not exist: #{path}"
 
-        :no_children_for_ephemerals ->
-          "Ephemerals cannot have children: #{path}"
+    def to_string(%ExZk.Error{err: :no_children_for_ephemerals, path: path}),
+      do: "Ephemerals cannot have children: #{path}"
 
-        :node_exists ->
-          "Node already exists: #{path}"
+    def to_string(%ExZk.Error{err: :node_exists, path: path}), do: "Node already exists: #{path}"
 
-        :not_empty ->
-          "Node not empty: #{path}"
+    def to_string(%ExZk.Error{err: :not_empty, path: path}), do: "Node not empty: #{path}"
 
-        :not_readonly ->
-          "Not a read-only call: #{path}"
+    def to_string(%ExZk.Error{err: :not_readonly, path: path}),
+      do: "Not a read-only call: #{path}"
 
-        :invalid_acl ->
-          "Acl is not valid: #{path}"
+    def to_string(%ExZk.Error{err: :invalid_acl, path: path}), do: "Acl is not valid: #{path}"
 
-        :no_auth ->
-          "Insufficient permission: #{path}"
+    def to_string(%ExZk.Error{err: :no_auth, path: path}), do: "Insufficient permission: #{path}"
 
-        :bad_arguments ->
-          "Arguments are not valid: #{path}"
+    def to_string(%ExZk.Error{err: :bad_arguments, path: path}),
+      do: "Arguments are not valid: #{path}"
 
-        :bad_version ->
-          "version No is not valid: #{path}"
+    def to_string(%ExZk.Error{err: :bad_version, path: path}),
+      do: "version No is not valid: #{path}"
 
-        :reconfig_in_progress ->
-          "Another reconfiguration is in progress -- concurrent reconfigs not supported (yet)"
+    def to_string(%ExZk.Error{err: :reconfig_in_progress}),
+      do: "Another reconfiguration is in progress -- concurrent reconfigs not supported (yet)"
 
-        :new_config_no_quorum ->
-          "No quorum of new config is connected and up-to-date with the leader of last committed config"
+    def to_string(%ExZk.Error{err: :new_config_no_quorum}),
+      do:
+        "No quorum of new config is connected and up-to-date with the leader of last committed config"
 
-        :quota_exceeded ->
-          "Quota has exceeded: #{path}"
+    def to_string(%ExZk.Error{err: :quota_exceeded, path: path}),
+      do: "Quota has exceeded: #{path}"
 
-        _ ->
-          "#{err}: #{path}"
-      end
-    end
+    def to_string(%ExZk.Error{err: err, path: path}), do: "#{err}: #{path}"
   end
 end

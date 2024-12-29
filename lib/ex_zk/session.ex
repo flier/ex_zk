@@ -14,7 +14,7 @@ defmodule ExZk.Session do
   }
 
   alias ExZk.Connector.Connected
-  alias ExZk.Data.{ACL, Stat}
+  alias ExZk.Data.{ACL, ClientInfo, Stat}
   alias ExZk.Defs.ErrCode
 
   alias ExZk.Proto.{
@@ -37,7 +37,8 @@ defmodule ExZk.Session do
     SetDataRequest,
     SetDataResponse,
     SyncRequest,
-    SyncResponse
+    SyncResponse,
+    WhoAmIResponse
   }
 
   @behaviour :gen_statem
@@ -366,6 +367,23 @@ defmodule ExZk.Session do
         case send_request(session, :multi, request, timeout) do
           {:ok, %Multi.Response{results: results}} ->
             {{:ok, results}, %{results: results}}
+
+          {:error, err} ->
+            {{:error, ExZk.Error.new(err)}, %{error: err}}
+        end
+      end
+    )
+  end
+
+  @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, ExZk.Error.t()}
+  def whoami(session, timeout \\ @default_timeout) do
+    :telemetry.span(
+      [:ex_zk, :session, :who_am_i],
+      %{session: session},
+      fn ->
+        case(send_request(session, :who_am_i, nil, timeout)) do
+          {:ok, %WhoAmIResponse{client_info: client_info}} ->
+            {{:ok, client_info}, %{client_info: client_info}}
 
           {:error, err} ->
             {{:error, ExZk.Error.new(err)}, %{error: err}}

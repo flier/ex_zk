@@ -1,8 +1,9 @@
 defmodule Mix.Tasks.Zkcli do
-  alias ExZk.Session
   use Mix.Task
 
   require Logger
+
+  alias ExZk.Session
 
   defmodule Context do
     @enforce_keys [:host, :session]
@@ -39,6 +40,7 @@ defmodule Mix.Tasks.Zkcli do
     redo <index>              Redo the cmd with the index from history.
     stat <path>               Showing the stat/metadata of one node.
     sync <path>               Sync the data of one node between leader and followers(Asynchronous sync)
+    whoami                    Get the client information
     quit                      Quit the CLI
   """
 
@@ -164,6 +166,22 @@ defmodule Mix.Tasks.Zkcli do
     case ExZk.sync(session, path) do
       {:ok, ^path} -> IO.puts("Sync is OK")
       {:error, err} -> IO.puts("Sync has failed. Error: #{err}")
+    end
+  end
+
+  @doc """
+  Get the client information
+  """
+  @spec whoami(Context.t()) :: :ok
+  def whoami(%Context{session: session}) do
+    case ExZk.whoami(session) do
+      {:ok, client_info} ->
+        IO.puts("Auth scheme: User")
+
+        client_info |> Enum.map_join("\n", &"#{&1.auth_scheme}: #{&1.user}") |> IO.puts()
+
+      {:error, err} ->
+        {:error, err}
     end
   end
 
