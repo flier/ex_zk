@@ -2,6 +2,8 @@ defmodule ExZk.Data do
   @moduledoc false
 
   defmodule Id do
+    @moduledoc false
+
     defstruct scheme: "",
               id: ""
 
@@ -36,6 +38,8 @@ defmodule ExZk.Data do
   end
 
   defmodule ACL do
+    @moduledoc false
+
     defstruct perms: 0,
               id: %Id{}
 
@@ -70,6 +74,10 @@ defmodule ExZk.Data do
   end
 
   defmodule Stat do
+    @moduledoc """
+    information shared with the client
+    """
+
     defstruct czxid: 0,
               mzxid: 0,
               ctime: 0,
@@ -149,6 +157,10 @@ defmodule ExZk.Data do
   end
 
   defmodule StatPersisted do
+    @moduledoc """
+    information explicitly stored by the server persistently
+    """
+
     defstruct czxid: 0,
               mzxid: 0,
               ctime: 0,
@@ -218,6 +230,8 @@ defmodule ExZk.Data do
   end
 
   defmodule ClientInfo do
+    @moduledoc false
+
     defstruct auth_scheme: "",
               user: ""
 
@@ -256,6 +270,8 @@ defmodule ExZk.Proto do
   @moduledoc false
 
   defmodule ConnectRequest do
+    @moduledoc false
+
     defstruct protocol_version: 0,
               last_zxid_seen: 0,
               time_out: 0,
@@ -310,6 +326,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule ConnectResponse do
+    @moduledoc false
+
     defstruct protocol_version: 0,
               time_out: 0,
               session_id: 0,
@@ -359,6 +377,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetWatches do
+    @moduledoc false
+
     defstruct relative_zxid: 0,
               data_watches: [],
               exist_watches: [],
@@ -403,6 +423,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetWatches2 do
+    @moduledoc false
+
     defstruct relative_zxid: 0,
               data_watches: [],
               exist_watches: [],
@@ -457,6 +479,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule RequestHeader do
+    @moduledoc false
+
     defstruct xid: 0,
               type: 0
 
@@ -491,6 +515,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule MultiHeader do
+    @moduledoc false
+
     defstruct type: 0,
               done: false,
               err: 0
@@ -530,6 +556,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule AuthPacket do
+    @moduledoc false
+
     defstruct type: 0,
               scheme: "",
               auth: <<>>
@@ -569,6 +597,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule ReplyHeader do
+    @moduledoc false
+
     defstruct xid: 0,
               zxid: 0,
               err: 0
@@ -608,6 +638,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetDataRequest do
+    @moduledoc false
+
     defstruct path: "",
               watch: false
 
@@ -642,6 +674,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetDataRequest do
+    @moduledoc false
+
     defstruct path: "",
               data: <<>>,
               version: 0
@@ -681,6 +715,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule ReconfigRequest do
+    @moduledoc false
+
     defstruct joining_servers: "",
               leaving_servers: "",
               new_members: "",
@@ -725,6 +761,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetDataResponse do
+    @moduledoc false
+
     defstruct stat: %ExZk.Data.Stat{}
 
     @type t :: %__MODULE__{
@@ -754,6 +792,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetSASLRequest do
+    @moduledoc false
+
     defstruct token: <<>>
 
     @type t :: %__MODULE__{
@@ -783,6 +823,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetSASLRequest do
+    @moduledoc false
+
     defstruct token: <<>>
 
     @type t :: %__MODULE__{
@@ -812,6 +854,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetSASLResponse do
+    @moduledoc false
+
     defstruct token: <<>>
 
     @type t :: %__MODULE__{
@@ -841,6 +885,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule CreateRequest do
+    @moduledoc false
+
     defstruct path: "",
               data: <<>>,
               acl: [],
@@ -885,6 +931,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule CreateTTLRequest do
+    @moduledoc false
+
     defstruct path: "",
               data: <<>>,
               acl: [],
@@ -934,6 +982,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule DeleteRequest do
+    @moduledoc false
+
     defstruct path: "",
               version: 0
 
@@ -968,6 +1018,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetChildrenRequest do
+    @moduledoc false
+
     defstruct path: "",
               watch: false
 
@@ -1002,6 +1054,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetAllChildrenNumberRequest do
+    @moduledoc false
+
     defstruct path: ""
 
     @type t :: %__MODULE__{
@@ -1031,6 +1085,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetChildren2Request do
+    @moduledoc false
+
     defstruct path: "",
               watch: false
 
@@ -1065,6 +1121,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule CheckVersionRequest do
+    @moduledoc false
+
     defstruct path: "",
               version: 0
 
@@ -1099,6 +1157,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetMaxChildrenRequest do
+    @moduledoc false
+
     defstruct path: ""
 
     @type t :: %__MODULE__{
@@ -1128,6 +1188,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetMaxChildrenResponse do
+    @moduledoc false
+
     defstruct max: 0
 
     @type t :: %__MODULE__{
@@ -1157,6 +1219,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetMaxChildrenRequest do
+    @moduledoc false
+
     defstruct path: "",
               max: 0
 
@@ -1191,6 +1255,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SyncRequest do
+    @moduledoc false
+
     defstruct path: ""
 
     @type t :: %__MODULE__{
@@ -1220,6 +1286,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SyncResponse do
+    @moduledoc false
+
     defstruct path: ""
 
     @type t :: %__MODULE__{
@@ -1249,6 +1317,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetACLRequest do
+    @moduledoc false
+
     defstruct path: ""
 
     @type t :: %__MODULE__{
@@ -1278,6 +1348,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetACLRequest do
+    @moduledoc false
+
     defstruct path: "",
               acl: [],
               version: 0
@@ -1317,6 +1389,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetACLResponse do
+    @moduledoc false
+
     defstruct stat: %ExZk.Data.Stat{}
 
     @type t :: %__MODULE__{
@@ -1346,6 +1420,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule AddWatchRequest do
+    @moduledoc false
+
     defstruct path: "",
               mode: 0
 
@@ -1380,6 +1456,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule WatcherEvent do
+    @moduledoc false
+
     defstruct type: 0,
               state: 0,
               path: ""
@@ -1419,6 +1497,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule ErrorResponse do
+    @moduledoc false
+
     defstruct err: 0
 
     @type t :: %__MODULE__{
@@ -1448,6 +1528,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule CreateResponse do
+    @moduledoc false
+
     defstruct path: ""
 
     @type t :: %__MODULE__{
@@ -1477,6 +1559,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule Create2Response do
+    @moduledoc false
+
     defstruct path: "",
               stat: %ExZk.Data.Stat{}
 
@@ -1511,6 +1595,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule ExistsRequest do
+    @moduledoc false
+
     defstruct path: "",
               watch: false
 
@@ -1545,6 +1631,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule ExistsResponse do
+    @moduledoc false
+
     defstruct stat: %ExZk.Data.Stat{}
 
     @type t :: %__MODULE__{
@@ -1574,6 +1662,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetDataResponse do
+    @moduledoc false
+
     defstruct data: <<>>,
               stat: %ExZk.Data.Stat{}
 
@@ -1608,6 +1698,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetChildrenResponse do
+    @moduledoc false
+
     defstruct children: []
 
     @type t :: %__MODULE__{
@@ -1637,6 +1729,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetAllChildrenNumberResponse do
+    @moduledoc false
+
     defstruct total_number: 0
 
     @type t :: %__MODULE__{
@@ -1666,6 +1760,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetChildren2Response do
+    @moduledoc false
+
     defstruct children: [],
               stat: %ExZk.Data.Stat{}
 
@@ -1700,6 +1796,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetACLResponse do
+    @moduledoc false
+
     defstruct acl: [],
               stat: %ExZk.Data.Stat{}
 
@@ -1734,6 +1832,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule CheckWatchesRequest do
+    @moduledoc false
+
     defstruct path: "",
               type: 0
 
@@ -1768,6 +1868,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule RemoveWatchesRequest do
+    @moduledoc false
+
     defstruct path: "",
               type: 0
 
@@ -1802,6 +1904,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetEphemeralsRequest do
+    @moduledoc false
+
     defstruct prefix_path: ""
 
     @type t :: %__MODULE__{
@@ -1831,6 +1935,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetEphemeralsResponse do
+    @moduledoc false
+
     defstruct ephemerals: []
 
     @type t :: %__MODULE__{
@@ -1860,6 +1966,8 @@ defmodule ExZk.Proto do
   end
 
   defmodule WhoAmIResponse do
+    @moduledoc false
+
     defstruct client_info: []
 
     @type t :: %__MODULE__{
@@ -1893,6 +2001,8 @@ defmodule ExZk.Txn do
   @moduledoc false
 
   defmodule TxnDigest do
+    @moduledoc false
+
     defstruct version: 0,
               tree_digest: 0
 
@@ -1927,6 +2037,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule TxnHeader do
+    @moduledoc false
+
     defstruct client_id: 0,
               cxid: 0,
               zxid: 0,
@@ -1976,6 +2088,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule CreateTxnV0 do
+    @moduledoc false
+
     defstruct path: "",
               data: <<>>,
               acl: [],
@@ -2020,6 +2134,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule CreateTxn do
+    @moduledoc false
+
     defstruct path: "",
               data: <<>>,
               acl: [],
@@ -2069,6 +2185,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule CreateTTLTxn do
+    @moduledoc false
+
     defstruct path: "",
               data: <<>>,
               acl: [],
@@ -2118,6 +2236,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule CreateContainerTxn do
+    @moduledoc false
+
     defstruct path: "",
               data: <<>>,
               acl: [],
@@ -2162,6 +2282,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule DeleteTxn do
+    @moduledoc false
+
     defstruct path: ""
 
     @type t :: %__MODULE__{
@@ -2191,6 +2313,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule SetDataTxn do
+    @moduledoc false
+
     defstruct path: "",
               data: <<>>,
               version: 0
@@ -2230,6 +2354,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule CheckVersionTxn do
+    @moduledoc false
+
     defstruct path: "",
               version: 0
 
@@ -2264,6 +2390,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule SetACLTxn do
+    @moduledoc false
+
     defstruct path: "",
               acl: [],
               version: 0
@@ -2303,6 +2431,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule SetMaxChildrenTxn do
+    @moduledoc false
+
     defstruct path: "",
               max: 0
 
@@ -2337,6 +2467,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule CreateSessionTxn do
+    @moduledoc false
+
     defstruct time_out: 0
 
     @type t :: %__MODULE__{
@@ -2366,6 +2498,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule CloseSessionTxn do
+    @moduledoc false
+
     defstruct paths2_delete: []
 
     @type t :: %__MODULE__{
@@ -2395,6 +2529,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule ErrorTxn do
+    @moduledoc false
+
     defstruct err: 0
 
     @type t :: %__MODULE__{
@@ -2424,6 +2560,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule Txn do
+    @moduledoc false
+
     defstruct type: 0,
               data: <<>>
 
@@ -2458,6 +2596,8 @@ defmodule ExZk.Txn do
   end
 
   defmodule MultiTxn do
+    @moduledoc false
+
     defstruct txns: []
 
     @type t :: %__MODULE__{
