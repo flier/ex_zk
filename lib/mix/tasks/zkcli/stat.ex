@@ -1,4 +1,8 @@
 defmodule Mix.Tasks.Zkcli.Stat do
+  @moduledoc """
+  Showing the stat/metadata of one node.
+  """
+
   @behaviour Mix.Tasks.Zkcli.Command
 
   alias ExZk.Error

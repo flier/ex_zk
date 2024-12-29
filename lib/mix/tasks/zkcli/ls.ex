@@ -1,4 +1,8 @@
 defmodule Mix.Tasks.Zkcli.Ls do
+  @moduledoc """
+  List all nodes
+  """
+
   @behaviour Mix.Tasks.Zkcli.Command
 
   alias Mix.Tasks.Zkcli.{Context, Stat}

@@ -37,7 +37,9 @@ defmodule Mix.Tasks.Zkcli do
     addauth <scheme> <auth>   Add authentication
     history                   Showing the history about the recent commands that you have executed
     redo <index>              Redo the cmd with the index from history.
-    quit                      QUit the CLI
+    stat <path>               Showing the stat/metadata of one node.
+    sync <path>               Sync the data of one node between leader and followers(Asynchronous sync)
+    quit                      Quit the CLI
   """
 
   @usage """
@@ -97,15 +99,27 @@ defmodule Mix.Tasks.Zkcli do
   ## Commands
   ##
 
+  @doc """
+  Print this help
+  """
   @spec help(Context.t()) :: :ok
   def help(%Context{} = _ctx), do: IO.puts(@commands)
 
+  @doc """
+  Print the help for a specific command
+  """
   @spec help(Context.t(), cmd :: String.t()) :: :ok
   def help(%Context{} = _ctx, cmd), do: module(cmd).usage()
 
+  @doc """
+  Close the current session
+  """
   @spec close(Context.t()) :: :ok
   def close(%Context{session: session}), do: ExZk.close(session)
 
+  @doc """
+  Quit the CLI
+  """
   @spec quit(Context.t()) :: no_return()
   def quit(%Context{session: session}) do
     ExZk.close(session)
@@ -113,6 +127,9 @@ defmodule Mix.Tasks.Zkcli do
     System.halt(1)
   end
 
+  @doc """
+  Showing the history about the recent commands that you have executed
+  """
   @spec history(Context.t()) :: :ok
   def history(%Context{history: history}) do
     for {id, cmd} <- history |> Stream.take(10) |> Enum.reverse() do
@@ -122,6 +139,9 @@ defmodule Mix.Tasks.Zkcli do
     :ok
   end
 
+  @doc """
+  Redo the cmd with the index from history.
+  """
   @spec redo(Context.t(), index :: binary()) :: :ok
   def redo(%Context{history: history} = ctx, index) do
     id = index |> String.to_integer()
@@ -133,6 +153,17 @@ defmodule Mix.Tasks.Zkcli do
       {_, cmd} ->
         eval({ctx, cmd})
         :ok
+    end
+  end
+
+  @doc """
+  Sync the data of one node between leader and followers(Asynchronous sync)
+  """
+  @spec sync(Context.t(), path :: String.t()) :: :ok
+  def sync(%Context{session: session}, path) do
+    case ExZk.sync(session, path) do
+      {:ok, ^path} -> IO.puts("Sync is OK")
+      {:error, err} -> IO.puts("Sync has failed. Error: #{err}")
     end
   end
 
