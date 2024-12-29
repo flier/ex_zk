@@ -100,6 +100,9 @@ defmodule Mix.Tasks.Zkcli do
   @spec help(Context.t(), cmd :: String.t()) :: :ok
   def help(%Context{} = _ctx, cmd), do: module(cmd).usage()
 
+  @spec close(Context.t()) :: :ok
+  def close(%Context{session: session}), do: ExZk.close(session)
+
   @spec quit(Context.t()) :: no_return()
   def quit(%Context{session: session}) do
     ExZk.close(session)
