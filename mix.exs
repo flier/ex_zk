@@ -47,7 +47,7 @@ defmodule ExZk.MixProject do
   def application do
     [
       mod: {ExZk, []},
-      extra_applications: [:logger, :eex, :ssl, :runtime_tools],
+      extra_applications: [:logger, :eex, :ssl, :runtime_tools, :telemetry],
       env: [
         logger: true
       ]
@@ -87,7 +87,8 @@ defmodule ExZk.MixProject do
       {:castore, "~> 1.0", optional: true},
       {:nimble_options, "~> 1.0"},
       {:prompt, "~> 0.10"},
-      {:telemetry, "~> 1.3"},
+      {:telemetry, "~> 1.0"},
+      {:timex, "~> 3.7"},
 
       # Dev and test dependencies
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

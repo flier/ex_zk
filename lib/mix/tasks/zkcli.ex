@@ -94,12 +94,18 @@ defmodule Mix.Tasks.Zkcli do
   ## Commands
   ##
 
-  @spec help(%Context{}) :: :ok
-  def help(_ctx), do: IO.puts(@commands)
-  def help(_ctx, cmd), do: module(cmd).usage()
+  @spec help(Context.t()) :: :ok
+  def help(%Context{} = _ctx), do: IO.puts(@commands)
 
-  @spec quit(%Context{}) :: no_return()
-  def quit(_ctx), do: System.halt(1)
+  @spec help(Context.t(), cmd :: String.t()) :: :ok
+  def help(%Context{} = _ctx, cmd), do: module(cmd).usage()
+
+  @spec quit(Context.t()) :: no_return()
+  def quit(%Context{session: session}) do
+    ExZk.close(session)
+
+    System.halt(1)
+  end
 
   ####
   ## Callbacks
@@ -112,6 +118,10 @@ defmodule Mix.Tasks.Zkcli do
     Logger.configure(level: log_level(parsed))
 
     Logger.debug(parsed: parsed, args: args, invalid: invalid)
+
+    Mix.Task.run("app.start")
+
+    ExZk.Logger.install()
 
     cond do
       Keyword.get(parsed, :help) ->
@@ -196,7 +206,13 @@ defmodule Mix.Tasks.Zkcli do
     try do
       ctx = %{ctx | command: String.to_existing_atom(cmd)}
 
-      :ok = run(ctx, cmd, args)
+      case run(ctx, cmd, args) do
+        :ok ->
+          nil
+
+        {:error, reason} ->
+          IO.puts("#{reason}")
+      end
 
       %{ctx | count: count + 1}
     rescue

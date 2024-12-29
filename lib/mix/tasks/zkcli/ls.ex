@@ -1,9 +1,7 @@
 defmodule Mix.Tasks.Zkcli.Ls do
   @behaviour Mix.Tasks.Zkcli.Command
 
-  import Logger
-
-  alias Mix.Tasks.Zkcli.Context
+  alias Mix.Tasks.Zkcli.{Context, Stat}
 
   @usage """
   Usage: ls [options] <path>
@@ -17,31 +15,46 @@ defmodule Mix.Tasks.Zkcli.Ls do
 
   @opts [
     help: :boolean,
+    recursive: :boolean,
     stat: :boolean,
-    watch: :boolean,
-    recursive: :boolean
+    watch: :boolean
   ]
 
   @aliases [
     h: :help,
+    R: :recursive,
     s: :stat,
-    w: :watch,
-    R: :recursive
+    w: :watch
   ]
 
   @impl true
-  def usage(), do: IO.puts(@usage)
+  def usage, do: IO.puts(@usage)
 
   @impl true
-  def run(%Context{session: _session} = ctx, args) do
-    {parsed, args, invalid} = OptionParser.parse(args, aliases: @aliases, strict: @opts)
+  def run(%Context{session: session} = _ctx, args) do
+    {parsed, args, _invalid} = OptionParser.parse(args, aliases: @aliases, strict: @opts)
 
-    debug(pid: self(), ctx: ctx, opts: parsed, args: args, rest: invalid)
-
-    if Keyword.get(parsed, :help) do
-      usage()
-    end
-
-    :ok
+    ls(session, List.first(args, "/"), parsed)
   end
+
+  defp ls(_, _, help: true), do: usage()
+  defp ls(_session, _path, recursive: true), do: :not_implemented
+
+  defp ls(session, path, stat: true) do
+    with {:ok, children, stat} <- ExZk.get_children2(session, path) do
+      print_children(children)
+      print_stat(stat)
+    end
+  end
+
+  defp ls(session, path, _opts) do
+    with {:ok, children} <- ExZk.get_children(session, path) do
+      print_children(children)
+    end
+  end
+
+  defp print_children(children),
+    do: "[#{children |> Enum.sort() |> Enum.join(", ")}]" |> IO.puts()
+
+  defp print_stat(stat), do: stat |> Stat.Printer.new() |> to_string() |> IO.puts()
 end

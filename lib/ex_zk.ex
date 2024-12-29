@@ -74,6 +74,9 @@ defmodule ExZk do
     |> start_link()
   end
 
+  @spec close(session(), timeout()) :: :ok
+  defdelegate close(session, timeout \\ :infinity), to: Session
+
   @spec get_children(session(), Path.t(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, reason :: term()}
   defdelegate get_children(session, path, timeout \\ @default_timeout), to: Session

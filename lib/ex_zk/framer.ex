@@ -1,22 +1,16 @@
 defmodule ExZk.Framer do
   require Logger
 
-  alias ExZk.{
-    Frame,
-    Framer,
-    Multi,
-    Proto
-  }
-
+  alias ExZk.{Frame, Multi, Proto}
   alias ExZk.Defs.OpCode
-  alias ExZk.Proto.{ReplyHeader, RequestHeader}
+  alias ExZk.Proto.{ErrorResponse, ReplyHeader, RequestHeader}
 
   defstruct next_xid: 1,
             requests: %{}
 
   @type t :: %__MODULE__{
           next_xid: xid(),
-          requests: %{xid() => {Frame.t(), pid()}}
+          requests: %{xid() => {Frame.t(), :gen_statem.from()}}
         }
 
   @type xid :: integer()
@@ -63,41 +57,52 @@ defmodule ExZk.Framer do
   end
 
   @spec parse_frame(t(), data :: binary()) ::
-          {:ok, Frame.t(), from :: :gen_statem.from(), t()} | {:error, reason :: term()}
+          {:ok, Frame.t(), :gen_statem.from(), t()} | {:error, reason :: term()}
   def parse_frame(%__MODULE__{} = framer, data) do
     data |> Frame.unpack() |> parse_reply(framer)
   end
 
-  defp parse_reply(
-         %Frame{reply_hdr: %ReplyHeader{xid: xid}, payload: payload} = frame,
-         %__MODULE__{requests: requests} = framer
-       )
-       when xid >= 0 do
+  @spec parse_reply(Frame.t(), t()) ::
+          {:ok, Frame.t(), :gen_statem.from(), t()} | {:error, reason :: term()}
+  def parse_reply(
+        %Frame{reply_hdr: %ReplyHeader{xid: xid, err: 0}, payload: payload} = frame,
+        %__MODULE__{requests: requests} = framer
+      )
+      when xid >= 0 do
     case Map.pop(requests, xid) do
       {nil, _} ->
         {:error, :unexpected_xid}
 
-      {{%Frame{req_hdr: %RequestHeader{type: type}, request: request} = req_hdr, from}, requests} ->
+      {{%Frame{req_hdr: %RequestHeader{type: type} = req_hdr, request: request}, from}, requests} ->
         with {:ok, op_code} <- OpCode.cast(type),
              {:ok, res_type} <- Keyword.fetch(@response_types, op_code),
              {:ok, response, rest} <- parse_response(res_type, payload) do
-          frame = %Frame{
-            frame
-            | req_hdr: req_hdr,
-              request: request,
-              response: response,
-              payload: rest
-          }
+          frame = %{frame | req_hdr: req_hdr, request: request, response: response, payload: rest}
 
-          {:ok, frame, from, %Framer{framer | requests: requests}}
+          {:ok, frame, from, %{framer | requests: requests}}
         else
           :error -> {:error, :unexpected_opcode}
-          {:error, reason} -> {:error, reason}
         end
     end
   end
 
-  defp parse_reply(frame, framer), do: {:ok, frame, nil, framer}
+  def parse_reply(
+        %Frame{reply_hdr: %ReplyHeader{xid: xid, err: err}} = frame,
+        %__MODULE__{requests: requests} = framer
+      )
+      when err != 0 do
+    case Map.pop(requests, xid) do
+      {nil, _} ->
+        {:error, :unexpected_xid}
+
+      {{%Frame{req_hdr: %RequestHeader{} = req_hdr, request: request}, from}, requests} ->
+        frame = %{frame | req_hdr: req_hdr, request: request, response: %ErrorResponse{err: err}}
+
+        {:ok, frame, from, %{framer | requests: requests}}
+    end
+  end
+
+  def parse_reply(frame, framer), do: {:ok, frame, nil, framer}
 
   defp parse_response(nil, payload), do: {:ok, nil, payload}
   defp parse_response(mod, payload), do: mod.unpack(payload)

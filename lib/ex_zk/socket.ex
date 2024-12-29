@@ -39,7 +39,19 @@ defmodule ExZk.Socket do
 
   @spec send_frame(sock :: GenServer.server(), frame :: Frame.t()) :: :ok
   def send_frame(sock, %Frame{} = frame) do
-    GenServer.cast(sock, {:send, ExZk.Wire.pack(frame)})
+    data = ExZk.Wire.pack(frame)
+
+    :telemetry.execute(
+      [:ex_zk, :socket, :send],
+      %{system_time: System.system_time(), size: byte_size(data)},
+      %{
+        socket: sock,
+        frame: frame,
+        data: data
+      }
+    )
+
+    GenServer.cast(sock, {:send, data})
   end
 
   ####
@@ -139,6 +151,16 @@ defmodule ExZk.Socket do
          <<sz::32, data::binary-size(sz), rest::binary>> = _data
        ) do
     frame = Frame.unpack(data)
+
+    :telemetry.execute(
+      [:ex_zk, :socket, :recv],
+      %{system_time: System.system_time(), size: byte_size(data)},
+      %{
+        socket: self(),
+        frame: frame,
+        data: data
+      }
+    )
 
     send(session, {:frame, self(), frame})
 
