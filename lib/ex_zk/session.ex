@@ -559,13 +559,7 @@ defmodule ExZk.Session do
     :telemetry.execute(
       [:ex_zk, :session, :connected],
       %{system_time: System.system_time()},
-      %{
-        session: self(),
-        name: opts[:name],
-        session_id: session_id,
-        addr: addr,
-        socket: socket
-      }
+      %{session_info(data) | session_id: session_id, addr: addr}
     )
 
     if !opts[:disable_auto_watch_reset] do
@@ -590,18 +584,12 @@ defmodule ExZk.Session do
     {data, action}
   end
 
-  defp handle_frame(
-         %Frame{response: :pong},
-         %__MODULE__{opts: opts, socket: socket, session_id: session_id, connected_address: addr} =
-           data
-       ) do
-    :telemetry.execute([:ex_zk, :session, :pong], %{latency: ping_latency(data)}, %{
-      session: self(),
-      name: opts[:name],
-      session_id: session_id,
-      addr: addr,
-      socket: socket
-    })
+  defp handle_frame(%Frame{response: :pong}, %__MODULE__{} = data) do
+    :telemetry.execute(
+      [:ex_zk, :session, :pong],
+      %{latency: ping_latency(data)},
+      session_info(data)
+    )
 
     data = %__MODULE__{data | last_ping_sent: nil}
     action = {{:timeout, :send_ping}, ping_interval(data), %{}}
@@ -610,12 +598,22 @@ defmodule ExZk.Session do
   end
 
   defp handle_frame(%Frame{response: {:auth_failed, err}}, %__MODULE__{} = data) do
-    Logger.debug("Got auth response for session id #{session_id(data)} with err: #{err}")
+    :telemetry.execute(
+      [:ex_zk, :session, :auth, :failed],
+      %{system_time: System.system_time()},
+      session_info(data) |> Map.put(:error, ErrCode.cast(err))
+    )
 
     :keep_state_and_data
   end
 
   defp handle_frame(%Frame{response: {:notification, evt}}, %__MODULE__{} = data) do
+    :telemetry.execute(
+      [:ex_zk, :session, :notification],
+      %{system_time: System.system_time()},
+      session_info(data) |> Map.put(:event, evt)
+    )
+
     Logger.debug(
       "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
     )
@@ -632,7 +630,7 @@ defmodule ExZk.Session do
 
   defp handle_frame(
          %Frame{reply_hdr: %ReplyHeader{zxid: zxid}} = frame,
-         %__MODULE__{opts: opts, session_id: session_id, framer: framer} = data
+         %__MODULE__{framer: framer} = data
        ) do
     case Framer.parse_reply(frame, framer) do
       {:ok, frame, {task, _} = from, framer} ->
@@ -655,14 +653,7 @@ defmodule ExZk.Session do
         :telemetry.execute(
           [:ex_zk, :session, :task, :stop],
           %{system_time: System.system_time()},
-          %{
-            session: self(),
-            name: opts[:name],
-            session_id: session_id,
-            task: task,
-            frame: frame,
-            reply: reply
-          }
+          session_info(data) |> Map.merge(%{task: task, frame: frame, reply: reply})
         )
 
         :gen_statem.reply(from, reply)
@@ -712,6 +703,20 @@ defmodule ExZk.Session do
 
   defp session_id(%__MODULE__{session_id: session_id}),
     do: session_id |> Integer.to_string(16) |> String.pad_leading(8, "0")
+
+  defp session_info(%__MODULE__{
+         opts: opts,
+         session_id: session_id,
+         socket: socket,
+         connected_address: addr
+       }),
+       do: %{
+         session: self(),
+         name: opts[:name],
+         session_id: session_id,
+         socket: socket,
+         addr: addr
+       }
 
   defp recv_timeout(%__MODULE__{} = data), do: div(data.session_timeout * 2, 3)
   defp ping_interval(%__MODULE__{} = data), do: div(recv_timeout(data), 2)

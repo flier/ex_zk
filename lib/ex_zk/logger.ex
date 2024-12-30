@@ -9,27 +9,35 @@ defmodule ExZk.Logger do
 
     * `[:ex_zk, :session, :connected]` - dispatched by `ExZk.Session` after the session has been established
       * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), addr: String.t(), socket: pid()}`
+      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t()}`
 
     * `[:ex_zk, :session, :disconnected]` - dispatched by `ExZk.Session` after the session has been disconnected
       * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), addr: String.t(), socket: pid()}`
+      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t()}`
 
     * `[:ex_zk, :session, :pong]` - dispatched by `ExZk.Session` after a pong has been received
       * Measurement: `%{latency: Duration.t()}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), addr: String.t(), socket: pid()}`
+      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t()}`
+
+    * `[:ex_zk, :session, :auth, :failed]` - dispatched by `ExZk.Session` after an authentication has failed
+      * Measurement: `%{system_time: system_time}`
+      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t(), error: ErrCode.t()}`
+
+    * `[:ex_zk, :session, :notification]` - dispatched by `ExZk.Session` after a notification `ExZk.WatchedEvent` event has been received
+      * Measurement: `%{system_time: system_time}`
+      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t(), event: WatchedEvent.t()}`
 
     * `[:ex_zk, :session, :task, :stop]` - dispatched by `ExZk.Session` after a task has been completed
       * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), task: pid(), frame: ExZk.Frame.t(), reply: term()}`
+      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), task: pid(), frame: Frame.t(), reply: term()}`
 
-    * `[:ex_zk, :socket, :send]` - dispatched by `ExZk.Socket` after a packet has been sent
+    * `[:ex_zk, :socket, :send]` - dispatched by `ExZk.Socket` after a `ExZk.Frame` has been sent
       * Measurement: `%{system_time: system_time, size: non_neg_integer()}`
-      * Metadata: `%{socket: pid(), frame: ExZk.Frame.t(), data: binary()}`
+      * Metadata: `%{socket: pid(), frame: Frame.t(), data: binary()}`
 
-    * `[:ex_zk, :socket, :recv]` - dispatched by `ExZk.Socket` after a packet has been received
+    * `[:ex_zk, :socket, :recv]` - dispatched by `ExZk.Socket` after a `ExZk.Frame` has been received
       * Measurement: `%{system_time: system_time, size: non_neg_integer()}`
-      * Metadata: `%{socket: pid(), frame: ExZk.Frame.t(), data: binary()}`
+      * Metadata: `%{socket: pid(), frame: Frame.t(), data: binary()}`
 
   """
 
@@ -45,6 +53,7 @@ defmodule ExZk.Logger do
       [:ex_zk, :session, :connected] => &__MODULE__.session_connected/4,
       [:ex_zk, :session, :disconnected] => &__MODULE__.session_disconnected/4,
       [:ex_zk, :session, :pong] => &__MODULE__.session_ping/4,
+      [:ex_zk, :session, :auth, :failed] => &__MODULE__.session_auth_failed/4,
       [:ex_zk, :session, :task, :stop] => &__MODULE__.session_task_completed/4,
       [:ex_zk, :socket, :send] => &__MODULE__.socket_send/4,
       [:ex_zk, :socket, :recv] => &__MODULE__.socket_recv/4
@@ -109,6 +118,25 @@ defmodule ExZk.Logger do
         Logger.log(level,
           session: [pid: session, id: session_id],
           ping: [latency: latency |> Duration.to_iso8601()]
+        )
+    end
+  end
+
+  @doc false
+  def session_auth_failed(
+        _name,
+        _measurements,
+        %{session: session, session_id: session_id, error: err} = _metadata,
+        opts
+      ) do
+    case log_level(opts[:log], session) do
+      false ->
+        :ok
+
+      level ->
+        Logger.log(level,
+          session: [pid: session, id: session_id],
+          auth: [error: err]
         )
     end
   end
