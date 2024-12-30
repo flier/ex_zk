@@ -1,4 +1,8 @@
 defmodule Mix.Tasks.ZkCli do
+  @moduledoc """
+  The interactive Zookeeper shell
+  """
+
   use Mix.Task
 
   import IO.ANSI
@@ -7,16 +11,57 @@ defmodule Mix.Tasks.ZkCli do
 
   alias ExZk.Session
 
+  defmodule History do
+    @moduledoc false
+
+    defstruct next: 0, cmds: []
+
+    @type t :: %__MODULE__{
+            next: id(),
+            cmds: [{id(), command()}]
+          }
+
+    @type id :: integer()
+    @type command :: [String.t()]
+
+    def id(%__MODULE__{next: next}), do: next
+
+    @spec put(t(), command()) :: t()
+    def put(%__MODULE__{next: next, cmds: cmds}, cmd),
+      do: %__MODULE__{next: next + 1, cmds: [{next, cmd} | cmds]}
+
+    @spec get(t(), id()) :: command() | nil
+    def get(%__MODULE__{cmds: cmds}, id) when is_integer(id) do
+      case cmds |> Enum.find(fn {n, _} -> n == id end) do
+        nil ->
+          nil
+
+        {_, cmd} ->
+          cmd
+      end
+    end
+
+    defimpl String.Chars do
+      def to_string(%History{cmds: cmds}) do
+        cmds
+        |> Stream.take(10)
+        |> Enum.reverse()
+        |> Enum.map_join("\n", fn {id, cmd} -> "#{id} - #{cmd |> Enum.join(" ")}" end)
+      end
+    end
+  end
+
   defmodule Context do
+    @moduledoc false
+
     @enforce_keys [:host, :session]
-    defstruct [:host, :session, :command, history: [], count: 0]
+    defstruct [:host, :session, :command, history: %History{}]
 
     @type t :: %__MODULE__{
             host: String.t(),
             session: pid(),
             command: atom(),
-            history: [{integer(), [String.t()]}],
-            count: integer()
+            history: History.t()
           }
   end
 
@@ -27,7 +72,7 @@ defmodule Mix.Tasks.ZkCli do
                 :ok | {:error, reason :: term()}
   end
 
-  @shortdoc "Starts the interactive shell"
+  @shortdoc "Starts the interactive Zookeeper shell"
 
   @default_server "localhost:2181"
   @default_timeout 300_000
@@ -135,27 +180,20 @@ defmodule Mix.Tasks.ZkCli do
   Showing the history about the recent commands that you have executed
   """
   @spec history(Context.t()) :: :ok
-  def history(%Context{history: history}) do
-    for {id, cmd} <- history |> Stream.take(10) |> Enum.reverse() do
-      IO.puts("#{id} - #{cmd |> Enum.join(" ")}")
-    end
-
-    :ok
-  end
+  def history(%Context{history: history}), do: IO.puts(history)
 
   @doc """
   Redo the cmd with the index from history.
   """
   @spec redo(Context.t(), index :: binary()) :: :ok
   def redo(%Context{history: history} = ctx, index) do
-    id = index |> String.to_integer()
-
-    case history |> Enum.find(fn {idx, _} -> idx == id end) do
+    case History.get(history, String.to_integer(index)) do
       nil ->
         print_error("Command index out of range")
 
-      {_, cmd} ->
+      cmd ->
         eval({ctx, cmd})
+
         :ok
     end
   end
@@ -193,32 +231,20 @@ defmodule Mix.Tasks.ZkCli do
 
   @impl true
   def run(args) do
+    Mix.Task.run("app.start")
+
     {parsed, args, invalid} = OptionParser.parse_head(args, aliases: @aliases, strict: @opts)
 
     Logger.configure(level: log_level(parsed))
 
     Logger.debug(parsed: parsed, args: args, invalid: invalid)
 
-    Mix.Task.run("app.start")
-
     ExZk.Logger.install()
 
-    cond do
-      Keyword.get(parsed, :help) ->
-        usage()
-
-      invalid != [] ->
-        print_error(
-          "Invalid options: #{invalid |> Enum.map_join(", ", fn
-            {key, nil} -> key
-            {key, value} -> "#{key} #{value}"
-          end)}"
-        )
-
-        usage()
-
-      true ->
-        start(args, parsed)
+    if parsed[:help] do
+      usage()
+    else
+      start(args, parsed)
     end
   end
 
@@ -263,9 +289,9 @@ defmodule Mix.Tasks.ZkCli do
 
   defp loop(ctx), do: ctx |> read() |> eval() |> loop()
 
-  defp read(%Context{host: host, session: session, count: count} = ctx) do
+  defp read(%Context{host: host, session: session, history: history} = ctx) do
     line =
-      Prompt.text("[zk: #{host}(#{session |> state()}) #{count}]",
+      Prompt.text("[zk: #{host}(#{session |> state()}) #{History.id(history)}]",
         color: :light_black,
         trim: true
       )
@@ -280,7 +306,7 @@ defmodule Mix.Tasks.ZkCli do
 
   defp eval({%Context{} = ctx, []}), do: ctx
 
-  defp eval({%Context{history: history, count: count} = ctx, [cmd | args]}) do
+  defp eval({%Context{history: history} = ctx, [cmd | args]}) do
     Logger.debug(ctx: ctx, cmd: cmd, args: args)
 
     try do
@@ -294,7 +320,7 @@ defmodule Mix.Tasks.ZkCli do
           print_error(reason)
       end
 
-      %{ctx | history: [{count, [cmd | args]} | history], count: count + 1}
+      %{ctx | history: History.put(history, [cmd | args])}
     rescue
       ArgumentError ->
         help(ctx)
