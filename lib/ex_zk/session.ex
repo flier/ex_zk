@@ -614,10 +614,6 @@ defmodule ExZk.Session do
       session_info(data) |> Map.put(:event, evt)
     )
 
-    Logger.debug(
-      "Got notification for session id #{session_id(data)} with event: #{evt |> inspect()}"
-    )
-
     {:keep_state, queue_event(data, evt)}
   end
 
