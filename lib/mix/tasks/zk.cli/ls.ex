@@ -36,24 +36,27 @@ defmodule Mix.Tasks.ZkCli.Ls do
 
   @impl true
   def run(%Context{session: session} = _ctx, args) do
-    {parsed, args, _invalid} = OptionParser.parse(args, aliases: @aliases, strict: @opts)
+    {opts, args, _invalid} = OptionParser.parse(args, aliases: @aliases, strict: @opts)
 
-    ls(session, List.first(args, "/"), parsed)
-  end
+    path = List.first(args, "/")
 
-  defp ls(_, _, help: true), do: usage()
-  defp ls(_session, _path, recursive: true), do: :not_implemented
+    cond do
+      opts[:help] ->
+        usage()
 
-  defp ls(session, path, stat: true) do
-    with {:ok, children, stat} <- ExZk.get_children2(session, path) do
-      print_children(children)
-      print_stat(stat)
-    end
-  end
+      opts[:recursive] ->
+        {:error, :not_implemented}
 
-  defp ls(session, path, _opts) do
-    with {:ok, children} <- ExZk.get_children(session, path) do
-      print_children(children)
+      opts[:stat] ->
+        with {:ok, children, stat} <- ExZk.get_children2(session, path) do
+          print_children(children)
+          print_stat(stat)
+        end
+
+      true ->
+        with {:ok, children} <- ExZk.get_children(session, path) do
+          print_children(children)
+        end
     end
   end
 
