@@ -414,7 +414,9 @@ defmodule ExZk.Session do
       # connect/3 down the pipe.
       receive do
         {:connected, ^socket, connected} ->
-          {:ok, :connected, on_connected(data, socket, connected)}
+          {data, action} = on_connected(data, socket, connected)
+
+          {:ok, :connected, data, action}
 
         {:disconnected, ^socket, reason} ->
           {:stop, %Error{reason: reason}}
@@ -477,7 +479,9 @@ defmodule ExZk.Session do
         {:connected, socket, %Connected{} = connected},
         %__MODULE__{socket: socket} = data
       ) do
-    {:next_state, :connected, on_connected(data, socket, connected)}
+    {data, action} = on_connected(data, socket, connected)
+
+    {:next_state, :connected, data, action}
   end
 
   def connecting(
@@ -527,12 +531,6 @@ defmodule ExZk.Session do
     :keep_state_and_data
   end
 
-  def connected(:cast, :ping, %__MODULE__{socket: socket} = data) do
-    :ok = Socket.send_frame(socket, new_ping_request())
-
-    {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
-  end
-
   def connected(
         {:call, from},
         {:send_request, opcode, request},
@@ -541,6 +539,12 @@ defmodule ExZk.Session do
     {:ok, frame, framer} = Framer.new_frame(framer, opcode, request, from)
     :ok = Socket.send_frame(socket, frame)
     {:keep_state, %{data | framer: framer}}
+  end
+
+  def connected({:timeout, :send_ping}, %{}, %__MODULE__{socket: socket} = data) do
+    :ok = Socket.send_frame(socket, new_ping_request())
+
+    {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
   end
 
   ####
@@ -570,24 +574,39 @@ defmodule ExZk.Session do
       end
     end
 
-    %{
+    data = %{
       data
       | socket: socket,
         connected_address: addr,
-        session_timeout: session_timeout,
         session_id: session_id,
+        session_timeout: session_timeout,
         framer: %Framer{},
         backoff_current: nil,
         reconnect_times: nil
     }
+
+    action = {{:timeout, :send_ping}, ping_interval(data), %{}}
+
+    {data, action}
   end
 
-  defp handle_frame(%Frame{response: :pong}, %__MODULE__{} = data) do
-    Logger.debug(
-      "Got ping response for session id #{session_id(data)} after #{ping_response_time(data) |> Duration.to_iso8601()}"
-    )
+  defp handle_frame(
+         %Frame{response: :pong},
+         %__MODULE__{opts: opts, socket: socket, session_id: session_id, connected_address: addr} =
+           data
+       ) do
+    :telemetry.execute([:ex_zk, :session, :pong], %{latency: ping_latency(data)}, %{
+      session: self(),
+      name: opts[:name],
+      session_id: session_id,
+      addr: addr,
+      socket: socket
+    })
 
-    {:keep_state, %__MODULE__{data | last_ping_sent: nil}}
+    data = %__MODULE__{data | last_ping_sent: nil}
+    action = {{:timeout, :send_ping}, ping_interval(data), %{}}
+
+    {:keep_state, data, action}
   end
 
   defp handle_frame(%Frame{response: {:auth_failed, err}}, %__MODULE__{} = data) do
@@ -694,9 +713,12 @@ defmodule ExZk.Session do
   defp session_id(%__MODULE__{session_id: session_id}),
     do: session_id |> Integer.to_string(16) |> String.pad_leading(8, "0")
 
-  defp ping_response_time(%__MODULE__{last_ping_sent: nil}), do: %Duration{}
+  defp recv_timeout(%__MODULE__{} = data), do: div(data.session_timeout * 2, 3)
+  defp ping_interval(%__MODULE__{} = data), do: div(recv_timeout(data), 2)
 
-  defp ping_response_time(%__MODULE__{last_ping_sent: last_ping_sent}) do
+  defp ping_latency(%__MODULE__{last_ping_sent: nil}), do: %Duration{}
+
+  defp ping_latency(%__MODULE__{last_ping_sent: last_ping_sent}) do
     %Duration{microsecond: {Time.diff(Time.utc_now(), last_ping_sent, :microsecond), 6}}
   end
 

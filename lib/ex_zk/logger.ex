@@ -13,7 +13,11 @@ defmodule ExZk.Logger do
 
     * `[:ex_zk, :session, :disconnected]` - dispatched by `ExZk.Session` after the session has been disconnected
       * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer()}`
+      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), addr: String.t(), socket: pid()}`
+
+    * `[:ex_zk, :session, :pong]` - dispatched by `ExZk.Session` after a pong has been received
+      * Measurement: `%{latency: Duration.t()}`
+      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), addr: String.t(), socket: pid()}`
 
     * `[:ex_zk, :session, :task, :stop]` - dispatched by `ExZk.Session` after a task has been completed
       * Measurement: `%{system_time: system_time}`
@@ -40,6 +44,7 @@ defmodule ExZk.Logger do
     handlers = %{
       [:ex_zk, :session, :connected] => &__MODULE__.session_connected/4,
       [:ex_zk, :session, :disconnected] => &__MODULE__.session_disconnected/4,
+      [:ex_zk, :session, :pong] => &__MODULE__.session_ping/4,
       [:ex_zk, :session, :task, :stop] => &__MODULE__.session_task_completed/4,
       [:ex_zk, :socket, :send] => &__MODULE__.socket_send/4,
       [:ex_zk, :socket, :recv] => &__MODULE__.socket_recv/4
@@ -66,7 +71,10 @@ defmodule ExZk.Logger do
         :ok
 
       level ->
-        Logger.log(level, session_id: session_id, addr: addr, socket: socket, state: :connected)
+        Logger.log(level,
+          session: [pid: session, id: session_id, state: :connected],
+          socket: [pid: socket, addr: addr]
+        )
     end
   end
 
@@ -82,7 +90,26 @@ defmodule ExZk.Logger do
         :ok
 
       level ->
-        Logger.log(level, session_id: session_id, state: :disconnected)
+        Logger.log(level, session: [pid: session, id: session_id], state: :disconnected)
+    end
+  end
+
+  @doc false
+  def session_ping(
+        _name,
+        %{latency: latency} = _measurements,
+        %{session: session, session_id: session_id} = _metadata,
+        opts
+      ) do
+    case log_level(opts[:log] || :debug, session) do
+      false ->
+        :ok
+
+      level ->
+        Logger.log(level,
+          session: [pid: session, id: session_id],
+          ping: [latency: latency |> Duration.to_iso8601()]
+        )
     end
   end
 
@@ -99,7 +126,12 @@ defmodule ExZk.Logger do
         :ok
 
       level ->
-        Logger.log(level, session_id: session_id, task: task, frame: frame, reply: reply)
+        Logger.log(level,
+          session: [pid: session, id: session_id],
+          task: task,
+          frame: frame,
+          reply: reply
+        )
     end
   end
 
@@ -107,7 +139,7 @@ defmodule ExZk.Logger do
   def socket_send(
         _name,
         _measurements,
-        %{socket: socket, frame: frame, data: data} = _metadata,
+        %{socket: socket, frame: frame} = _metadata,
         opts
       ) do
     case log_level(opts[:log] || :debug, socket) do
@@ -115,7 +147,7 @@ defmodule ExZk.Logger do
         :ok
 
       level ->
-        Logger.log(level, socket: socket, send: frame, data: data)
+        Logger.log(level, socket: socket, send: frame)
     end
   end
 
