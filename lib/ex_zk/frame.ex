@@ -1,6 +1,4 @@
 defmodule ExZk.Frame do
-  require Logger
-
   alias ExZk.Defs.OpCode
   alias ExZk.Multi
   alias ExZk.WatchedEvent

@@ -12,8 +12,6 @@ defmodule Mix.Tasks.ZkCli do
   alias ExZk.Session
 
   defmodule History do
-    @moduledoc false
-
     defstruct next: 0, cmds: []
 
     @type t :: %__MODULE__{
@@ -52,8 +50,6 @@ defmodule Mix.Tasks.ZkCli do
   end
 
   defmodule Context do
-    @moduledoc false
-
     @enforce_keys [:host, :session]
     defstruct [:host, :session, :command, history: %History{}]
 

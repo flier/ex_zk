@@ -1,6 +1,4 @@
 defmodule ExZk.Framer do
-  require Logger
-
   alias ExZk.{Frame, Multi, Proto}
   alias ExZk.Defs.OpCode
   alias ExZk.Proto.{ErrorResponse, ReplyHeader, RequestHeader}

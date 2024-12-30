@@ -2,9 +2,9 @@ defmodule <%= @module_name %> do
   @moduledoc false
   <%= for %ExZk.Jute.Class{name: name, doc: doc, fields: fields} <- @classes do %>
     defmodule <%= name %> do
-      @moduledoc <%= if doc, do: ~s("""
+      <%= if doc, do: ~s(@moduledoc """
       #{doc}
-      """), else: false %>
+      """)%>
 
       defstruct [
           <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
