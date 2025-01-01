@@ -431,8 +431,8 @@ defmodule ExZk.Session do
 
           {:ok, :connected, data, action}
 
-        {:disconnected, ^socket, reason} ->
-          {:stop, %Socket.Error{reason: reason}}
+        {:disconnected, ^socket, error} ->
+          {:stop, error}
       end
     else
       {:ok, :connecting, data}
@@ -461,7 +461,7 @@ defmodule ExZk.Session do
 
   def disconnected(
         :info,
-        {:disconnected, socket, reason},
+        {:disconnected, socket, error},
         %__MODULE__{socket: socket} = data
       ) do
     :telemetry.execute(
@@ -471,7 +471,7 @@ defmodule ExZk.Session do
     )
 
     data = %{data | connected_address: nil}
-    disconnect(data, reason)
+    disconnect(data, error)
   end
 
   def disconnected(
@@ -498,10 +498,10 @@ defmodule ExZk.Session do
     {:next_state, :connected, data, action}
   end
 
-  def connecting(:info, {:disconnected, socket, reason}, %__MODULE__{socket: socket} = data) do
+  def connecting(:info, {:disconnected, socket, error}, %__MODULE__{socket: socket} = data) do
     :telemetry.execute([:ex_zk, :session, :disconnected], %{}, session_info(data))
 
-    disconnect(data, reason)
+    disconnect(data, error)
   end
 
   def connecting({:call, from}, :status, %__MODULE__{socket: socket} = _data) do
@@ -510,11 +510,11 @@ defmodule ExZk.Session do
   end
 
   # "Connected" state: the session is up and the socket is alive.
-  def connected(:info, {:disconnected, socket, reason}, %__MODULE__{socket: socket} = data) do
+  def connected(:info, {:disconnected, socket, error}, %__MODULE__{socket: socket} = data) do
     :telemetry.execute([:ex_zk, :session, :disconnected], %{}, session_info(data))
 
     data = %{data | connected_address: nil}
-    disconnect(data, reason)
+    disconnect(data, error)
   end
 
   def connected(:info, {:frame, socket, frame}, %__MODULE__{socket: socket} = data) do
@@ -663,9 +663,9 @@ defmodule ExZk.Session do
     end
   end
 
-  defp disconnect(%__MODULE__{opts: opts} = data, reason) do
+  defp disconnect(%__MODULE__{opts: opts} = data, error) do
     if opts[:exit_on_disconnection] do
-      {:stop, %Socket.Error{reason: reason}}
+      {:stop, error}
     else
       {backoff, data} = next_backoff(data)
 

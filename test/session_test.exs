@@ -92,8 +92,7 @@ defmodule ConnectionTest do
         Process.flag(:trap_exit, true)
 
         # connect to the server
-        assert Session.start_link(sync_connect: true) ==
-                 {:error, %Socket.Error{reason: :foobar}}
+        assert Session.start_link(sync_connect: true) == {:error, %Socket.Error{reason: :foobar}}
 
         assert_called_exactly(
           Connector.connect(:_, sync_connect: true),

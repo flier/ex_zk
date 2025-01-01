@@ -66,7 +66,7 @@ defmodule SocketTest do
       {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
 
-      assert_receive {:disconnected, ^sock, :reason}
+      assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
       assert_called(Connector.connect(self(), []))
 
       assert_receive {:EXIT, ^sock, :normal}
@@ -81,7 +81,7 @@ defmodule SocketTest do
       {:ok, sock} = Socket.start_link(self(), ssl: true)
       assert is_pid(sock)
 
-      assert_receive {:disconnected, ^sock, :reason}
+      assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
       assert_called(Connector.connect(self(), ssl: true))
       assert_called(:ssl.setopts(:sock, active: :once))
 

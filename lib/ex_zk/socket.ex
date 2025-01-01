@@ -144,7 +144,7 @@ defmodule ExZk.Socket do
       {:error, reason} ->
         :ok = transport.close(socket)
 
-        send(session, {:disconnected, self(), reason})
+        send(session, {:disconnected, self(), %Error{reason: reason}})
 
         error =
           case transport do
@@ -196,7 +196,7 @@ defmodule ExZk.Socket do
   end
 
   defp stop(reason, %__MODULE__{session: session} = state) do
-    send(session, {:disconnected, self(), reason})
+    send(session, {:disconnected, self(), %Error{reason: reason}})
     {:stop, :normal, state}
   end
 end
