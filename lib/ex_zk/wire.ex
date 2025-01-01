@@ -166,6 +166,7 @@ defmodule ExZk.Wire do
       when type in [:boolean, :byte, :int, :long, :float, :double, :ustring, :buffer],
       do: {:error, :nomatch}
 
+  def unpack(<<0, 0, 0, 0, rest::binary>>, {:vector, _type}), do: {:ok, [], rest}
   def unpack(<<0xFF, 0xFF, 0xFF, 0xFF, rest::binary>>, {:vector, _type}), do: {:ok, [], rest}
 
   def unpack(<<len::32, rest::binary>>, {:vector, type}) do
