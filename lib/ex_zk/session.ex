@@ -5,6 +5,7 @@ defmodule ExZk.Session do
 
   alias ExZk.{
     Create,
+    Error,
     Frame,
     Framer,
     Multi,
@@ -117,7 +118,7 @@ defmodule ExZk.Session do
   end
 
   @spec get_children(session(), Path.t(), watch :: boolean(), timeout()) ::
-          {:ok, children :: list(Path.t())} | {:error, ExZk.Error.t()}
+          {:ok, children :: list(Path.t())} | {:error, Error.t()}
   def get_children(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_children], %{session: session, path: path}, fn ->
       request = %Proto.GetChildrenRequest{
@@ -130,13 +131,13 @@ defmodule ExZk.Session do
           {{:ok, children}, %{children: children}}
 
         {:error, err} ->
-          {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+          {{:error, Error.new(err, path)}, %{error: err}}
       end
     end)
   end
 
   @spec get_children2(session(), Path.t(), watch :: boolean(), timeout()) ::
-          {:ok, children :: list(Path.t()), Stat.t()} | {:error, ExZk.Error.t()}
+          {:ok, children :: list(Path.t()), Stat.t()} | {:error, Error.t()}
   def get_children2(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_children2], %{session: session, path: path}, fn ->
       request = %Proto.GetChildren2Request{
@@ -149,13 +150,13 @@ defmodule ExZk.Session do
           {{:ok, children, stat}, %{children: children, stat: stat}}
 
         {:error, err} ->
-          {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+          {{:error, Error.new(err, path)}, %{error: err}}
       end
     end)
   end
 
   @spec get_ephemerals(session(), Path.t(), timeout()) ::
-          {:ok, children :: list(Path.t())} | {:error, ExZk.Error.t()}
+          {:ok, children :: list(Path.t())} | {:error, Error.t()}
   def get_ephemerals(session, prefix_path \\ "/", timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :get_ephemerals],
@@ -168,14 +169,14 @@ defmodule ExZk.Session do
             {{:ok, ephemerals}, %{ephemerals: ephemerals}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, prefix_path)}, %{error: err}}
+            {{:error, Error.new(err, prefix_path)}, %{error: err}}
         end
       end
     )
   end
 
   @spec get_all_children_number(session(), Path.t(), timeout()) ::
-          {:ok, total_number :: integer()} | {:error, ExZk.Error.t()}
+          {:ok, total_number :: integer()} | {:error, Error.t()}
   def get_all_children_number(session, path, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :get_all_children_number],
@@ -188,14 +189,14 @@ defmodule ExZk.Session do
             {{:ok, total_number}, %{total_number: total_number}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+            {{:error, Error.new(err, path)}, %{error: err}}
         end
       end
     )
   end
 
   @spec get_data(session(), Path.t(), watch :: boolean(), timeout()) ::
-          {:ok, iodata(), Stat.t()} | {:error, ExZk.Error.t()}
+          {:ok, iodata(), Stat.t()} | {:error, Error.t()}
   def get_data(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_data], %{session: session, path: path}, fn ->
       request = %Proto.GetDataRequest{path: IO.chardata_to_string(path), watch: watch || false}
@@ -205,13 +206,13 @@ defmodule ExZk.Session do
           {{:ok, data, stat}, %{data: data, stat: stat}}
 
         {:error, err} ->
-          {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+          {{:error, Error.new(err, path)}, %{error: err}}
       end
     end)
   end
 
   @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
-          {:ok, Stat.t()} | {:error, ExZk.Error.t()}
+          {:ok, Stat.t()} | {:error, Error.t()}
   def set_data(session, path, data \\ "", version \\ @any_version, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :set_data],
@@ -228,14 +229,14 @@ defmodule ExZk.Session do
             {{:ok, stat}, %{stat: stat}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+            {{:error, Error.new(err, path)}, %{error: err}}
         end
       end
     )
   end
 
   @spec create(session(), Path.t(), iodata(), opts :: [Create.option()], timeout()) ::
-          {:ok, Path.t(), Stat.t() | nil} | {:error, ExZk.Error.t()}
+          {:ok, Path.t(), Stat.t() | nil} | {:error, Error.t()}
   def create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :create],
@@ -251,14 +252,14 @@ defmodule ExZk.Session do
             {{:ok, path, stat}, %{path: path, stat: stat}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+            {{:error, Error.new(err, path)}, %{error: err}}
         end
       end
     )
   end
 
   @spec delete(session(), Path.t(), version(), timeout()) ::
-          :ok | {:error, ExZk.Error.t()}
+          :ok | {:error, Error.t()}
   def delete(session, path, version \\ @any_version, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :delete],
@@ -274,14 +275,14 @@ defmodule ExZk.Session do
             {:ok, %{}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+            {{:error, Error.new(err, path)}, %{error: err}}
         end
       end
     )
   end
 
   @spec exists(session(), Path.t(), timeout()) ::
-          {:ok, boolean(), Stat.t() | nil} | {:error, ExZk.Error.t()}
+          {:ok, boolean(), Stat.t() | nil} | {:error, Error.t()}
   def exists(session, path, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :exists],
@@ -297,14 +298,14 @@ defmodule ExZk.Session do
             {{:ok, false, nil}, %{}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+            {{:error, Error.new(err, path)}, %{error: err}}
         end
       end
     )
   end
 
   @spec get_acl(session(), Path.t(), timeout()) ::
-          {:ok, list(ACL.t()), Stat.t()} | {:error, ExZk.Error.t()}
+          {:ok, list(ACL.t()), Stat.t()} | {:error, Error.t()}
   def get_acl(session, path, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :get_acl],
@@ -317,14 +318,14 @@ defmodule ExZk.Session do
             {{:ok, acl, stat}, %{acl: acl, stat: stat}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+            {{:error, Error.new(err, path)}, %{error: err}}
         end
       end
     )
   end
 
   @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
-          {:ok, Stat.t()} | {:error, ExZk.Error.t()}
+          {:ok, Stat.t()} | {:error, Error.t()}
   def set_acl(session, path, acl, version \\ @any_version, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :set_acl],
@@ -341,13 +342,13 @@ defmodule ExZk.Session do
             {{:ok, stat}, %{stat: stat}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+            {{:error, Error.new(err, path)}, %{error: err}}
         end
       end
     )
   end
 
-  @spec sync(session(), Path.t(), timeout()) :: {:ok, Path.t()} | {:error, ExZk.Error.t()}
+  @spec sync(session(), Path.t(), timeout()) :: {:ok, Path.t()} | {:error, Error.t()}
   def sync(session, path, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :sync],
@@ -360,14 +361,14 @@ defmodule ExZk.Session do
             {{:ok, path}, %{path: path}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+            {{:error, Error.new(err, path)}, %{error: err}}
         end
       end
     )
   end
 
   @spec multi(session(), ops :: [Multi.Op.t()], timeout()) ::
-          {[Multi.Result.t()]} | {:error, ExZk.Error.t()}
+          {[Multi.Result.t()]} | {:error, Error.t()}
   def multi(session, ops, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :exists],
@@ -380,15 +381,15 @@ defmodule ExZk.Session do
             {{:ok, results}, %{results: results}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err)}, %{error: err}}
+            {{:error, Error.new(err)}, %{error: err}}
         end
       end
     )
   end
 
-  @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, ExZk.Error.t()}
+  @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, Error.t()}
   @spec whoami(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) ::
-          {:error, ExZk.Error.t()} | {:ok, [ClientInfo.t()]}
+          {:error, Error.t()} | {:ok, [ClientInfo.t()]}
   def whoami(session, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :who_am_i],
@@ -399,7 +400,7 @@ defmodule ExZk.Session do
             {{:ok, client_info}, %{client_info: client_info}}
 
           {:error, err} ->
-            {{:error, ExZk.Error.new(err)}, %{error: err}}
+            {{:error, Error.new(err)}, %{error: err}}
         end
       end
     )

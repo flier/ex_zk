@@ -89,12 +89,12 @@ defmodule ExZk do
     to: Session
 
   @spec get_ephemerals(session(), Path.t(), timeout()) ::
-          {:ok, children :: list(Path.t())} | {:error, ExZk.Error.t()}
+          {:ok, children :: list(Path.t())} | {:error, Error.t()}
   defdelegate get_ephemerals(session, prefix_path, timeout \\ @default_timeout),
     to: Session
 
   @spec get_all_children_number(session(), Path.t(), timeout()) ::
-          {:ok, total_number :: integer()} | {:error, ExZk.Error.t()}
+          {:ok, total_number :: integer()} | {:error, Error.t()}
   defdelegate get_all_children_number(session, path, timeout \\ @default_timeout),
     to: Session
 
