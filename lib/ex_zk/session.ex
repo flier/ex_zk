@@ -8,6 +8,7 @@ defmodule ExZk.Session do
     Frame,
     Framer,
     Multi,
+    Proto,
     Socket,
     WatchedEvent,
     WatchManager
@@ -16,32 +17,7 @@ defmodule ExZk.Session do
   alias ExZk.Connector.Connected
   alias ExZk.Data.{ACL, ClientInfo, Stat}
   alias ExZk.Defs.ErrCode
-
-  alias ExZk.Proto.{
-    Create2Response,
-    CreateResponse,
-    DeleteRequest,
-    ExistsRequest,
-    ExistsResponse,
-    GetACLRequest,
-    GetACLResponse,
-    GetChildren2Request,
-    GetChildren2Response,
-    GetChildrenRequest,
-    GetChildrenResponse,
-    GetDataRequest,
-    GetDataResponse,
-    GetEphemeralsRequest,
-    GetEphemeralsResponse,
-    ReplyHeader,
-    SetACLRequest,
-    SetACLResponse,
-    SetDataRequest,
-    SetDataResponse,
-    SyncRequest,
-    SyncResponse,
-    WhoAmIResponse
-  }
+  alias ExZk.Proto.ReplyHeader
 
   @behaviour :gen_statem
 
@@ -164,10 +140,13 @@ defmodule ExZk.Session do
           {:ok, children :: list(Path.t())} | {:error, ExZk.Error.t()}
   def get_children(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_children], %{session: session, path: path}, fn ->
-      request = %GetChildrenRequest{path: IO.chardata_to_string(path), watch: watch || false}
+      request = %Proto.GetChildrenRequest{
+        path: IO.chardata_to_string(path),
+        watch: watch || false
+      }
 
       case send_request(session, :get_children, request, timeout) do
-        {:ok, %GetChildrenResponse{children: children}} ->
+        {:ok, %Proto.GetChildrenResponse{children: children}} ->
           {{:ok, children}, %{children: children}}
 
         {:error, err} ->
@@ -180,10 +159,13 @@ defmodule ExZk.Session do
           {:ok, children :: list(Path.t()), Stat.t()} | {:error, ExZk.Error.t()}
   def get_children2(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_children2], %{session: session, path: path}, fn ->
-      request = %GetChildren2Request{path: IO.chardata_to_string(path), watch: watch || false}
+      request = %Proto.GetChildren2Request{
+        path: IO.chardata_to_string(path),
+        watch: watch || false
+      }
 
       case send_request(session, :get_children2, request, timeout) do
-        {:ok, %GetChildren2Response{children: children, stat: stat}} ->
+        {:ok, %Proto.GetChildren2Response{children: children, stat: stat}} ->
           {{:ok, children, stat}, %{children: children, stat: stat}}
 
         {:error, err} ->
@@ -199,10 +181,10 @@ defmodule ExZk.Session do
       [:ex_zk, :session, :get_ephemerals],
       %{session: session, path: prefix_path},
       fn ->
-        request = %GetEphemeralsRequest{prefix_path: IO.chardata_to_string(prefix_path)}
+        request = %Proto.GetEphemeralsRequest{prefix_path: IO.chardata_to_string(prefix_path)}
 
         case send_request(session, :get_ephemerals, request, timeout) do
-          {:ok, %GetEphemeralsResponse{ephemerals: ephemerals}} ->
+          {:ok, %Proto.GetEphemeralsResponse{ephemerals: ephemerals}} ->
             {{:ok, ephemerals}, %{ephemerals: ephemerals}}
 
           {:error, err} ->
@@ -212,14 +194,34 @@ defmodule ExZk.Session do
     )
   end
 
+  @spec get_all_children_number(session(), Path.t(), timeout()) ::
+          {:ok, total_number :: integer()} | {:error, ExZk.Error.t()}
+  def get_all_children_number(session, path, timeout \\ @default_timeout) do
+    :telemetry.span(
+      [:ex_zk, :session, :get_all_children_number],
+      %{session: session, path: path},
+      fn ->
+        request = %Proto.GetAllChildrenNumberRequest{path: IO.chardata_to_string(path)}
+
+        case send_request(session, :get_all_children_number, request, timeout) do
+          {:ok, %Proto.GetAllChildrenNumberResponse{total_number: total_number}} ->
+            {{:ok, total_number}, %{total_number: total_number}}
+
+          {:error, err} ->
+            {{:error, ExZk.Error.new(err, path)}, %{error: err}}
+        end
+      end
+    )
+  end
+
   @spec get_data(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, iodata(), Stat.t()} | {:error, ExZk.Error.t()}
   def get_data(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_data], %{session: session, path: path}, fn ->
-      request = %GetDataRequest{path: IO.chardata_to_string(path), watch: watch || false}
+      request = %Proto.GetDataRequest{path: IO.chardata_to_string(path), watch: watch || false}
 
       case send_request(session, :get_data, request, timeout) do
-        {:ok, %GetDataResponse{data: data, stat: stat}} ->
+        {:ok, %Proto.GetDataResponse{data: data, stat: stat}} ->
           {{:ok, data, stat}, %{data: data, stat: stat}}
 
         {:error, err} ->
@@ -235,14 +237,14 @@ defmodule ExZk.Session do
       [:ex_zk, :session, :set_data],
       %{session: session, path: path, data: data, version: version},
       fn ->
-        request = %SetDataRequest{
+        request = %Proto.SetDataRequest{
           path: IO.chardata_to_string(path),
           data: IO.iodata_to_binary(data),
           version: version || @any_version
         }
 
         case send_request(session, :set_data, request, timeout) do
-          {:ok, %SetDataResponse{stat: stat}} ->
+          {:ok, %Proto.SetDataResponse{stat: stat}} ->
             {{:ok, stat}, %{stat: stat}}
 
           {:error, err} ->
@@ -262,10 +264,10 @@ defmodule ExZk.Session do
         {opcode, request} = Create.new_request(path, data, opts)
 
         case send_request(session, opcode, request, timeout) do
-          {:ok, %CreateResponse{path: path}} ->
+          {:ok, %Proto.CreateResponse{path: path}} ->
             {{:ok, path, nil}, %{path: path}}
 
-          {:ok, %Create2Response{path: path, stat: stat}} ->
+          {:ok, %Proto.Create2Response{path: path, stat: stat}} ->
             {{:ok, path, stat}, %{path: path, stat: stat}}
 
           {:error, err} ->
@@ -282,7 +284,7 @@ defmodule ExZk.Session do
       [:ex_zk, :session, :delete],
       %{session: session, path: path, version: version},
       fn ->
-        request = %DeleteRequest{
+        request = %Proto.DeleteRequest{
           path: IO.chardata_to_string(path),
           version: version || @any_version
         }
@@ -305,10 +307,10 @@ defmodule ExZk.Session do
       [:ex_zk, :session, :exists],
       %{session: session, path: path},
       fn ->
-        request = %ExistsRequest{path: IO.chardata_to_string(path)}
+        request = %Proto.ExistsRequest{path: IO.chardata_to_string(path)}
 
         case send_request(session, :exists, request, timeout) do
-          {:ok, %ExistsResponse{stat: stat}} ->
+          {:ok, %Proto.ExistsResponse{stat: stat}} ->
             {{:ok, true, stat}, %{stat: stat}}
 
           {:error, :no_node} ->
@@ -328,10 +330,10 @@ defmodule ExZk.Session do
       [:ex_zk, :session, :get_acl],
       %{session: session, path: path},
       fn ->
-        request = %GetACLRequest{path: IO.chardata_to_string(path)}
+        request = %Proto.GetACLRequest{path: IO.chardata_to_string(path)}
 
         case send_request(session, :get_acl, request, timeout) do
-          {:ok, %GetACLResponse{acl: acl, stat: stat}} ->
+          {:ok, %Proto.GetACLResponse{acl: acl, stat: stat}} ->
             {{:ok, acl, stat}, %{acl: acl, stat: stat}}
 
           {:error, err} ->
@@ -348,14 +350,14 @@ defmodule ExZk.Session do
       [:ex_zk, :session, :set_acl],
       %{session: session, path: path, acl: acl, version: version},
       fn ->
-        request = %SetACLRequest{
+        request = %Proto.SetACLRequest{
           path: IO.chardata_to_string(path),
           acl: acl,
           version: version || @any_version
         }
 
         case send_request(session, :set_acl, request, timeout) do
-          {:ok, %SetACLResponse{stat: stat}} ->
+          {:ok, %Proto.SetACLResponse{stat: stat}} ->
             {{:ok, stat}, %{stat: stat}}
 
           {:error, err} ->
@@ -371,10 +373,10 @@ defmodule ExZk.Session do
       [:ex_zk, :session, :sync],
       %{session: session, path: path},
       fn ->
-        request = %SyncRequest{path: IO.chardata_to_string(path)}
+        request = %Proto.SyncRequest{path: IO.chardata_to_string(path)}
 
         case send_request(session, :sync, request, timeout) do
-          {:ok, %SyncResponse{path: path}} ->
+          {:ok, %Proto.SyncResponse{path: path}} ->
             {{:ok, path}, %{path: path}}
 
           {:error, err} ->
@@ -406,14 +408,14 @@ defmodule ExZk.Session do
 
   @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, ExZk.Error.t()}
   @spec whoami(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) ::
-          {:error, ExZk.Error.t()} | {:ok, [ExZk.Data.ClientInfo.t()]}
+          {:error, ExZk.Error.t()} | {:ok, [ClientInfo.t()]}
   def whoami(session, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :who_am_i],
       %{session: session},
       fn ->
         case(send_request(session, :who_am_i, nil, timeout)) do
-          {:ok, %WhoAmIResponse{client_info: client_info}} ->
+          {:ok, %Proto.WhoAmIResponse{client_info: client_info}} ->
             {{:ok, client_info}, %{client_info: client_info}}
 
           {:error, err} ->

@@ -86,6 +86,8 @@ defmodule Mix.Tasks.ZkCli do
     get <path>                Get the data of the specific path.
     getAcl <path>             Get the ACL permission of one path
     getEphemerals <path>      Get all the ephemeral nodes created by this session
+    getAllChildrenNumber <path>
+                              Get all numbers of children nodes under a specific path
     history                   Showing the history about the recent commands that you have executed.
     ls <path>                 List all nodes.
     quit                      Quit the CLI.
@@ -207,11 +209,10 @@ defmodule Mix.Tasks.ZkCli do
   @doc """
   Sync the data of one node between leader and followers(Asynchronous sync)
   """
-  @spec sync(Context.t(), path :: String.t()) :: :ok
+  @spec sync(Context.t(), Path.t()) :: :ok
   def sync(%Context{session: session}, path) do
-    case ExZk.sync(session, path) do
-      {:ok, ^path} -> IO.puts("Sync is OK")
-      {:error, err} -> print_error("Sync has failed. Error: #{err}")
+    with {:ok, ^path} <- ExZk.sync(session, path) do
+      IO.puts("Sync is OK")
     end
   end
 
@@ -220,14 +221,20 @@ defmodule Mix.Tasks.ZkCli do
   """
   @spec whoami(Context.t()) :: :ok
   def whoami(%Context{session: session}) do
-    case ExZk.whoami(session) do
-      {:ok, client_info} ->
-        IO.puts("Auth scheme: User")
+    with {:ok, client_info} <- ExZk.whoami(session) do
+      IO.puts("Auth scheme: User")
 
-        client_info |> Enum.map_join("\n", &"#{&1.auth_scheme}: #{&1.user}") |> IO.puts()
+      client_info |> Enum.map_join("\n", &"#{&1.auth_scheme}: #{&1.user}") |> IO.puts()
+    end
+  end
 
-      {:error, err} ->
-        {:error, err}
+  @doc """
+  Get all numbers of children nodes under a specific path
+  """
+  @spec get_all_children_number(Context.t(), Path.t()) :: :ok
+  def get_all_children_number(%Context{session: session}, path) do
+    with {:ok, n} <- ExZk.get_all_children_number(session, path) do
+      IO.puts(n)
     end
   end
 

@@ -1,42 +1,9 @@
 defmodule ExZk.Frame do
   alias ExZk.Defs.OpCode
-  alias ExZk.Multi
+  alias ExZk.{Multi, Proto}
+  alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
   alias ExZk.WatchedEvent
   alias ExZk.Watcher.Event
-
-  alias ExZk.Proto.{
-    AuthPacket,
-    ConnectRequest,
-    ConnectResponse,
-    Create2Response,
-    CreateRequest,
-    CreateResponse,
-    CreateTTLRequest,
-    DeleteRequest,
-    ExistsRequest,
-    ExistsResponse,
-    GetACLRequest,
-    GetACLResponse,
-    GetChildren2Request,
-    GetChildren2Response,
-    GetChildrenRequest,
-    GetChildrenResponse,
-    GetDataRequest,
-    GetDataResponse,
-    GetEphemeralsRequest,
-    GetEphemeralsResponse,
-    ReplyHeader,
-    RequestHeader,
-    SetACLRequest,
-    SetACLResponse,
-    SetDataRequest,
-    SetDataResponse,
-    SetWatches,
-    SetWatches2,
-    SyncRequest,
-    SyncResponse,
-    WatcherEvent
-  }
 
   defstruct [:req_hdr, :reply_hdr, :request, :response, :payload]
 
@@ -49,40 +16,42 @@ defmodule ExZk.Frame do
         }
 
   @type request ::
-          ConnectRequest.t()
-          | AuthPacket.t()
-          | CreateRequest.t()
-          | CreateTTLRequest.t()
-          | DeleteRequest.t()
-          | ExistsRequest.t()
-          | GetACLRequest.t()
-          | GetChildren2Request.t()
-          | GetChildrenRequest.t()
-          | GetDataRequest.t()
-          | GetEphemeralsRequest.t()
-          | SetACLRequest.t()
-          | SetDataRequest.t()
-          | SetWatches.t()
-          | SetWatches2.t()
-          | SyncRequest.t()
+          Proto.ConnectRequest.t()
+          | Proto.AuthPacket.t()
+          | Proto.CreateRequest.t()
+          | Proto.CreateTTLRequest.t()
+          | Proto.DeleteRequest.t()
+          | Proto.ExistsRequest.t()
+          | Proto.GetACLRequest.t()
+          | Proto.GetAllChildrenNumberRequest.t()
+          | Proto.GetChildren2Request.t()
+          | Proto.GetChildrenRequest.t()
+          | Proto.GetDataRequest.t()
+          | Proto.GetEphemeralsRequest.t()
+          | Proto.SetACLRequest.t()
+          | Proto.SetDataRequest.t()
+          | Proto.SetWatches.t()
+          | Proto.SetWatches2.t()
+          | Proto.SyncRequest.t()
           | Multi.request()
 
   @type response ::
           :pong
           | {:auth_failed, error()}
           | {:notification, zxid(), WatcherEvent.t()}
-          | ConnectResponse.t()
-          | Create2Response.t()
-          | CreateResponse.t()
-          | ExistsResponse.t()
-          | GetACLResponse.t()
-          | GetChildren2Response.t()
-          | GetChildrenResponse.t()
-          | GetDataResponse.t()
-          | GetEphemeralsResponse.t()
-          | SetACLResponse.t()
-          | SetDataResponse.t()
-          | SyncResponse.t()
+          | Proto.ConnectResponse.t()
+          | Proto.Create2Response.t()
+          | Proto.CreateResponse.t()
+          | Proto.ExistsResponse.t()
+          | Proto.GetACLResponse.t()
+          | Proto.GetAllChildrenNumberResponse.t()
+          | Proto.GetChildren2Response.t()
+          | Proto.GetChildrenResponse.t()
+          | Proto.GetDataResponse.t()
+          | Proto.GetEphemeralsResponse.t()
+          | Proto.SetACLResponse.t()
+          | Proto.SetDataResponse.t()
+          | Proto.SyncResponse.t()
 
   @type error :: integer()
   @type xid :: integer()
@@ -111,7 +80,7 @@ defmodule ExZk.Frame do
   def new_auth_packet(scheme, auth) do
     %__MODULE__{
       req_hdr: new_request_header(@auth_packet_xid, :auth),
-      request: %AuthPacket{scheme: scheme, auth: auth}
+      request: %Proto.AuthPacket{scheme: scheme, auth: auth}
     }
   end
 
@@ -130,7 +99,7 @@ defmodule ExZk.Frame do
         readonly \\ nil
       ) do
     %__MODULE__{
-      request: %ConnectRequest{
+      request: %Proto.ConnectRequest{
         protocol_version: @default_protocol_version,
         last_zxid_seen: last_zxid || 0,
         time_out: session_timeout || 0,
@@ -150,7 +119,7 @@ defmodule ExZk.Frame do
   def new_set_watches_request(relative_zxid, data_watches, exist_watches, child_watches) do
     %__MODULE__{
       req_hdr: new_request_header(@set_watches_xid, :set_watches),
-      request: %SetWatches{
+      request: %Proto.SetWatches{
         relative_zxid: relative_zxid,
         data_watches: data_watches,
         exist_watches: exist_watches,
@@ -177,7 +146,7 @@ defmodule ExZk.Frame do
       ) do
     %__MODULE__{
       req_hdr: new_request_header(@set_watches_xid, :set_watches2),
-      request: %SetWatches2{
+      request: %Proto.SetWatches2{
         relative_zxid: relative_zxid,
         data_watches: data_watches,
         exist_watches: exist_watches,
