@@ -85,6 +85,7 @@ defmodule Mix.Tasks.ZkCli do
     deleteAll <path>          Recursively delete a node with a specific path
     get <path>                Get the data of the specific path.
     getAcl <path>             Get the ACL permission of one path
+    getEphemerals <path>      Get all the ephemeral nodes created by this session
     history                   Showing the history about the recent commands that you have executed.
     ls <path>                 List all nodes.
     quit                      Quit the CLI.
@@ -297,7 +298,7 @@ defmodule Mix.Tasks.ZkCli do
   defp read(%Context{host: host, session: session, history: history} = ctx) do
     line = prompt("[zk: #{host}(#{session |> state()}) #{History.id(history)}] ")
 
-    {ctx, line |> String.split()}
+    {ctx, line |> OptionParser.split()}
   end
 
   defp state(session) do
@@ -357,7 +358,7 @@ defmodule Mix.Tasks.ZkCli do
 
   defp prompt(prompt) do
     IO.write(light_black() <> prompt <> reset())
-    IO.read(:line)
+    IO.read(:line) |> String.trim()
   end
 
   defp print_progress(msg) when is_binary(msg), do: IO.puts(msg)

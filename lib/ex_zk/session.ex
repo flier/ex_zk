@@ -31,6 +31,8 @@ defmodule ExZk.Session do
     GetChildrenResponse,
     GetDataRequest,
     GetDataResponse,
+    GetEphemeralsRequest,
+    GetEphemeralsResponse,
     ReplyHeader,
     SetACLRequest,
     SetACLResponse,
@@ -188,6 +190,26 @@ defmodule ExZk.Session do
           {{:error, ExZk.Error.new(err, path)}, %{error: err}}
       end
     end)
+  end
+
+  @spec get_ephemerals(session(), Path.t(), timeout()) ::
+          {:ok, children :: list(Path.t())} | {:error, ExZk.Error.t()}
+  def get_ephemerals(session, prefix_path \\ "/", timeout \\ @default_timeout) do
+    :telemetry.span(
+      [:ex_zk, :session, :get_ephemerals],
+      %{session: session, path: prefix_path},
+      fn ->
+        request = %GetEphemeralsRequest{prefix_path: IO.chardata_to_string(prefix_path)}
+
+        case send_request(session, :get_ephemerals, request, timeout) do
+          {:ok, %GetEphemeralsResponse{ephemerals: ephemerals}} ->
+            {{:ok, ephemerals}, %{ephemerals: ephemerals}}
+
+          {:error, err} ->
+            {{:error, ExZk.Error.new(err, prefix_path)}, %{error: err}}
+        end
+      end
+    )
   end
 
   @spec get_data(session(), Path.t(), watch :: boolean(), timeout()) ::

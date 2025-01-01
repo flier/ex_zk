@@ -23,6 +23,8 @@ defmodule ExZk.Frame do
     GetChildrenResponse,
     GetDataRequest,
     GetDataResponse,
+    GetEphemeralsRequest,
+    GetEphemeralsResponse,
     ReplyHeader,
     RequestHeader,
     SetACLRequest,
@@ -57,6 +59,7 @@ defmodule ExZk.Frame do
           | GetChildren2Request.t()
           | GetChildrenRequest.t()
           | GetDataRequest.t()
+          | GetEphemeralsRequest.t()
           | SetACLRequest.t()
           | SetDataRequest.t()
           | SetWatches.t()
@@ -76,6 +79,7 @@ defmodule ExZk.Frame do
           | GetChildren2Response.t()
           | GetChildrenResponse.t()
           | GetDataResponse.t()
+          | GetEphemeralsResponse.t()
           | SetACLResponse.t()
           | SetDataResponse.t()
           | SyncResponse.t()

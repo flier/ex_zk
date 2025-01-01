@@ -88,6 +88,11 @@ defmodule ExZk do
   defdelegate get_children2(session, path, watch \\ false, timeout \\ @default_timeout),
     to: Session
 
+  @spec get_ephemerals(session(), Path.t(), timeout()) ::
+          {:ok, children :: list(Path.t())} | {:error, ExZk.Error.t()}
+  defdelegate get_ephemerals(session, prefix_path, timeout \\ @default_timeout),
+    to: Session
+
   @spec get_data(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, iodata(), Stat.t()} | {:error, Error.t()}
   defdelegate get_data(session, path, watch \\ false, timeout \\ @default_timeout), to: Session
