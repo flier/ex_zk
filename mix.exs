@@ -68,7 +68,8 @@ defmodule ExZk.MixProject do
         "coveralls.post": :test,
         "coveralls.html": :test,
         "coveralls.cobertura": :test,
-        integration_test: :test
+        integration_test: :test,
+        "zk.cli": [:dev, :test]
       ]
     ]
   end
@@ -86,17 +87,17 @@ defmodule ExZk.MixProject do
     [
       {:castore, "~> 1.0", optional: true},
       {:nimble_options, "~> 1.0"},
-      {:prompt, "~> 0.10"},
       {:telemetry, "~> 1.0"},
-      {:timex, "~> 3.7"},
 
       # Dev and test dependencies
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.35", only: [:dev, :doc]},
       {:excoveralls, "~> 0.18", only: :test},
+      {:hexdump, "~> 0.1", only: [:dev, :test]},
       {:mock, "~> 0.3", only: :test},
-      {:nimble_parsec, "~> 1.4", only: [:dev, :doc, :test]}
+      {:nimble_parsec, "~> 1.4", only: [:dev, :doc, :test]},
+      {:timex, "~> 3.7", only: [:dev, :test]}
     ]
   end
 end

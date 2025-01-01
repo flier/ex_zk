@@ -52,7 +52,7 @@ defmodule Mix.Tasks.ZkCli.Create do
   defp create(session, [path, data], opts), do: create(session, path, data, [ACL.open()], opts)
 
   defp create(session, [path, data, acl | _rest], opts),
-    do: create(session, path, data, ACL.parse(acl), opts)
+    do: create(session, path, data, ACL.parse_acls(acl), opts)
 
   defp create(session, path, data, acl, opts) do
     with {:ok, path, _stat} <-

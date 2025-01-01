@@ -11,6 +11,8 @@ defmodule Mix.Tasks.ZkCli do
 
   alias ExZk.Session
 
+  @requirements ["app.start"]
+
   defmodule History do
     defstruct next: 0, cmds: []
 
@@ -256,7 +258,7 @@ defmodule Mix.Tasks.ZkCli do
     secure = Keyword.get(opts, :secure)
     wait_for_connection = Keyword.get(opts, :wait_for_connection, false)
 
-    print_progress("Connecting to #{server}")
+    if args == [], do: print_progress("Connecting to #{server}")
 
     scheme = if Keyword.get(opts, :secure), do: "ssl", else: "zk"
 
@@ -287,11 +289,7 @@ defmodule Mix.Tasks.ZkCli do
   defp loop(ctx), do: ctx |> read() |> eval() |> loop()
 
   defp read(%Context{host: host, session: session, history: history} = ctx) do
-    line =
-      Prompt.text("[zk: #{host}(#{session |> state()}) #{History.id(history)}]",
-        color: :light_black,
-        trim: true
-      )
+    line = prompt("[zk: #{host}(#{session |> state()}) #{History.id(history)}] ")
 
     {ctx, line |> String.split()}
   end
@@ -350,6 +348,11 @@ defmodule Mix.Tasks.ZkCli do
   defp log_level(%{critical: true}), do: :critical
   defp log_level(%{log_level: level}) when is_binary(level), do: String.to_existing_atom(level)
   defp log_level(_), do: Logger.level()
+
+  defp prompt(prompt) do
+    IO.write(light_black() <> prompt <> reset())
+    IO.read(:line)
+  end
 
   defp print_progress(msg) when is_binary(msg), do: IO.puts(msg)
   defp print_error(msg) when is_binary(msg), do: IO.puts(light_red() <> msg <> reset())

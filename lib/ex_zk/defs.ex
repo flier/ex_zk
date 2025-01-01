@@ -196,59 +196,94 @@ defmodule ExZk.Defs do
 
         iex> import ExZk.Defs.Id
         iex> alias ExZk.Data.{ACL, Id}
-        iex> acl({:all, anyone()})
+        iex> ExZk.Defs.ACL.new(:all, anyone())
         %ACL{perms: 31, id: %Id{scheme: "world", id: "anyone"}}
-        iex> acl({7, anyone()})
+        iex> ExZk.Defs.ACL.new(7, anyone())
         %ACL{perms: 7, id: %Id{scheme: "world", id: "anyone"}}
-        iex> acl({[:read, :write, :delete], anyone()})
+        iex> ExZk.Defs.ACL.new([:read, :write, :delete], anyone())
         %ACL{perms: 11, id: %Id{scheme: "world", id: "anyone"}}
 
     """
-    @spec new({Perm.t() | Perms.t(), Id.t()}) :: t()
-    def new({perms, id}) when is_atom(perms), do: %ACL{perms: Perm.value!(perms), id: id}
-    def new({perms, id}) when is_list(perms), do: %ACL{perms: Perms.value!(perms), id: id}
-    def new({perms, id}) when is_integer(perms), do: %ACL{perms: perms, id: id}
+    @spec new(Perm.t() | Perms.t(), Id.t()) :: t()
+    def new(perms, id) when is_atom(perms), do: %ACL{perms: Perm.value!(perms), id: id}
+    def new(perms, id) when is_list(perms), do: %ACL{perms: Perms.value!(perms), id: id}
+    def new(perms, id) when is_integer(perms), do: %ACL{perms: perms, id: id}
 
     @doc """
     This is a completely open ACL.
     """
     @spec open :: t()
-    def open, do: new({:all, Id.anyone()})
+    def open, do: new(:all, Id.anyone())
 
     @doc """
     This ACL gives the creators authentication id's all permissions.
     """
     @spec creator_all :: t()
-    def creator_all, do: new({:all, Id.auth()})
+    def creator_all, do: new(:all, Id.auth())
 
     @doc """
     This ACL gives the world the ability to read.
     """
     @spec read :: t()
-    def read, do: new({:read, Id.anyone()})
+    def read, do: new(:read, Id.anyone())
 
     @doc """
     Parse an ACL string.
 
     ## Example
 
-        iex> alias {ExZk.Data.ACL, Id}
         iex> import ExZk.Defs.ACL
-        iex> parse("world:anyone:r")
+        iex> alias ExZk.Data.{ACL, Id}
+        iex> parse_acls("world:anyone:r")
         [%ACL{perms: 1, id: %Id{scheme: "world", id: "anyone"}}]
-        iex> parse("world:anyone:rw")
+        iex> parse_acls("world:anyone:rw")
         [%ACL{perms: 3, id: %Id{scheme: "world", id: "anyone"}}]
+        iex> parse_acls("world:anyone:r,auth::rw")
+        [%ACL{perms: 1, id: %Id{scheme: "world", id: "anyone"}}, %ACL{perms: 3, id: %Id{scheme: "auth"}}]
     """
-    @spec parse(String.t()) :: [ACL.t()]
-    def parse(s) do
+    @spec parse_acls(String.t()) :: [ACL.t()]
+    def parse_acls(s) do
       s
       |> String.split(",", trim: true)
-      |> Enum.flat_map(fn s ->
-        case s |> String.split(":", trim: true) do
-          [scheme, id, perms] -> [{Perms.parse(perms), Id.new(scheme, id)}]
-          _ -> []
-        end
-      end)
+      |> Enum.map(&parse/1)
+      |> Enum.filter(&(!is_nil(&1)))
+    end
+
+    @doc """
+    Parse an ACL string.
+
+    ## Example
+
+        iex> import ExZk.Defs.ACL
+        iex> alias ExZk.Data.{ACL, Id}
+        iex> parse("world:anyone:r")
+        %ACL{perms: 1, id: %Id{scheme: "world", id: "anyone"}}
+        iex> parse("world:anyone:rw")
+        %ACL{perms: 3, id: %Id{scheme: "world", id: "anyone"}}
+        iex> parse("world::")
+        %ACL{perms: 31, id: %Id{scheme: "world", id: ""}}
+        iex> parse("world:anyone")
+        %ACL{perms: 31, id: %Id{scheme: "world", id: "anyone"}}
+        iex> parse("digest:user:pass:rw")
+        %ACL{perms: 3, id: %Id{scheme: "digest", id: "user:pass"}}
+    """
+    @spec parse(String.t()) :: ACL.t()
+    def parse(s) do
+      case s |> String.split(":") do
+        [scheme, id] ->
+          new(:all, Id.new(scheme, id))
+
+        [scheme, id, ""] ->
+          new(:all, Id.new(scheme, id))
+
+        [scheme, id, perms] ->
+          new(Perms.parse(perms), Id.new(scheme, id))
+
+        [scheme | rest] ->
+          {perms, rest} = List.pop_at(rest, -1)
+
+          new(Perms.parse(perms), Id.new(scheme, rest |> Enum.join(":")))
+      end
     end
   end
 end
