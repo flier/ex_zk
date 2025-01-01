@@ -3,7 +3,8 @@ defmodule ExZkTest do
 
   doctest ExZk
   doctest ExZk.Connector
-  doctest ExZk.Defs.Ids
+  doctest ExZk.Defs.ACL
+  doctest ExZk.Defs.Id
   doctest ExZk.Defs.Perms
   doctest ExZk.Jute
   doctest ExZk.Jute.Binding

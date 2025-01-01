@@ -1,6 +1,6 @@
 defmodule ExZk.Framer do
-  alias ExZk.{Frame, Multi, Proto}
   alias ExZk.Defs.OpCode
+  alias ExZk.{Frame, Multi, Proto}
   alias ExZk.Proto.{ErrorResponse, ReplyHeader, RequestHeader}
 
   defstruct next_xid: 1,

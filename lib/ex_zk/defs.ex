@@ -1,8 +1,6 @@
 defmodule ExZk.Defs do
   import ExZk.TypedEnum
 
-  alias ExZk.Data.{ACL, Id}
-
   defenum(ErrCode,
     ok: 0,
     system_error: -1,
@@ -159,84 +157,95 @@ defmodule ExZk.Defs do
     end
   end
 
-  defmodule Ids do
+  defmodule Id do
+    alias ExZk.Data.Id
+
+    @type t :: Id.t()
+
     @doc """
     This Id represents anyone.
     """
-    @spec anyone_id :: Id.t()
-    def anyone_id, do: %Id{scheme: "world", id: "anyone"}
+    @spec anyone :: Id.t()
+    def anyone, do: %Id{scheme: "world", id: "anyone"}
 
     @doc """
     This Id is only usable to set ACLs.
 
     It will get substituted with the Id's the client authenticated with.
     """
-    @spec auth_ids :: Id.t()
-    def auth_ids, do: %Id{scheme: "auth"}
+    @spec auth :: Id.t()
+    def auth, do: %Id{scheme: "auth"}
 
     @doc """
     Create a new Id.
     """
-    @spec id(scheme :: String.t(), id :: String.t()) :: Id.t()
-    def id(scheme, id), do: %Id{scheme: scheme, id: id}
+    @spec new(scheme :: String.t(), id :: String.t()) :: t()
+    def new(scheme, id), do: %Id{scheme: scheme, id: id}
+  end
 
-    @doc """
-    This is a completely open ACL.
-    """
-    @spec open_acl :: ACL.t()
-    def open_acl, do: acl({:all, anyone_id()})
+  defmodule ACL do
+    alias ExZk.Data.ACL
+    alias ExZk.Defs.Id
 
-    @doc """
-    This ACL gives the creators authentication id's all permissions.
-    """
-    @spec creator_all_acl :: ACL.t()
-    def creator_all_acl, do: acl({:all, auth_ids()})
-
-    @doc """
-    This ACL gives the world the ability to read.
-    """
-    @spec read_acl :: ACL.t()
-    def read_acl, do: acl({:read, anyone_id()})
+    @type t :: ACL.t()
 
     @doc """
     Create a new ACL.
 
     ## Example
 
-        iex> import ExZk.Defs.Ids
+        iex> import ExZk.Defs.Id
         iex> alias ExZk.Data.{ACL, Id}
-        iex> acl({:all, anyone_id()})
+        iex> acl({:all, anyone()})
         %ACL{perms: 31, id: %Id{scheme: "world", id: "anyone"}}
-        iex> acl({7, anyone_id()})
+        iex> acl({7, anyone()})
         %ACL{perms: 7, id: %Id{scheme: "world", id: "anyone"}}
-        iex> acl({[:read, :write, :delete], anyone_id()})
+        iex> acl({[:read, :write, :delete], anyone()})
         %ACL{perms: 11, id: %Id{scheme: "world", id: "anyone"}}
 
     """
-    @spec acl({Perm.t() | Perms.t(), Id.t()}) :: ACL.t()
-    def acl({perms, id}) when is_atom(perms), do: %ACL{perms: Perm.value!(perms), id: id}
-    def acl({perms, id}) when is_list(perms), do: %ACL{perms: Perms.value!(perms), id: id}
-    def acl({perms, id}) when is_integer(perms), do: %ACL{perms: perms, id: id}
+    @spec new({Perm.t() | Perms.t(), Id.t()}) :: t()
+    def new({perms, id}) when is_atom(perms), do: %ACL{perms: Perm.value!(perms), id: id}
+    def new({perms, id}) when is_list(perms), do: %ACL{perms: Perms.value!(perms), id: id}
+    def new({perms, id}) when is_integer(perms), do: %ACL{perms: perms, id: id}
+
+    @doc """
+    This is a completely open ACL.
+    """
+    @spec open :: t()
+    def open, do: new({:all, Id.anyone()})
+
+    @doc """
+    This ACL gives the creators authentication id's all permissions.
+    """
+    @spec creator_all :: t()
+    def creator_all, do: new({:all, Id.auth()})
+
+    @doc """
+    This ACL gives the world the ability to read.
+    """
+    @spec read :: t()
+    def read, do: new({:read, Id.anyone()})
 
     @doc """
     Parse an ACL string.
 
     ## Example
 
-        iex> import ExZk.Defs.Ids
-        iex> alias ExZk.Data.{ACL, Id}
-        iex> parse_acl("world:anyone:r")
+        iex> alias {ExZk.Data.ACL, Id}
+        iex> import ExZk.Defs.ACL
+        iex> parse("world:anyone:r")
         [%ACL{perms: 1, id: %Id{scheme: "world", id: "anyone"}}]
-        iex> parse_acl("world:anyone:rw")
+        iex> parse("world:anyone:rw")
         [%ACL{perms: 3, id: %Id{scheme: "world", id: "anyone"}}]
     """
-    @spec parse_acl(String.t()) :: [ACL.t()]
-    def parse_acl(s) do
+    @spec parse(String.t()) :: [ACL.t()]
+    def parse(s) do
       s
       |> String.split(",", trim: true)
       |> Enum.flat_map(fn s ->
         case s |> String.split(":", trim: true) do
-          [scheme, id, perms] -> [acl({Perms.parse(perms), id(scheme, id)})]
+          [scheme, id, perms] -> [{Perms.parse(perms), Id.new(scheme, id)}]
           _ -> []
         end
       end)

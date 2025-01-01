@@ -1,9 +1,8 @@
 defmodule CreateTest do
   use ExUnit.Case, async: true
 
-  import ExZk.Defs.Ids
-
   alias ExZk.Create
+  alias ExZk.Defs.ACL
   alias ExZk.Proto.{CreateRequest, CreateTTLRequest}
 
   @path "/foo/bar"
@@ -47,8 +46,8 @@ defmodule CreateTest do
     end
 
     test "a node with ACL" do
-      assert Create.new_request(@path, @data, acl: [open_acl()]) ==
-               {:create, %CreateRequest{path: @path, data: @data, acl: [open_acl()]}}
+      assert Create.new_request(@path, @data, acl: [ACL.open()]) ==
+               {:create, %CreateRequest{path: @path, data: @data, acl: [ACL.open()]}}
     end
   end
 end

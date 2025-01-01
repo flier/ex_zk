@@ -1,11 +1,10 @@
 defmodule MultiTest do
   use ExUnit.Case, async: true
 
-  import ExZk.Defs.Ids
   import ExZk.Multi.Op
 
   alias ExZk.Data.Stat
-  alias ExZk.Defs.{ErrCode, OpCode}
+  alias ExZk.Defs.{ACL, ErrCode, OpCode}
   alias ExZk.Multi
   alias ExZk.Multi.{Response, Result}
   alias ExZk.Wire
@@ -39,11 +38,11 @@ defmodule MultiTest do
 
   describe "given a multi op" do
     test "it can be construct" do
-      assert create(@path, @data, acl: [open_acl()]) ==
-               {:create, @path, @data, [acl: [open_acl()]]}
+      assert create(@path, @data, acl: [ACL.open()]) ==
+               {:create, @path, @data, [acl: [ACL.open()]]}
 
       assert create(@path, @data) == {:create, @path, @data, []}
-      assert create(@path, acl: [open_acl()]) == {:create, @path, "", [acl: [open_acl()]]}
+      assert create(@path, acl: [ACL.open()]) == {:create, @path, "", [acl: [ACL.open()]]}
 
       assert create(@path) == {:create, @path, "", []}
 
@@ -66,11 +65,11 @@ defmodule MultiTest do
       assert create(@path, @data) |> to_request() ==
                {:create, %CreateRequest{path: @path, data: @data}}
 
-      assert create(@path, @data, acl: [open_acl()]) |> to_request() ==
-               {:create, %CreateRequest{path: @path, data: @data, acl: [open_acl()]}}
+      assert create(@path, @data, acl: [ACL.open()]) |> to_request() ==
+               {:create, %CreateRequest{path: @path, data: @data, acl: [ACL.open()]}}
 
-      assert create(@path, acl: [open_acl()]) |> to_request() ==
-               {:create, %CreateRequest{path: @path, acl: [open_acl()]}}
+      assert create(@path, acl: [ACL.open()]) |> to_request() ==
+               {:create, %CreateRequest{path: @path, acl: [ACL.open()]}}
 
       assert delete(@path, @version) |> to_request() ==
                {:delete, %DeleteRequest{path: @path, version: @version}}

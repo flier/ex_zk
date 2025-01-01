@@ -5,7 +5,7 @@ defmodule Mix.Tasks.ZkCli.Create do
 
   @behaviour Mix.Tasks.ZkCli.Command
 
-  import ExZk.Defs.Ids
+  alias ExZk.Defs.ACL
   alias Mix.Tasks.ZkCli.Context
 
   @usage """
@@ -48,11 +48,11 @@ defmodule Mix.Tasks.ZkCli.Create do
     end
   end
 
-  defp create(session, [path], opts), do: create(session, path, "", [open_acl()], opts)
-  defp create(session, [path, data], opts), do: create(session, path, data, [open_acl()], opts)
+  defp create(session, [path], opts), do: create(session, path, "", [ACL.open()], opts)
+  defp create(session, [path, data], opts), do: create(session, path, data, [ACL.open()], opts)
 
   defp create(session, [path, data, acl | _rest], opts),
-    do: create(session, path, data, parse_acl(acl), opts)
+    do: create(session, path, data, ACL.parse(acl), opts)
 
   defp create(session, path, data, acl, opts) do
     with {:ok, path, _stat} <-
