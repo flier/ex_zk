@@ -61,8 +61,9 @@ defmodule ExZk.Framer do
 
   @spec parse_reply(Frame.t(), t()) ::
           {:ok, Frame.t(), :gen_statem.from(), t()} | {:error, reason :: term()}
+
   def parse_reply(
-        %Frame{reply_hdr: %ReplyHeader{xid: xid, err: 0}, payload: payload} = frame,
+        %Frame{reply_hdr: %ReplyHeader{xid: xid, err: err}, payload: payload} = frame,
         %__MODULE__{requests: requests} = framer
       )
       when xid >= 0 do
@@ -71,31 +72,32 @@ defmodule ExZk.Framer do
         {:error, :unexpected_xid}
 
       {{%Frame{req_hdr: %RequestHeader{type: type} = req_hdr, request: request}, from}, requests} ->
-        with {:ok, op_code} <- OpCode.cast(type),
-             {:ok, res_type} <- Keyword.fetch(@response_types, op_code),
-             {:ok, response, rest} <- parse_response(res_type, payload) do
-          frame = %{frame | req_hdr: req_hdr, request: request, response: response, payload: rest}
+        if err != 0 do
+          frame = %{
+            frame
+            | req_hdr: req_hdr,
+              request: request,
+              response: %ErrorResponse{err: err}
+          }
 
           {:ok, frame, from, %{framer | requests: requests}}
         else
-          :error -> {:error, :unexpected_opcode}
+          with {:ok, op_code} <- OpCode.cast(type),
+               {:ok, res_type} <- Keyword.fetch(@response_types, op_code),
+               {:ok, response, rest} <- parse_response(res_type, payload) do
+            frame = %{
+              frame
+              | req_hdr: req_hdr,
+                request: request,
+                response: response,
+                payload: rest
+            }
+
+            {:ok, frame, from, %{framer | requests: requests}}
+          else
+            :error -> {:error, :unexpected_opcode}
+          end
         end
-    end
-  end
-
-  def parse_reply(
-        %Frame{reply_hdr: %ReplyHeader{xid: xid, err: err}} = frame,
-        %__MODULE__{requests: requests} = framer
-      )
-      when err != 0 do
-    case Map.pop(requests, xid) do
-      {nil, _} ->
-        {:error, :unexpected_xid}
-
-      {{%Frame{req_hdr: %RequestHeader{} = req_hdr, request: request}, from}, requests} ->
-        frame = %{frame | req_hdr: req_hdr, request: request, response: %ErrorResponse{err: err}}
-
-        {:ok, frame, from, %{framer | requests: requests}}
     end
   end
 

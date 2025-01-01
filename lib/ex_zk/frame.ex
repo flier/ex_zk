@@ -202,10 +202,6 @@ defmodule ExZk.Frame do
     }
   end
 
-  @spec xid(t()) :: xid()
-  def xid(%__MODULE__{req_hdr: %RequestHeader{xid: xid}}), do: xid
-  def xid(%__MODULE__{reply_hdr: %ReplyHeader{xid: xid}}), do: xid
-
   ####
   ## Protocol
   ##

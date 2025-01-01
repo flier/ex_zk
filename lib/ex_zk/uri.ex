@@ -22,8 +22,18 @@ defmodule ExZk.URI do
       iex> ExZk.URI.to_start_options("tcp://example.com")
       [host: "example.com"]
 
+      iex> ExZk.URI.to_start_options("http://example.com")
+      ** (ArgumentError) expected scheme to be zk://, tcp://, or ssl://, got: http://
+
       iex> ExZk.URI.to_start_options("ssl://username:password@example.com:2181/zookeeper")
       [ssl: true, path: "/zookeeper", password: "password", username: "username", port: 2181, host: "example.com"]
+
+      iex> ExZk.URI.to_start_options("ssl://:password@example.com:2181/zookeeper")
+      [ssl: true, path: "/zookeeper", password: "password", port: 2181, host: "example.com"]
+
+      iex> ExZk.URI.to_start_options("ssl://username:@example.com:2181/zookeeper")
+      ** (ArgumentError) expected password in the Zookeeper URI to be given as zk://:PASSWORD@HOST or zk://USERNAME:PASSWORD@HOST
+
 
   """
   @spec to_start_options(binary()) :: Keyword.t()
@@ -52,19 +62,19 @@ defmodule ExZk.URI do
 
   defp username_and_password(%URI{userinfo: nil}), do: {nil, nil}
 
-  defp username_and_password(%URI{userinfo: userinfo}) do
-    String.split(userinfo, ":", parts: 2) |> username_and_password()
-  end
+  defp username_and_password(%URI{userinfo: userinfo}),
+    do: String.split(userinfo, ":", parts: 2) |> username_and_password()
 
   defp username_and_password(["", password]), do: {nil, password}
-  defp username_and_password([username, password]), do: {username, password}
 
-  defp username_and_password(_),
+  defp username_and_password([_, ""]),
     do:
       raise(
         ArgumentError,
         "expected password in the Zookeeper URI to be given as zk://:PASSWORD@HOST or zk://USERNAME:PASSWORD@HOST"
       )
+
+  defp username_and_password([username, password]), do: {username, password}
 
   defp path(%URI{path: path}) when path in [nil, "", "/"], do: nil
   defp path(%URI{path: "/" <> _ = path}), do: path

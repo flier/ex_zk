@@ -42,10 +42,9 @@ defmodule ExZk.Connector do
     timeout = Keyword.fetch!(opts, :timeout)
 
     with {:ok, socket} <- transport.connect(String.to_charlist(host), port, socket_opts, timeout),
-         :ok <- setup_socket_buffers(transport, socket) do
-      with {:ok, res} <- negotiate(transport, socket, opts, timeout) do
-        {:ok, socket, Connected.new(Format.format_host_and_port(host, port), res)}
-      end
+         :ok <- setup_socket_buffers(transport, socket),
+         {:ok, res} <- negotiate(transport, socket, opts, timeout) do
+      {:ok, socket, Connected.new(Format.format_host_and_port(host, port), res)}
     end
   end
 

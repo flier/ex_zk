@@ -12,6 +12,33 @@ defmodule ExZk.Auth do
   @x509_scheme "x509"
   @ip_scheme "ip"
 
+  @type info ::
+          {:digest, {username :: String.t(), password :: String.t()}}
+          | {:x509, subject_principal :: String.t()}
+          | {:ip, addr :: String.t() | :inet.ip_address()}
+
+  @doc """
+  Create a new auth info
+
+  ## Examples
+
+      iex> ExZk.Auth.new({:digest, {"username", "password"}})
+      %ExZk.Auth.Info{scheme: "digest", data: "username:password"}
+
+      iex> ExZk.Auth.new({:x509, "CN=example.com"})
+      %ExZk.Auth.Info{scheme: "x509", data: "CN=example.com"}
+
+      iex> ExZk.Auth.new({:ip, "127.0.0.1"})
+      %ExZk.Auth.Info{scheme: "ip", data: "127.0.0.1"}
+
+      iex> ExZk.Auth.new({:ip, {127, 0, 0, 1}})
+      %ExZk.Auth.Info{scheme: "ip", data: "127.0.0.1"}
+
+      iex> ExZk.Auth.new({:ip, {0, 0, 0, 0, 0, 0, 0, 1}})
+      %ExZk.Auth.Info{scheme: "ip", data: "::1"}
+  """
+  @spec new(info()) :: Info.t()
+
   def new({:digest, {username, password}}) when is_binary(username) and is_binary(password),
     do: digest(username, password)
 

@@ -68,6 +68,29 @@ defmodule ConnectorTest do
       assert_called(:gen_tcp.recv(:sock, 0, @timeout))
     end
 
+    test_with_mock "it can connect to a server with fragmented frame",
+                   :gen_tcp,
+                   [:unstick, :passthrough],
+                   connect: fn _addr, _port, _opts, _timeout -> {:ok, :sock} end,
+                   send: fn :sock, _data -> :ok end,
+                   recv: [
+                     in_series(
+                       [:sock, 0, @timeout],
+                       Wire.pack(%Frame{response: @connect_response})
+                       |> :binary.bin_to_list()
+                       |> Stream.chunk_every(8)
+                       |> Enum.map(&{:ok, :binary.list_to_bin(&1)})
+                     )
+                   ] do
+      assert Connector.connect(self(), @connect_opts) == {:ok, :sock, @connected}
+
+      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:inet.getopts(:sock, [:sndbuf, :recbuf, :buffer]))
+      assert_called(:inet.setopts(:sock, buffer: @bufsize))
+      assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
+      assert_called_exactly(:gen_tcp.recv(:sock, 0, @timeout), 4)
+    end
+
     test "it can connect to a server with SSL" do
       assert Connector.connect(self(), @connect_opts ++ [ssl: true]) == {:ok, :ssl, @connected}
 

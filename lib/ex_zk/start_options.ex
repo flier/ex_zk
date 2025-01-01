@@ -164,14 +164,62 @@ defmodule ExZk.StartOptions do
 
   def options_typespec(:ex_zk), do: @ex_zk_start_link_opts_typespc
 
+  @doc """
+  Validate start options
+
+  ## Examples
+
+      iex> import ExZk.StartOptions
+      iex> {:ok, _} = validate(host: "localhost", port: 2181)
+      iex> {:ok, _} = validate(host: {127, 0, 0, 1})
+      iex> {:ok, _} = validate(host: {0, 0, 0, 0, 0, 0, 0, 1})
+      iex> {:error, %NimbleOptions.ValidationError{
+      ...>    message: "invalid value for :host option: invalid IP address: {127, 0}",
+      ...> }} = validate(host: {127, 0})
+      iex> {:error, %NimbleOptions.ValidationError{
+      ...>    message: "invalid value for :host option: host must be a string or IP address",
+      ...> }} = validate(host: 123)
+      iex> {:ok, _} = validate(name: "test")
+      iex> {:ok, _} = validate(name: {:global, "test"})
+      iex> {:ok, _} = validate(name: {:via, :supervisor, "test"})
+      iex> {:error, %NimbleOptions.ValidationError{
+      ...>    message: "invalid value for :name option: name must be a binary, {:global, name} or {:via, module, name}",
+      ...> }} = validate(name: nil)
+      iex> {:ok, _} = validate(auth_info: {:digest, {"user", "pass"}})
+      iex> {:ok, _} = validate(auth_info: {:ip, "127.0.0.1"})
+      iex> {:ok, _} = validate(auth_info: {:ip, {127, 0, 0, 1}})
+      iex> {:ok, _} = validate(auth_info: {:ip, ":1"})
+      iex> {:ok, _} = validate(auth_info: {:ip, {0, 0, 0, 0, 0, 0, 0, 1}})
+      iex> {:error, %NimbleOptions.ValidationError{
+      ...>   message: "invalid value for :auth_info option: invalid IP address: {0, 0}",
+      ...> }} = validate(auth_info: {:ip, {0, 0}})
+      iex> {:ok, _} = validate(auth_info: {:x509, "CN=localhost,OU=ZooKeeper,O=Apache,L=Unknown,ST=Unknown,C=Unknown"})
+      iex> {:ok, _} = validate(auth_info: [{:digest, {"user", "pass"}}, {:ip, "127.0.0.1"}])
+      iex> {:error, %NimbleOptions.ValidationError{
+      ...>    message: "invalid value for :auth_info option: auth_info must be {:digest, {username, password}}, {:ip, addr} or {:x509, subject}",
+      ...> }} = validate(auth_info: nil)
+
+  """
   def validate(opts), do: NimbleOptions.validate(opts, @ex_zk_start_link_opts_schema)
 
   def __validate_host__(host) when is_binary(host), do: {:ok, host}
-  def __validate_host__({:local, path} = value) when is_binary(path), do: {:ok, value}
+
+  def __validate_host__(host) when is_tuple(host) do
+    if :inet.is_ip_address(host) do
+      {:ok, host}
+    else
+      {:error, "invalid IP address: #{inspect(host)}"}
+    end
+  end
+
+  def __validate_host__(_), do: {:error, "host must be a string or IP address"}
 
   def __validate_name__(name) when is_binary(name), do: {:ok, name}
   def __validate_name__({:global, name}) when is_binary(name), do: {:ok, name}
   def __validate_name__({:via, mod, name}) when is_atom(mod) and is_binary(name), do: {:ok, name}
+
+  def __validate_name__(_),
+    do: {:error, "name must be a binary, {:global, name} or {:via, module, name}"}
 
   def __validate_auth_info__(auth_info) when is_list(auth_info) do
     if Enum.all?(auth_info, &__validate_auth_info__(&1)) do
@@ -183,9 +231,23 @@ defmodule ExZk.StartOptions do
 
   def __validate_auth_info__({:digest, {username, password}})
       when is_binary(username) and is_binary(password),
-      do: true
+      do: {:ok, {:digest, {username, password}}}
 
-  def __validate_auth_info__({:ip, addr}) when is_binary(addr), do: true
-  def __validate_auth_info__({:ip, addr}) when is_tuple(addr), do: :inet.is_ip_address(addr)
-  def __validate_auth_info__({:x509, subject}) when is_binary(subject), do: true
+  def __validate_auth_info__({:ip, addr}) when is_binary(addr), do: {:ok, {:ip, addr}}
+
+  def __validate_auth_info__({:ip, addr}) when is_tuple(addr) do
+    if :inet.is_ip_address(addr) do
+      {:ok, addr}
+    else
+      {:error, "invalid IP address: #{inspect(addr)}"}
+    end
+  end
+
+  def __validate_auth_info__({:x509, subject}) when is_binary(subject),
+    do: {:ok, {:x509, subject}}
+
+  def __validate_auth_info__(_),
+    do:
+      {:error,
+       "auth_info must be {:digest, {username, password}}, {:ip, addr} or {:x509, subject}"}
 end

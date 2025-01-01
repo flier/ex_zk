@@ -2,16 +2,28 @@ defmodule FramerTest do
   use ExUnit.Case, async: true
 
   import ExZk.Wire
-  alias ExZk.Proto.{CreateRequest, CreateResponse, DeleteRequest, ReplyHeader, RequestHeader}
+
+  alias ExZk.Proto.{
+    CreateRequest,
+    CreateResponse,
+    DeleteRequest,
+    ErrorResponse,
+    ReplyHeader,
+    RequestHeader
+  }
+
+  alias ExZk.Defs.ErrCode
   alias ExZk.{Frame, Framer}
 
   @path "/foobar"
   @data "hello world"
+  @err ErrCode.value!(:bad_arguments)
 
   @ping_xid -2
 
   @create_request %CreateRequest{path: @path, data: @data}
   @create_response %CreateResponse{path: @path}
+  @error_response %ErrorResponse{err: @err}
   @delete_request %DeleteRequest{path: @path}
   @ping_response %ReplyHeader{xid: @ping_xid}
 
@@ -41,6 +53,21 @@ defmodule FramerTest do
       assert map_size(f2.requests) == 0
     end
 
+    test "it can parse frame with error for request" do
+      f = %Framer{}
+
+      assert {:ok, %Frame{req_hdr: %RequestHeader{xid: xid}, request: @create_request},
+              %Framer{} = f1} =
+               Framer.new_frame(f, :create_container, @create_request)
+
+      assert {:ok, %Frame{request: @create_request, response: @error_response}, _sender,
+              %Framer{} = f2} =
+               Framer.parse_frame(f1, pack([%ReplyHeader{xid: xid, err: @err}]))
+
+      assert f2.next_xid == f1.next_xid
+      assert map_size(f2.requests) == 0
+    end
+
     test "it can parse frame without response for request" do
       f = %Framer{}
 
@@ -64,6 +91,12 @@ defmodule FramerTest do
 
     test "it can handle unexpected xid" do
       assert Framer.parse_frame(%Framer{}, pack([%ReplyHeader{xid: 123}, @create_response])) ==
+               {:error, :unexpected_xid}
+
+      assert Framer.parse_frame(
+               %Framer{},
+               pack([%ReplyHeader{xid: 123, err: @err}, @create_response])
+             ) ==
                {:error, :unexpected_xid}
     end
 

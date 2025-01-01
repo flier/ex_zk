@@ -130,6 +130,8 @@ defmodule ExZk.Wire do
       {:ok, "hello", <<>>}
       iex> unpack(<<0xff, 0xff, 0xff, 0xff>>, :buffer)
       {:ok, "", <<>>}
+      iex> unpack(<<0, 0, 0, 0>>, {:vector, :int})
+      {:ok, [], <<>>}
       iex> unpack(<<0xff, 0xff, 0xff, 0xff>>, {:vector, :int})
       {:ok, [], <<>>}
       iex> unpack(<<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>, {:vector, :int})
@@ -170,9 +172,9 @@ defmodule ExZk.Wire do
   def unpack(<<0xFF, 0xFF, 0xFF, 0xFF, rest::binary>>, {:vector, _type}), do: {:ok, [], rest}
 
   def unpack(<<len::32, rest::binary>>, {:vector, type}) do
-    case 1..len |> Enum.reduce_while({[], rest}, &unpack_vector(&1, &2, type)) do
-      {:error, reason} -> {:error, reason}
-      {l, rest} -> {:ok, l |> Enum.reverse(), rest}
+    with {:ok, l, rest} <-
+           1..len |> Enum.reduce_while({:ok, [], rest}, &unpack_vector(&1, &2, type)) do
+      {:ok, l |> Enum.reverse(), rest}
     end
   end
 
@@ -184,9 +186,8 @@ defmodule ExZk.Wire do
   end
 
   def unpack(buf, types) when is_binary(buf) and is_list(types) do
-    case types |> Enum.reduce_while({[], buf}, &unpack_type(&1, &2)) do
-      {:error, reason} -> {:error, reason}
-      {l, rest} -> {:ok, l |> Enum.reverse(), rest}
+    with {:ok, l, rest} <- types |> Enum.reduce_while({:ok, [], buf}, &unpack_type(&1, &2)) do
+      {:ok, l |> Enum.reverse(), rest}
     end
   end
 
@@ -196,27 +197,27 @@ defmodule ExZk.Wire do
 
   defp unpack_vector(_, {_acc, []}, _type), do: {:halt, {[], {:error, :nomatch}}}
 
-  defp unpack_vector(_, {acc, buf}, type) do
+  defp unpack_vector(_, {:ok, acc, buf}, type) do
     case unpack(buf, type) do
-      {:ok, v, rest} -> {:cont, {[v | acc], rest}}
+      {:ok, v, rest} -> {:cont, {:ok, [v | acc], rest}}
       {:error, reason} -> {:halt, {:error, reason}}
     end
   end
 
   defp unpack_type({name, _type}, {acc, ""}) do
-    {:cont, {[{name, nil} | acc], ""}}
+    {:cont, {:ok, [{name, nil} | acc], ""}}
   end
 
-  defp unpack_type({name, type}, {acc, buf}) do
+  defp unpack_type({name, type}, {:ok, acc, buf}) do
     case unpack(buf, type) do
-      {:ok, v, rest} -> {:cont, {[{name, v} | acc], rest}}
+      {:ok, v, rest} -> {:cont, {:ok, [{name, v} | acc], rest}}
       {:error, reason} -> {:halt, {:error, reason}}
     end
   end
 
-  defp unpack_type(type, {acc, buf}) do
+  defp unpack_type(type, {:ok, acc, buf}) do
     case unpack(buf, type) do
-      {:ok, v, rest} -> {:cont, {[v | acc], rest}}
+      {:ok, v, rest} -> {:cont, {:ok, [v | acc], rest}}
       {:error, reason} -> {:halt, {:error, reason}}
     end
   end

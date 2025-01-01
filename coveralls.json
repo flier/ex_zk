@@ -1,0 +1,6 @@
+{
+    "skip_files": [
+        "lib/ex_zk/protocol.ex",
+        "lib/mix/tasks/"
+    ]
+}
