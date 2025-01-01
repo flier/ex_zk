@@ -230,7 +230,7 @@ defmodule ExZk.Session do
     )
   end
 
-  @spec create(session(), Path.t(), iodata(), opts :: [option()], timeout()) ::
+  @spec create(session(), Path.t(), iodata(), opts :: [Create.option()], timeout()) ::
           {:ok, Path.t(), Stat.t() | nil} | {:error, ExZk.Error.t()}
   def create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout) do
     :telemetry.span(

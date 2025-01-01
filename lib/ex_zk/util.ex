@@ -69,19 +69,23 @@ defmodule ExZk.Util do
             nil
 
           {{:value, dir}, dirs} ->
-            case Session.get_children(session, dir, watch) do
-              {:ok, children} ->
-                children = children |> Enum.sort() |> Enum.map(&Path.join(dir, &1))
-                dirs = dirs |> :queue.join(:queue.from_list(children))
-
-                {children, dirs}
-
-              {:error, _err} ->
-                {[], dirs}
-            end
+            list_subtree_bfs_children(session, dirs, dir, watch)
         end
     end)
     |> Stream.concat()
+  end
+
+  defp list_subtree_bfs_children(session, dirs, dir, watch) do
+    case Session.get_children(session, dir, watch) do
+      {:ok, children} ->
+        children = children |> Enum.sort() |> Enum.map(&Path.join(dir, &1))
+        dirs = dirs |> :queue.join(:queue.from_list(children))
+
+        {children, dirs}
+
+      {:error, _err} ->
+        {[], dirs}
+    end
   end
 
   defp list_subtree_dfs(session, dir, watch) do

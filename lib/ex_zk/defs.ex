@@ -74,7 +74,7 @@ defmodule ExZk.Defs do
     error: -1
   )
 
-  defenum(Perms,
+  defenum(Perm,
     read: 1,
     write: 2,
     create: 4,
@@ -82,6 +82,82 @@ defmodule ExZk.Defs do
     admin: 16,
     all: 31
   )
+
+  defmodule Perms do
+    @type t :: [Perm.t()]
+
+    @doc """
+    Convert an integer to a list of permissions.
+
+    ## Example
+
+        iex> alias ExZk.Defs.Perms
+        iex> Perms.cast(31)
+        [:all]
+        iex> Perms.cast(3)
+        [:read, :write]
+        iex> Perms.cast(0)
+        []
+
+    """
+    @spec cast(integer()) :: t()
+    def cast(31), do: [:all]
+
+    def cast(perms) when is_integer(perms) do
+      <<admin::1, delete::1, create::1, write::1, read::1>> = <<perms::5>>
+
+      [
+        if(read == 1, do: :read),
+        if(write == 1, do: :write),
+        if(create == 1, do: :create),
+        if(delete == 1, do: :delete),
+        if(admin == 1, do: :admin)
+      ]
+      |> Enum.filter(&(&1 != nil))
+    end
+
+    @doc """
+    Convert a list of permissions to an integer.
+
+    ## Example
+
+        iex> alias ExZk.Defs.Perms
+        iex> Perms.value!([:read, :write])
+        3
+    """
+    @spec value!(t()) :: integer()
+    def value!(perms), do: perms |> Enum.map(&Perm.value!/1) |> Enum.sum()
+
+    @doc """
+    Parse a string into a list of permissions.
+
+    ## Example
+
+        iex> alias ExZk.Defs.Perms
+        iex> Perms.parse("r")
+        [:read]
+        iex> Perms.parse("rw")
+        [:read, :write]
+    """
+    @spec parse(String.t()) :: t()
+    def parse(s), do: parse(s, [])
+
+    defp parse(<<>>, perms), do: perms |> Stream.filter(&(&1 != nil)) |> Enum.reverse()
+
+    defp parse(<<c::utf8, rest::binary>>, perms) do
+      perm =
+        case c do
+          ?r -> :read
+          ?w -> :write
+          ?c -> :create
+          ?d -> :delete
+          ?a -> :admin
+          _ -> nil
+        end
+
+      parse(rest, [perm | perms])
+    end
+  end
 
   defmodule Ids do
     @doc """
@@ -124,8 +200,46 @@ defmodule ExZk.Defs do
 
     @doc """
     Create a new ACL.
+
+    ## Example
+
+        iex> import ExZk.Defs.Ids
+        iex> alias ExZk.Data.{ACL, Id}
+        iex> acl({:all, anyone_id()})
+        %ACL{perms: 31, id: %Id{scheme: "world", id: "anyone"}}
+        iex> acl({7, anyone_id()})
+        %ACL{perms: 7, id: %Id{scheme: "world", id: "anyone"}}
+        iex> acl({[:read, :write, :delete], anyone_id()})
+        %ACL{perms: 11, id: %Id{scheme: "world", id: "anyone"}}
+
     """
-    @spec acl({Perms.t(), Id.t()}) :: ACL.t()
-    def acl({perms, id}), do: %ACL{perms: Perms.value!(perms), id: id}
+    @spec acl({Perm.t() | Perms.t(), Id.t()}) :: ACL.t()
+    def acl({perms, id}) when is_atom(perms), do: %ACL{perms: Perm.value!(perms), id: id}
+    def acl({perms, id}) when is_list(perms), do: %ACL{perms: Perms.value!(perms), id: id}
+    def acl({perms, id}) when is_integer(perms), do: %ACL{perms: perms, id: id}
+
+    @doc """
+    Parse an ACL string.
+
+    ## Example
+
+        iex> import ExZk.Defs.Ids
+        iex> alias ExZk.Data.{ACL, Id}
+        iex> parse_acl("world:anyone:r")
+        [%ACL{perms: 1, id: %Id{scheme: "world", id: "anyone"}}]
+        iex> parse_acl("world:anyone:rw")
+        [%ACL{perms: 3, id: %Id{scheme: "world", id: "anyone"}}]
+    """
+    @spec parse_acl(String.t()) :: [ACL.t()]
+    def parse_acl(s) do
+      s
+      |> String.split(",", trim: true)
+      |> Enum.flat_map(fn s ->
+        case s |> String.split(":", trim: true) do
+          [scheme, id, perms] -> [acl({Perms.parse(perms), id(scheme, id)})]
+          _ -> []
+        end
+      end)
+    end
   end
 end

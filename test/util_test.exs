@@ -3,9 +3,8 @@ defmodule UtilTest do
 
   import Mock
 
-  alias ExZk.Multi
   alias ExZk.Data.Stat
-  alias ExZk.{Session, Util}
+  alias ExZk.{Multi, Session, Util}
 
   @stat %Stat{}
 

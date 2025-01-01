@@ -3,7 +3,7 @@ defmodule ExZk do
   This is the documentation for the ExZk project.
   """
 
-  alias ExZk.{Error, Multi, Session, StartOptions, URI, Util}
+  alias ExZk.{Create, Error, Multi, Session, StartOptions, URI, Util}
   alias ExZk.Data.{ACL, ClientInfo, Stat}
 
   use Application
@@ -103,7 +103,7 @@ defmodule ExZk do
               ),
               to: Session
 
-  @spec create(session(), Path.t(), iodata(), opts :: [option()], timeout()) ::
+  @spec create(session(), Path.t(), iodata(), opts :: [Create.option()], timeout()) ::
           {:ok, Path.t(), Stat.t() | nil} | {:error, Error.t()}
   defdelegate create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout),
     to: Session
