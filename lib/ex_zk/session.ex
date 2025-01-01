@@ -107,7 +107,7 @@ defmodule ExZk.Session do
   @type zxid :: Frame.zxid()
 
   @default_timeout 5000
-  @no_version -1
+  @any_version -1
 
   ####
   ## Public API
@@ -158,11 +158,11 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec get_children(session(), Path.t(), timeout()) ::
+  @spec get_children(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, ExZk.Error.t()}
-  def get_children(session, path, timeout \\ @default_timeout) do
+  def get_children(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_children], %{session: session, path: path}, fn ->
-      request = %GetChildrenRequest{path: IO.chardata_to_string(path)}
+      request = %GetChildrenRequest{path: IO.chardata_to_string(path), watch: watch || false}
 
       case send_request(session, :get_children, request, timeout) do
         {:ok, %GetChildrenResponse{children: children}} ->
@@ -174,11 +174,11 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec get_children2(session(), Path.t(), timeout()) ::
+  @spec get_children2(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, children :: list(Path.t()), Stat.t()} | {:error, ExZk.Error.t()}
-  def get_children2(session, path, timeout \\ @default_timeout) do
+  def get_children2(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_children2], %{session: session, path: path}, fn ->
-      request = %GetChildren2Request{path: IO.chardata_to_string(path)}
+      request = %GetChildren2Request{path: IO.chardata_to_string(path), watch: watch || false}
 
       case send_request(session, :get_children2, request, timeout) do
         {:ok, %GetChildren2Response{children: children, stat: stat}} ->
@@ -190,11 +190,11 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec get_data(session(), Path.t(), timeout()) ::
+  @spec get_data(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, iodata(), Stat.t()} | {:error, ExZk.Error.t()}
-  def get_data(session, path, timeout \\ @default_timeout) do
+  def get_data(session, path, watch \\ false, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_data], %{session: session, path: path}, fn ->
-      request = %GetDataRequest{path: IO.chardata_to_string(path)}
+      request = %GetDataRequest{path: IO.chardata_to_string(path), watch: watch || false}
 
       case send_request(session, :get_data, request, timeout) do
         {:ok, %GetDataResponse{data: data, stat: stat}} ->
@@ -208,7 +208,7 @@ defmodule ExZk.Session do
 
   @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, ExZk.Error.t()}
-  def set_data(session, path, data \\ "", version \\ @no_version, timeout \\ @default_timeout) do
+  def set_data(session, path, data \\ "", version \\ @any_version, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :set_data],
       %{session: session, path: path, data: data, version: version},
@@ -216,7 +216,7 @@ defmodule ExZk.Session do
         request = %SetDataRequest{
           path: IO.chardata_to_string(path),
           data: IO.iodata_to_binary(data),
-          version: version
+          version: version || @any_version
         }
 
         case send_request(session, :set_data, request, timeout) do
@@ -255,12 +255,15 @@ defmodule ExZk.Session do
 
   @spec delete(session(), Path.t(), version(), timeout()) ::
           :ok | {:error, ExZk.Error.t()}
-  def delete(session, path, version \\ @no_version, timeout \\ @default_timeout) do
+  def delete(session, path, version \\ @any_version, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :delete],
       %{session: session, path: path, version: version},
       fn ->
-        request = %DeleteRequest{path: IO.chardata_to_string(path), version: version}
+        request = %DeleteRequest{
+          path: IO.chardata_to_string(path),
+          version: version || @any_version
+        }
 
         case send_request(session, :delete, request, timeout) do
           :ok ->
@@ -318,12 +321,16 @@ defmodule ExZk.Session do
 
   @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
           {:ok, Stat.t()} | {:error, ExZk.Error.t()}
-  def set_acl(session, path, acl, version \\ @no_version, timeout \\ @default_timeout) do
+  def set_acl(session, path, acl, version \\ @any_version, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :set_acl],
       %{session: session, path: path, acl: acl, version: version},
       fn ->
-        request = %SetACLRequest{path: IO.chardata_to_string(path), acl: acl, version: version}
+        request = %SetACLRequest{
+          path: IO.chardata_to_string(path),
+          acl: acl,
+          version: version || @any_version
+        }
 
         case send_request(session, :get_acl, request, timeout) do
           {:ok, %SetACLResponse{stat: stat}} ->
@@ -356,7 +363,7 @@ defmodule ExZk.Session do
   end
 
   @spec multi(session(), ops :: [Multi.Op.t()], timeout()) ::
-          {:ok, [Multi.Result.t()]} | {:error, ExZk.Error.t()}
+          {[Multi.Result.t()]} | {:error, ExZk.Error.t()}
   def multi(session, ops, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :exists],
@@ -376,6 +383,8 @@ defmodule ExZk.Session do
   end
 
   @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, ExZk.Error.t()}
+  @spec whoami(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) ::
+          {:error, ExZk.Error.t()} | {:ok, [ExZk.Data.ClientInfo.t()]}
   def whoami(session, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :who_am_i],
@@ -449,12 +458,13 @@ defmodule ExZk.Session do
   def disconnected(
         :info,
         {:disconnected, socket, reason},
-        %__MODULE__{opts: opts, socket: socket} = data
+        %__MODULE__{socket: socket} = data
       ) do
-    :telemetry.execute([:ex_zk, :session, :disconnected], %{system_time: System.system_time()}, %{
-      session: self(),
-      name: opts[:name]
-    })
+    :telemetry.execute(
+      [:ex_zk, :session, :disconnected],
+      %{system_time: System.system_time()},
+      session_info(data)
+    )
 
     data = %{data | connected_address: nil}
     disconnect(data, reason)
@@ -484,15 +494,8 @@ defmodule ExZk.Session do
     {:next_state, :connected, data, action}
   end
 
-  def connecting(
-        :info,
-        {:disconnected, socket, reason},
-        %__MODULE__{opts: opts, socket: socket} = data
-      ) do
-    :telemetry.execute([:ex_zk, :session, :disconnected], %{}, %{
-      session: self(),
-      name: opts[:name]
-    })
+  def connecting(:info, {:disconnected, socket, reason}, %__MODULE__{socket: socket} = data) do
+    :telemetry.execute([:ex_zk, :session, :disconnected], %{}, session_info(data))
 
     disconnect(data, reason)
   end
@@ -503,16 +506,8 @@ defmodule ExZk.Session do
   end
 
   # "Connected" state: the session is up and the socket is alive.
-  def connected(
-        :info,
-        {:disconnected, socket, reason},
-        %__MODULE__{opts: opts, socket: socket, session_id: session_id} = data
-      ) do
-    :telemetry.execute([:ex_zk, :session, :disconnected], %{}, %{
-      session: self(),
-      name: opts[:name],
-      session_id: session_id
-    })
+  def connected(:info, {:disconnected, socket, reason}, %__MODULE__{socket: socket} = data) do
+    :telemetry.execute([:ex_zk, :session, :disconnected], %{}, session_info(data))
 
     data = %{data | connected_address: nil}
     disconnect(data, reason)
@@ -541,11 +536,14 @@ defmodule ExZk.Session do
     {:keep_state, %{data | framer: framer}}
   end
 
-  def connected({:timeout, :send_ping}, %{}, %__MODULE__{socket: socket} = data) do
+  def connected(:cast, :send_ping, %__MODULE__{socket: socket} = data) do
     :ok = Socket.send_frame(socket, new_ping_request())
 
     {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
   end
+
+  def connected({:timeout, :send_ping}, %{}, _data),
+    do: {:keep_state_and_data, {:next_event, :cast, :send_ping}}
 
   ####
   ## Private methods
@@ -579,12 +577,12 @@ defmodule ExZk.Session do
         reconnect_times: nil
     }
 
-    action = {{:timeout, :send_ping}, ping_interval(data), %{}}
+    action = {{:timeout, :send_ping}, ping_interval(session_timeout), %{}}
 
     {data, action}
   end
 
-  defp handle_frame(%Frame{response: :pong}, %__MODULE__{} = data) do
+  defp handle_frame(%Frame{response: :pong}, %__MODULE__{session_timeout: session_timeout} = data) do
     :telemetry.execute(
       [:ex_zk, :session, :pong],
       %{latency: ping_latency(data)},
@@ -592,7 +590,7 @@ defmodule ExZk.Session do
     )
 
     data = %__MODULE__{data | last_ping_sent: nil}
-    action = {{:timeout, :send_ping}, ping_interval(data), %{}}
+    action = {{:timeout, :send_ping}, ping_interval(session_timeout), %{}}
 
     {:keep_state, data, action}
   end
@@ -714,8 +712,13 @@ defmodule ExZk.Session do
          addr: addr
        }
 
-  defp recv_timeout(%__MODULE__{} = data), do: div(data.session_timeout * 2, 3)
-  defp ping_interval(%__MODULE__{} = data), do: div(recv_timeout(data), 2)
+  defp ping_interval(nil), do: :infinity
+
+  defp ping_interval(session_timeout) do
+    recv_timeout = div(session_timeout * 2, 3)
+
+    div(recv_timeout, 2)
+  end
 
   defp ping_latency(%__MODULE__{last_ping_sent: nil}), do: %Duration{}
 

@@ -5,9 +5,12 @@ defmodule ConnectionTest do
   import Mock
 
   import ExZk.Wire
+
+  alias ExZk.{Connector, Frame, Session}
   alias ExZk.Defs.OpCode
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
-  alias ExZk.{Connector, Frame, Session}
+  alias ExZk.WatchedEvent
+  alias ExZk.Watcher.Event
 
   @close_session Frame.new_close_session()
 
@@ -116,7 +119,7 @@ defmodule ConnectionTest do
                send(session, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
-             end) == "Got ping response for session id - after PT0S"
+             end) == "[session: [pid: #{inspect(session)}, id: nil], ping: [latency: \"PT0S\"]]"
     end
 
     test "it can handle auth packet response" do
@@ -132,7 +135,8 @@ defmodule ConnectionTest do
                send(session, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
-             end) == "Got auth response for session id - with err: -1"
+             end) ==
+               "[session: [pid: #{inspect(session)}, id: nil], auth: [error: {:ok, :system_error}]]"
     end
 
     test "it can handle notification" do
@@ -145,15 +149,26 @@ defmodule ConnectionTest do
       frame =
         Frame.unpack(
           pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
-            pack(%WatcherEvent{type: 1, state: 2, path: "/test"})
+            pack(%WatcherEvent{
+              type: Event.Type.value!(:node_data_changed),
+              state: Event.KeeperState.value!(:sync_connected),
+              path: "/test"
+            })
         )
+
+      evt = %WatchedEvent{
+        type: :node_data_changed,
+        state: :sync_connected,
+        path: "/test",
+        zxid: 123
+      }
 
       assert capture_log([level: :debug, format: "$message"], fn ->
                send(session, {:frame, socket, frame})
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
              end) ==
-               ~s[Got notification for session id - with event: #{%ExZk.WatchedEvent{type: :node_created, state: :sync_connected, path: "/test", zxid: 123} |> inspect()}]
+               "[session: [pid: #{inspect(session)}, id: nil], notification: #{inspect(evt)}]"
     end
 
     test "it can handle unknown build-in frame" do
@@ -180,7 +195,7 @@ defmodule ConnectionTest do
         # connect to the server
         {:ok, session} = Session.start_link(sync_connect: true)
 
-        assert :gen_statem.cast(session, :ping) == :ok
+        assert :gen_statem.cast(session, :send_ping) == :ok
 
         assert {:connected, %{socket: socket}} = Session.status(session)
 
@@ -196,7 +211,7 @@ defmodule ConnectionTest do
 
                    assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
                  end),
-                 "Got ping response for session id - after PT"
+                 "[session: [pid: #{inspect(session)}, id: nil], ping: [latency: \"PT0."
                )
       end
     end

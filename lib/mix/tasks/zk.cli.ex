@@ -75,10 +75,11 @@ defmodule Mix.Tasks.ZkCli do
 
   @commands """
     help [command]            Print this help
+    addauth <scheme> <auth>   Add authentication
     ls <path>                 List all nodes
     close                     Close the current session
     connect <host:port>       Connect to a different server
-    addauth <scheme> <auth>   Add authentication
+    delete <path>             Delete a node with a specific path
     history                   Showing the history about the recent commands that you have executed
     redo <index>              Redo the cmd with the index from history.
     stat <path>               Showing the stat/metadata of one node.
@@ -305,6 +306,8 @@ defmodule Mix.Tasks.ZkCli do
   defp eval({%Context{history: history} = ctx, [cmd | args]}) do
     Logger.debug(ctx: ctx, cmd: cmd, args: args)
 
+    cmd = Macro.underscore(cmd)
+
     try do
       ctx = %{ctx | command: String.to_existing_atom(cmd)}
 
@@ -335,7 +338,7 @@ defmodule Mix.Tasks.ZkCli do
     end
   end
 
-  defp module(cmd), do: Module.concat(__MODULE__, cmd |> String.capitalize())
+  defp module(cmd), do: Module.concat(__MODULE__, cmd |> Macro.camelize())
 
   defp log_level(opts) when is_list(opts), do: log_level(Enum.into(opts, %{}))
   defp log_level(%{debug: true}), do: :debug

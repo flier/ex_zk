@@ -5,6 +5,7 @@ defmodule Mix.Tasks.ZkCli.Ls do
 
   @behaviour Mix.Tasks.ZkCli.Command
 
+  alias ExZk.Util
   alias Mix.Tasks.ZkCli.{Context, Stat}
 
   @usage """
@@ -45,16 +46,20 @@ defmodule Mix.Tasks.ZkCli.Ls do
         usage()
 
       opts[:recursive] ->
-        {:error, :not_implemented}
+        for path <- Util.list_subtree(session, path, :dfs, opts[:watch]) do
+          IO.puts(path)
+        end
+
+        :ok
 
       opts[:stat] ->
-        with {:ok, children, stat} <- ExZk.get_children2(session, path) do
+        with {:ok, children, stat} <- ExZk.get_children2(session, path, opts[:watch]) do
           print_children(children)
           print_stat(stat)
         end
 
       true ->
-        with {:ok, children} <- ExZk.get_children(session, path) do
+        with {:ok, children} <- ExZk.get_children(session, path, opts[:watch]) do
           print_children(children)
         end
     end

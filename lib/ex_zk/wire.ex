@@ -62,7 +62,7 @@ defmodule ExZk.Wire do
       iex> pack({:buffer, "hello"})
       <<0, 0, 0, 5, 104, 101, 108, 108, 111>>
       iex> pack({:buffer, <<>>})
-      <<0, 0, 0, 0>>
+      <<0xff, 0xff, 0xff, 0xff>>
       iex> pack({{:vector, :int}, [1, 2, 3]})
       <<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>
       iex> pack({{:vector, :int}, []})
@@ -83,6 +83,7 @@ defmodule ExZk.Wire do
   def pack({:float, f}) when is_float(f), do: <<f::float-size(32)>>
   def pack({:double, f}) when is_float(f), do: <<f::float-size(64)>>
   def pack({:ustring, s}) when is_binary(s), do: <<byte_size(s)::32, s::binary>>
+  def pack({:buffer, <<>>}), do: <<-1::32>>
   def pack({:buffer, b}) when is_binary(b), do: <<byte_size(b)::32, b::binary>>
   def pack({{:vector, _type}, []}), do: <<-1::32>>
 
@@ -127,6 +128,8 @@ defmodule ExZk.Wire do
       {:ok, "hello", <<>>}
       iex> unpack(<<0, 0, 0, 5, 104, 101, 108, 108, 111>>, :buffer)
       {:ok, "hello", <<>>}
+      iex> unpack(<<0xff, 0xff, 0xff, 0xff>>, :buffer)
+      {:ok, "", <<>>}
       iex> unpack(<<0xff, 0xff, 0xff, 0xff>>, {:vector, :int})
       {:ok, [], <<>>}
       iex> unpack(<<0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3>>, {:vector, :int})
@@ -153,6 +156,7 @@ defmodule ExZk.Wire do
   def unpack(<<n::integer-signed-size(64), rest::binary>>, :long), do: {:ok, n, rest}
   def unpack(<<f::float-size(32), rest::binary>>, :float), do: {:ok, f, rest}
   def unpack(<<f::float-size(64), rest::binary>>, :double), do: {:ok, f, rest}
+  def unpack(<<0xFF, 0xFF, 0xFF, 0xFF, rest::binary>>, :buffer), do: {:ok, "", rest}
 
   def unpack(<<len::32, s::binary-size(len), rest::binary>>, type)
       when type in [:ustring, :buffer],

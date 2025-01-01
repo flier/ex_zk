@@ -54,6 +54,7 @@ defmodule ExZk.Logger do
       [:ex_zk, :session, :disconnected] => &__MODULE__.session_disconnected/4,
       [:ex_zk, :session, :pong] => &__MODULE__.session_ping/4,
       [:ex_zk, :session, :auth, :failed] => &__MODULE__.session_auth_failed/4,
+      [:ex_zk, :session, :notification] => &__MODULE__.session_notification/4,
       [:ex_zk, :session, :task, :stop] => &__MODULE__.session_task_completed/4,
       [:ex_zk, :socket, :send] => &__MODULE__.socket_send/4,
       [:ex_zk, :socket, :recv] => &__MODULE__.socket_recv/4
@@ -137,6 +138,25 @@ defmodule ExZk.Logger do
         Logger.log(level,
           session: [pid: session, id: session_id],
           auth: [error: err]
+        )
+    end
+  end
+
+  @doc false
+  def session_notification(
+        _name,
+        _measurements,
+        %{session: session, session_id: session_id, event: evt} = _metadata,
+        opts
+      ) do
+    case log_level(opts[:log], session) do
+      false ->
+        :ok
+
+      level ->
+        Logger.log(level,
+          session: [pid: session, id: session_id],
+          notification: evt
         )
     end
   end

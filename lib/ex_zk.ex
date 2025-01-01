@@ -3,7 +3,7 @@ defmodule ExZk do
   This is the documentation for the ExZk project.
   """
 
-  alias ExZk.{Error, Multi, Session, StartOptions, URI}
+  alias ExZk.{Error, Multi, Session, StartOptions, URI, Util}
   alias ExZk.Data.{ACL, ClientInfo, Stat}
 
   use Application
@@ -29,7 +29,8 @@ defmodule ExZk do
   @type version :: Session.version()
 
   @default_timeout 5000
-  @no_version -1
+  @default_batch_size 1000
+  @any_version -1
 
   ####
   ## Public API
@@ -77,17 +78,19 @@ defmodule ExZk do
   @spec close(session(), timeout()) :: :ok
   defdelegate close(session, timeout \\ :infinity), to: Session
 
-  @spec get_children(session(), Path.t(), timeout()) ::
+  @spec get_children(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, Error.t()}
-  defdelegate get_children(session, path, timeout \\ @default_timeout), to: Session
+  defdelegate get_children(session, path, watch \\ false, timeout \\ @default_timeout),
+    to: Session
 
-  @spec get_children2(session(), Path.t(), timeout()) ::
+  @spec get_children2(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, children :: list(Path.t()), Stat.t()} | {:error, Error.t()}
-  defdelegate get_children2(session, path, timeout \\ @default_timeout), to: Session
+  defdelegate get_children2(session, path, watch \\ false, timeout \\ @default_timeout),
+    to: Session
 
-  @spec get_data(session(), Path.t(), timeout()) ::
+  @spec get_data(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, iodata(), Stat.t()} | {:error, Error.t()}
-  defdelegate get_data(session, path, timeout \\ @default_timeout), to: Session
+  defdelegate get_data(session, path, watch \\ false, timeout \\ @default_timeout), to: Session
 
   @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
@@ -95,7 +98,7 @@ defmodule ExZk do
                 session,
                 path,
                 data \\ "",
-                version \\ @no_version,
+                version \\ @any_version,
                 timeout \\ @default_timeout
               ),
               to: Session
@@ -107,8 +110,23 @@ defmodule ExZk do
 
   @spec delete(session(), Path.t(), version(), timeout()) ::
           :ok | {:error, Error.t()}
-  defdelegate delete(session, path, version \\ @no_version, timeout \\ @default_timeout),
+  defdelegate delete(session, path, version \\ @any_version, timeout \\ @default_timeout),
     to: Session
+
+  @doc """
+  Recursively delete the node with the given path.
+
+  Important: All versions, of all nodes, under the given node are deleted.
+  """
+  @spec delete_recursive(session(), Path.t(), batch_size :: non_neg_integer(), timeout()) ::
+          :ok | {:error, Error.t()}
+  defdelegate delete_recursive(
+                session,
+                path,
+                batch_size \\ @default_batch_size,
+                timeout \\ @default_timeout
+              ),
+              to: Util
 
   @spec exists(session(), Path.t(), timeout()) ::
           {:ok, boolean(), Stat.t() | nil} | {:error, Error.t()}
@@ -120,7 +138,7 @@ defmodule ExZk do
 
   @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
-  defdelegate set_acl(session, path, acl, version \\ @no_version, timeout \\ @default_timeout),
+  defdelegate set_acl(session, path, acl, version \\ @any_version, timeout \\ @default_timeout),
     to: Session
 
   @spec sync(session(), Path.t(), timeout()) ::
