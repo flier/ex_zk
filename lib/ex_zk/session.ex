@@ -332,7 +332,7 @@ defmodule ExZk.Session do
           version: version || @any_version
         }
 
-        case send_request(session, :get_acl, request, timeout) do
+        case send_request(session, :set_acl, request, timeout) do
           {:ok, %SetACLResponse{stat: stat}} ->
             {{:ok, stat}, %{stat: stat}}
 

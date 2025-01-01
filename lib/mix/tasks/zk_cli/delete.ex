@@ -12,7 +12,7 @@ defmodule Mix.Tasks.ZkCli.Delete do
 
   Options:
     -h, --help                Print this help
-    -R, --recursive           Recursively delete a node with a specific path
+    -R, --recursive           Recursively delete nodes
     -v, --version <version>   Delete a node with a specific version
   """
 

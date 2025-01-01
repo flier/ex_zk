@@ -155,6 +155,17 @@ defmodule ExZk.Defs do
 
       parse(rest, [perm | perms])
     end
+
+    def to_string(perms) do
+      perms
+      |> Enum.map_join(fn
+        :read -> "r"
+        :write -> "w"
+        :create -> "c"
+        :delete -> "d"
+        :admin -> "a"
+      end)
+    end
   end
 
   defmodule Id do
@@ -181,6 +192,10 @@ defmodule ExZk.Defs do
     """
     @spec new(scheme :: String.t(), id :: String.t()) :: t()
     def new(scheme, id), do: %Id{scheme: scheme, id: id}
+
+    defimpl String.Chars, for: Id do
+      def to_string(%Id{scheme: scheme, id: id}), do: "#{scheme}:#{id}"
+    end
   end
 
   defmodule ACL do
@@ -283,6 +298,12 @@ defmodule ExZk.Defs do
           {perms, rest} = List.pop_at(rest, -1)
 
           new(Perms.parse(perms), Id.new(scheme, rest |> Enum.join(":")))
+      end
+    end
+
+    defimpl String.Chars, for: ACL do
+      def to_string(%ACL{perms: perms, id: id}) do
+        "#{id}:#{perms |> Perms.cast() |> Perms.to_string()}"
       end
     end
   end
