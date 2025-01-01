@@ -6,7 +6,7 @@ defmodule ConnectionTest do
 
   import ExZk.Wire
 
-  alias ExZk.{Connector, Frame, Session}
+  alias ExZk.{Connector, Frame, Session, Socket}
   alias ExZk.Defs.OpCode
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
   alias ExZk.WatchedEvent
@@ -93,7 +93,7 @@ defmodule ConnectionTest do
 
         # connect to the server
         assert Session.start_link(sync_connect: true) ==
-                 {:error, %Session.Error{reason: :foobar}}
+                 {:error, %Socket.Error{reason: :foobar}}
 
         assert_called_exactly(
           Connector.connect(:_, sync_connect: true),

@@ -21,26 +21,6 @@ defmodule ExZk.Session do
 
   @behaviour :gen_statem
 
-  defmodule Error do
-    defexception [:reason]
-
-    @type t :: %__MODULE__{reason: atom}
-
-    @impl true
-    def message(%__MODULE__{reason: reason}) do
-      format_reason(reason)
-    end
-
-    # :inet.format_error/1 doesn't format closed messages.
-    defp format_reason(:tcp_closed), do: "TCP connection closed"
-    defp format_reason(:ssl_closed), do: "SSL connection closed"
-
-    # Manually returned by us when the connection is closed and someone tries to send a command to Zookeeper.
-    defp format_reason(:closed), do: "the connection to Zookeeper is closed"
-
-    defp format_reason(reason), do: reason |> :inet.format_error() |> List.to_string()
-  end
-
   defmodule WatcherSetEvent do
     defstruct [:watchers, :event]
 
@@ -452,7 +432,7 @@ defmodule ExZk.Session do
           {:ok, :connected, data, action}
 
         {:disconnected, ^socket, reason} ->
-          {:stop, %Error{reason: reason}}
+          {:stop, %Socket.Error{reason: reason}}
       end
     else
       {:ok, :connecting, data}
@@ -685,7 +665,7 @@ defmodule ExZk.Session do
 
   defp disconnect(%__MODULE__{opts: opts} = data, reason) do
     if opts[:exit_on_disconnection] do
-      {:stop, %Error{reason: reason}}
+      {:stop, %Socket.Error{reason: reason}}
     else
       {backoff, data} = next_backoff(data)
 
