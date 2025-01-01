@@ -6,7 +6,7 @@ defmodule Mix.Tasks.ZkCli.Ls do
   @behaviour Mix.Tasks.ZkCli.Command
 
   alias ExZk.Util
-  alias Mix.Tasks.ZkCli.{Context, Stat}
+  alias Mix.Tasks.ZkCli.Context
 
   @usage """
   Usage: ls [options] <path>
@@ -39,12 +39,17 @@ defmodule Mix.Tasks.ZkCli.Ls do
   def run(%Context{session: session} = _ctx, args) do
     {opts, args, _invalid} = OptionParser.parse(args, aliases: @aliases, strict: @opts)
 
-    path = List.first(args, "/")
+    if opts[:help] do
+      usage()
+    else
+      ls(session, args, opts)
+    end
+  end
 
+  defp ls(_session, [], _opts), do: usage()
+
+  defp ls(session, [path | _], opts) do
     cond do
-      opts[:help] ->
-        usage()
-
       opts[:recursive] ->
         for path <- Util.list_subtree(session, path, :dfs, opts[:watch]) do
           IO.puts(path)
@@ -55,7 +60,8 @@ defmodule Mix.Tasks.ZkCli.Ls do
       opts[:stat] ->
         with {:ok, children, stat} <- ExZk.get_children2(session, path, opts[:watch]) do
           print_children(children)
-          print_stat(stat)
+
+          stat |> IO.puts()
         end
 
       true ->
@@ -67,6 +73,4 @@ defmodule Mix.Tasks.ZkCli.Ls do
 
   defp print_children(children),
     do: "[#{children |> Enum.sort() |> Enum.join(", ")}]" |> IO.puts()
-
-  defp print_stat(stat), do: stat |> Stat.Printer.new() |> IO.puts()
 end

@@ -35,19 +35,20 @@ defmodule Mix.Tasks.ZkCli.Delete do
   def run(%Context{session: session} = _ctx, args) do
     {opts, args, _invalid} = OptionParser.parse(args, aliases: @aliases, strict: @opts)
 
-    cond do
-      opts[:help] ->
-        usage()
+    if opts[:help] do
+      usage()
+    else
+      delete(session, args, opts)
+    end
+  end
 
-      args == [] ->
-        {:error, :missing_path}
+  defp delete(_session, [], _opts), do: usage()
 
-      [path | _] = args ->
-        if opts[:recursive] do
-          ExZk.delete_recursive(session, path)
-        else
-          ExZk.delete(session, path, opts[:version])
-        end
+  defp delete(session, [path | _], opts) do
+    if opts[:recursive] do
+      ExZk.delete_recursive(session, path)
+    else
+      ExZk.delete(session, path, opts[:version])
     end
   end
 end

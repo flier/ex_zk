@@ -6,7 +6,7 @@ defmodule Mix.Tasks.ZkCli.Stat do
   @behaviour Mix.Tasks.ZkCli.Command
 
   alias ExZk.Error
-  alias Mix.Tasks.ZkCli.{Context, Stat}
+  alias Mix.Tasks.ZkCli.Context
 
   @usage """
   Usage: stat [options] <path>
@@ -31,54 +31,38 @@ defmodule Mix.Tasks.ZkCli.Stat do
 
   @impl true
   def run(%Context{session: session} = _ctx, args) do
-    {parsed, args, _invalid} = OptionParser.parse(args, aliases: @aliases, strict: @opts)
+    {opts, args, _invalid} = OptionParser.parse(args, aliases: @aliases, strict: @opts)
 
-    stat(session, List.first(args, "/"), parsed)
+    if opts[:help] do
+      usage()
+    else
+      stat(session, args, opts)
+    end
   end
 
-  defp stat(_, _, help: true), do: usage()
+  defp stat(_session, [], _opts), do: usage()
 
-  defp stat(session, path, _opts) do
+  defp stat(session, [path | _], _opts) do
     case ExZk.exists(session, path) do
-      {:ok, true, stat} -> print_stat(stat)
+      {:ok, true, stat} -> stat |> IO.puts()
       {:ok, false, nil} -> {:error, Error.new(:no_node, path)}
       {:error, err} -> {:error, err}
     end
   end
 
-  defp print_stat(stat), do: stat |> Stat.Printer.new() |> IO.puts()
-end
-
-defmodule Mix.Tasks.ZkCli.Stat.Printer do
-  alias ExZk.Data.Stat
-
-  @enforce_keys [:stat]
-  defstruct [:stat]
-
-  @type t :: %__MODULE__{
-          stat: Stat.t()
-        }
-
-  @spec new(Stat.t()) :: t()
-  def new(stat), do: %__MODULE__{stat: stat}
-
-  defimpl String.Chars do
-    alias Mix.Tasks.ZkCli.Stat.Printer
-
-    def to_string(%Printer{
-          stat: %Stat{
-            czxid: czxid,
-            mzxid: mzxid,
-            ctime: ctime,
-            mtime: mtime,
-            version: version,
-            cversion: cversion,
-            aversion: aversion,
-            ephemeral_owner: ephemeral_owner,
-            data_length: data_length,
-            num_children: num_children,
-            pzxid: pzxid
-          }
+  defimpl String.Chars, for: ExZk.Data.Stat do
+    def to_string(%ExZk.Data.Stat{
+          czxid: czxid,
+          mzxid: mzxid,
+          ctime: ctime,
+          mtime: mtime,
+          version: version,
+          cversion: cversion,
+          aversion: aversion,
+          ephemeral_owner: ephemeral_owner,
+          data_length: data_length,
+          num_children: num_children,
+          pzxid: pzxid
         }) do
       """
       cZxid = #{czxid |> zxid()}

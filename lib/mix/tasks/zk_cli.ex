@@ -76,18 +76,21 @@ defmodule Mix.Tasks.ZkCli do
   @default_timeout 300_000
 
   @commands """
-    help [command]            Print this help
-    addauth <scheme> <auth>   Add authentication
-    ls <path>                 List all nodes
-    close                     Close the current session
-    connect <host:port>       Connect to a different server
-    delete <path>             Delete a node with a specific path
-    history                   Showing the history about the recent commands that you have executed
+    help [command]            Print this help.
+    addauth <scheme> <auth>   Add authentication.
+    ls <path>                 List all nodes.
+    close                     Close the current session.
+    connect <host:port>       Connect to a different server.
+    create <path> <data>      Create a node.
+    delete <path>             Delete a node with a specific path.
+    get <path>                Get the data of the specific path.
+    history                   Showing the history about the recent commands that you have executed.
     redo <index>              Redo the cmd with the index from history.
+    set <path> <data>         Set/update the data on a path.
     stat <path>               Showing the stat/metadata of one node.
-    sync <path>               Sync the data of one node between leader and followers(Asynchronous sync)
-    whoami                    Get the client information
-    quit                      Quit the CLI
+    sync <path>               Sync the data of one node between leader and followers(Asynchronous sync).
+    whoami                    Get the client information.
+    quit                      Quit the CLI.
   """
 
   @usage """

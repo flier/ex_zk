@@ -5,7 +5,7 @@ defmodule Mix.Tasks.ZkCli.Get do
 
   @behaviour Mix.Tasks.ZkCli.Command
 
-  alias Mix.Tasks.ZkCli.{Context, Stat}
+  alias Mix.Tasks.ZkCli.Context
 
   @usage """
   Usage: get [options] <path>
@@ -44,7 +44,7 @@ defmodule Mix.Tasks.ZkCli.Get do
     if opts[:help] do
       usage()
     else
-      get(session, List.first(args, "/"), opts)
+      get(session, args, opts)
     end
   end
 
@@ -59,7 +59,9 @@ defmodule Mix.Tasks.ZkCli.Get do
    +--------+-----------------------------------------+------------------+
   """
 
-  defp get(session, path, opts) do
+  defp get(_session, [], _opts), do: usage()
+
+  defp get(session, [path | _], opts) do
     with {:ok, data, stat} <- ExZk.get_data(session, path, opts[:watch]) do
       cond do
         IO.iodata_length(data) == 0 ->
@@ -76,11 +78,9 @@ defmodule Mix.Tasks.ZkCli.Get do
       end
       |> IO.puts()
 
-      if opts[:stat], do: stat(stat)
+      if opts[:stat], do: stat |> IO.puts()
 
       :ok
     end
   end
-
-  defp stat(stat), do: stat |> Stat.Printer.new() |> IO.puts()
 end

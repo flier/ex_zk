@@ -48,10 +48,11 @@ defmodule Mix.Tasks.ZkCli.Create do
     end
   end
 
+  defp create(_session, [], _opts), do: usage()
   defp create(session, [path], opts), do: create(session, path, "", [ACL.open()], opts)
   defp create(session, [path, data], opts), do: create(session, path, data, [ACL.open()], opts)
 
-  defp create(session, [path, data, acl | _rest], opts),
+  defp create(session, [path, data, acl | _], opts),
     do: create(session, path, data, ACL.parse_acls(acl), opts)
 
   defp create(session, path, data, acl, opts) do
