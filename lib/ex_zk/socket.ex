@@ -137,7 +137,7 @@ defmodule ExZk.Socket do
 
   # A socket error occurred.
   def handle_info({:tcp_error, socket, reason}, %__MODULE__{socket: socket} = state) do
-    stop({:tcp_error, reason}, state)
+    stop(reason, state)
   end
 
   # The socket was closed.
@@ -147,7 +147,7 @@ defmodule ExZk.Socket do
 
   # A socket error occurred.
   def handle_info({:ssl_error, socket, reason}, %__MODULE__{socket: socket} = state) do
-    stop({:ssl_error, reason}, state)
+    stop(reason, state)
   end
 
   @impl true

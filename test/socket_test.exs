@@ -4,6 +4,7 @@ defmodule SocketTest do
   import Mock
 
   import ExZk.Wire
+
   alias ExZk.Proto.{ConnectResponse, ReplyHeader}
   alias ExZk.{Connector, Frame, Socket}
 
@@ -88,6 +89,66 @@ defmodule SocketTest do
       assert_receive {:EXIT, ^sock, :normal}
     end
 
+    test "it will be stopped when received :tcp_closed" do
+      {:ok, sock} = Socket.start_link(self(), [])
+
+      send(sock, {:tcp_closed, :sock})
+
+      assert_receive {:connected, ^sock, @connected}
+      assert_receive {:disconnected, ^sock, %Socket.Error{reason: :tcp_closed}}
+    end
+
+    test "it will be stopped when received :tcp_error" do
+      {:ok, sock} = Socket.start_link(self(), [])
+
+      send(sock, {:tcp_error, :sock, :reason})
+
+      assert_receive {:connected, ^sock, @connected}
+      assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
+    end
+
+    test "it will be stopped when received :ssl_closed" do
+      {:ok, sock} = Socket.start_link(self(), [])
+
+      send(sock, {:ssl_closed, :sock})
+
+      assert_receive {:connected, ^sock, @connected}
+      assert_receive {:disconnected, ^sock, %Socket.Error{reason: :ssl_closed}}
+    end
+
+    test "it will be stopped when received :ssl_error" do
+      {:ok, sock} = Socket.start_link(self(), [])
+
+      send(sock, {:ssl_error, :sock, :reason})
+
+      assert_receive {:connected, ^sock, @connected}
+      assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
+    end
+
+    test_with_mock "it can send frame", :gen_tcp, [:unstick], send: fn :sock, _data -> :ok end do
+      {:ok, sock} = Socket.start_link(self(), [])
+
+      frame = Frame.new_ping_request()
+
+      assert Socket.send_frame(sock, frame) == :ok
+      assert Socket.normal_stop(sock) == :ok
+
+      assert_called(:gen_tcp.send(:sock, pack(frame)))
+    end
+
+    test_with_mock "it will be stopped when send frame failed", :gen_tcp, [:unstick],
+      close: fn :sock -> :ok end,
+      send: fn :sock, _data -> {:error, :reason} end do
+      {:ok, sock} = Socket.start_link(self(), [])
+
+      frame = Frame.new_ping_request()
+
+      assert Socket.send_frame(sock, frame) == :ok
+
+      assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
+      assert_called(:gen_tcp.send(:sock, pack(frame)))
+    end
+
     test "it can receive frame" do
       {:ok, sock} = Socket.start_link(self(), [])
       assert is_pid(sock)
@@ -100,6 +161,28 @@ defmodule SocketTest do
 
       # receive frame
       send(sock, {:tcp, :sock, frame})
+      assert_receive {:frame, ^sock, %Frame{reply_hdr: ^reply_hdr, payload: ""}}
+    end
+
+    test "it can receive fragmented frame" do
+      {:ok, sock} = Socket.start_link(self(), [])
+      assert is_pid(sock)
+
+      assert_receive {:connected, ^sock, @connected}
+
+      reply_hdr = %ReplyHeader{xid: 123, zxid: 456, err: 789}
+      buf = pack(reply_hdr)
+      frame = <<byte_size(buf)::32>> <> buf
+
+      for data <-
+            frame
+            |> :binary.bin_to_list()
+            |> Enum.chunk_every(16)
+            |> Enum.map(&:binary.list_to_bin/1) do
+        send(sock, {:tcp, :sock, data})
+      end
+
+      # receive frame
       assert_receive {:frame, ^sock, %Frame{reply_hdr: ^reply_hdr, payload: ""}}
     end
   end
