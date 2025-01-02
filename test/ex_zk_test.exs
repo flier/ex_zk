@@ -1,6 +1,9 @@
 defmodule ExZkTest do
   use ExUnit.Case, async: true
 
+  alias ExZk.Multi
+  alias ExZk.Data.ClientInfo
+  alias ExZk.Defs.ACL
   alias ExZk.Create
   alias ExZk.Data.Stat
   alias ExZk.Proto
@@ -12,6 +15,24 @@ defmodule ExZkTest do
   @version 123
   @any_version -1
   @ttl 60
+  @acl [ACL.open()]
+  @client_info %ClientInfo{auth_scheme: "digest", user: "username"}
+  @multi_ops [
+    Multi.Op.create(@path, @data),
+    Multi.Op.check(@path, @version),
+    Multi.Op.delete(@path),
+    Multi.Op.get_children(@path),
+    Multi.Op.get_data(@path),
+    Multi.Op.set_data(@path, @data)
+  ]
+  @multi_results [
+    {:create, @path, @stat},
+    {:check, true},
+    {:delete, :ok},
+    {:get_children, @children},
+    {:get_data, @data, @stat},
+    {:set_data, @stat}
+  ]
 
   defmodule MockSession do
     @behaviour :gen_statem
@@ -28,15 +49,35 @@ defmodule ExZkTest do
       {:ok, :connected, args}
     end
 
-    def connected({:call, from}, {:send_request, opcode, request}, data) do
-      assert {^request, response} = data[opcode],
-             "request: #{inspect(request)}, data: #{inspect(data)}"
+    def connected({:call, from}, :status, data) do
+      {:keep_state_and_data, {:reply, from, {:connected, data}}}
+    end
 
-      {:keep_state_and_data, {:reply, from, response}}
+    def connected({:call, from}, {:send_request, opcode, request}, data) do
+      case data[opcode] do
+        {^request, response} ->
+          {:keep_state_and_data, {:reply, from, response}}
+
+        [{^request, response} | rest] ->
+          {:keep_state, %{data | opcode => rest}, {:reply, from, response}}
+      end
     end
   end
 
   describe "given a mock session" do
+    test "it can be closed" do
+      {:ok, session} = MockSession.start_link(%{})
+
+      assert ExZk.close(session) == :ok
+      assert !Process.alive?(session)
+    end
+
+    test "it can get status" do
+      {:ok, session} = MockSession.start_link(%{})
+
+      assert ExZk.status(session) == {:connected, %{}}
+    end
+
     test "it can get children" do
       {:ok, session} =
         MockSession.start_link(%{
@@ -185,6 +226,132 @@ defmodule ExZkTest do
         })
 
       assert ExZk.delete(session, @path, @version) == :ok
+    end
+
+    test "it can delete a node recursively" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          get_data:
+            {%Proto.GetDataRequest{path: @path},
+             {:ok, %Proto.GetDataResponse{data: @data, stat: @stat}}},
+          get_children:
+            Enum.concat([""], @children)
+            |> Enum.map(
+              &{%Proto.GetChildrenRequest{path: Path.join(@path, &1)},
+               {:ok, %Proto.GetChildrenResponse{children: []}}}
+            ),
+          delete:
+            Enum.concat(@children, [""])
+            |> Enum.map(
+              &{%Proto.DeleteRequest{path: Path.join(@path, &1), version: @any_version}, :ok}
+            )
+        })
+
+      assert ExZk.delete_recursive(session, @path, 0) == :ok
+    end
+
+    test "it can delete a node recursively in batch" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          get_data:
+            {%Proto.GetDataRequest{path: @path},
+             {:ok, %Proto.GetDataResponse{data: @data, stat: @stat}}},
+          get_children:
+            Enum.concat([""], @children)
+            |> Enum.map(
+              &{%Proto.GetChildrenRequest{path: Path.join(@path, &1)},
+               {:ok, %Proto.GetChildrenResponse{children: []}}}
+            ),
+          multi:
+            {Multi.to_request(
+               Enum.concat(@children, [""])
+               |> Enum.map(&Multi.Op.delete(Path.join(@path, &1)))
+             ),
+             {:ok,
+              %Multi.Response{
+                results: Enum.concat(@children, [""]) |> Enum.map(fn _ -> {:delete, :ok} end)
+              }}}
+        })
+
+      assert ExZk.delete_recursive(session, @path) == :ok
+    end
+
+    test "it can check a node is exists" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          exists: {%Proto.ExistsRequest{path: @path}, {:ok, %Proto.ExistsResponse{stat: @stat}}}
+        })
+
+      assert ExZk.exists(session, @path) == {:ok, true, @stat}
+    end
+
+    test "it can check a node is not exists" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          exists: {%Proto.ExistsRequest{path: @path}, {:error, :no_node}}
+        })
+
+      assert ExZk.exists(session, @path) == {:ok, false, nil}
+    end
+
+    test "it can get ACL of a node" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          get_acl:
+            {%Proto.GetACLRequest{path: @path},
+             {:ok, %Proto.GetACLResponse{acl: @acl, stat: @stat}}}
+        })
+
+      assert ExZk.get_acl(session, @path) == {:ok, @acl, @stat}
+    end
+
+    test "it can set ACL of a node" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          set_acl:
+            {%Proto.SetACLRequest{path: @path, acl: @acl, version: @any_version},
+             {:ok, %Proto.SetACLResponse{stat: @stat}}}
+        })
+
+      assert ExZk.set_acl(session, @path, @acl) == {:ok, @stat}
+    end
+
+    test "it can set ACL of a node with version" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          set_acl:
+            {%Proto.SetACLRequest{path: @path, acl: @acl, version: @version},
+             {:ok, %Proto.SetACLResponse{stat: @stat}}}
+        })
+
+      assert ExZk.set_acl(session, @path, @acl, @version) == {:ok, @stat}
+    end
+
+    test "it can sync a node" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          sync: {%Proto.SyncRequest{path: @path}, {:ok, %Proto.SyncResponse{path: @path}}}
+        })
+
+      assert ExZk.sync(session, @path) == {:ok, @path}
+    end
+
+    test "it can check whoami" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          who_am_i: {nil, {:ok, %Proto.WhoAmIResponse{client_info: @client_info}}}
+        })
+
+      assert ExZk.whoami(session) == {:ok, @client_info}
+    end
+
+    test "it can send multi ops" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          multi: {Multi.to_request(@multi_ops), {:ok, %Multi.Response{results: @multi_results}}}
+        })
+
+      assert ExZk.multi(session, @multi_ops) == {:ok, @multi_results}
     end
   end
 end

@@ -51,6 +51,10 @@ defmodule ExZk do
       iex> is_pid(pid)
       true
 
+      iex> {:ok, pid} = ExZk.start_link("zk://user:pass@localhost:2181/")
+      iex> is_pid(pid)
+      true
+
       iex> {:ok, pid} = ExZk.start_link(host: "example.com", port: 9999, password: "secret")
       iex> is_pid(pid)
       true
@@ -78,6 +82,9 @@ defmodule ExZk do
   @spec close(session(), timeout()) :: :ok
   defdelegate close(session, timeout \\ :infinity), to: Session
 
+  @spec status(session()) :: {Session.status(), metadata :: %{}}
+  defdelegate status(session), to: Session
+
   @spec get_children(session(), Path.t(), watch :: boolean(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, Error.t()}
   defdelegate get_children(session, path, watch \\ false, timeout \\ @default_timeout),
@@ -104,14 +111,8 @@ defmodule ExZk do
 
   @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
-  defdelegate set_data(
-                session,
-                path,
-                data \\ "",
-                version \\ @any_version,
-                timeout \\ @default_timeout
-              ),
-              to: Session
+  defdelegate set_data(session, path, data, version \\ @any_version, timeout \\ @default_timeout),
+    to: Session
 
   @spec create(session(), Path.t(), iodata(), opts :: [Create.option()], timeout()) ::
           {:ok, Path.t(), Stat.t() | nil} | {:error, Error.t()}

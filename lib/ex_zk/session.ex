@@ -215,7 +215,7 @@ defmodule ExZk.Session do
 
   @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
-  def set_data(session, path, data \\ "", version \\ @any_version, timeout \\ @default_timeout)
+  def set_data(session, path, data, version \\ @any_version, timeout \\ @default_timeout)
       when is_version_or_nil(version) do
     :telemetry.span(
       [:ex_zk, :session, :set_data],
