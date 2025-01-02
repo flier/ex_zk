@@ -8,6 +8,7 @@ defmodule DocTest do
   doctest ExZk.Defs.ACL
   doctest ExZk.Defs.Id
   doctest ExZk.Defs.Perms
+  doctest ExZk.Error
   doctest ExZk.Format
   doctest ExZk.Jute
   doctest ExZk.Jute.Binding

@@ -1,4 +1,52 @@
 defmodule ExZk.Error do
+  @moduledoc """
+  An error response from the Zookeeper server.
+
+  ## Examples
+
+      iex> ExZk.Error.new(:no_node, "/foo/bar") |> to_string()
+      "Node does not exist: /foo/bar"
+
+      iex> ExZk.Error.new(:no_children_for_ephemerals, "/foo/bar") |> to_string()
+      "Ephemerals cannot have children: /foo/bar"
+
+      iex> ExZk.Error.new(:node_exists, "/foo/bar") |> to_string()
+      "Node already exists: /foo/bar"
+
+      iex> ExZk.Error.new(:not_empty, "/foo/bar") |> to_string()
+      "Node not empty: /foo/bar"
+
+      iex> ExZk.Error.new(:not_readonly, "/foo/bar") |> to_string()
+      "Not a read-only call: /foo/bar"
+
+      iex> ExZk.Error.new(:invalid_acl, "/foo/bar") |> to_string()
+      "Acl is not valid: /foo/bar"
+
+      iex> ExZk.Error.new(:no_auth, "/foo/bar") |> to_string()
+      "Insufficient permission: /foo/bar"
+
+      iex> ExZk.Error.new(:bad_arguments, "/foo/bar") |> to_string()
+      "Arguments are not valid: /foo/bar"
+
+      iex> ExZk.Error.new(:bad_version, "/foo/bar") |> to_string()
+      "version No is not valid: /foo/bar"
+
+      iex> ExZk.Error.new(:reconfig_in_progress, "/foo/bar") |> to_string()
+      "Another reconfiguration is in progress -- concurrent reconfigs not supported (yet)"
+
+      iex> ExZk.Error.new(:new_config_no_quorum, "/foo/bar") |> to_string()
+      "No quorum of new config is connected and up-to-date with the leader of last committed config"
+
+      iex> ExZk.Error.new(:quota_exceeded, "/foo/bar") |> to_string()
+      "Quota has exceeded: /foo/bar"
+
+      iex> ExZk.Error.new(123, "/foo/bar") |> to_string()
+      "Error: 123: /foo/bar"
+
+      iex> ExZk.Error.new(:session_expired, "") |> to_string()
+      "Error: session_expired"
+
+  """
   alias ExZk.Defs.ErrCode
 
   @enforce_keys [:err]
@@ -53,6 +101,7 @@ defmodule ExZk.Error do
     def to_string(%ExZk.Error{err: :quota_exceeded, path: path}),
       do: "Quota has exceeded: #{path}"
 
-    def to_string(%ExZk.Error{err: err, path: path}), do: "#{err}: #{path}"
+    def to_string(%ExZk.Error{err: err, path: ""}), do: "Error: #{err}"
+    def to_string(%ExZk.Error{err: err, path: path}), do: "Error: #{err}: #{path}"
   end
 end
