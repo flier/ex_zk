@@ -8,8 +8,8 @@ defmodule ExZk.Wire do
           | :double
           | :ustring
           | :buffer
-          | term()
           | {:vector, type()}
+          | term()
 
   ####
   ## Protocols
@@ -19,6 +19,25 @@ defmodule ExZk.Wire do
     @spec pack(value :: any()) :: binary()
     @doc "Pack a value into a binary"
     def pack(value)
+  end
+
+  defmodule Value do
+    @moduledoc """
+    Typed value
+    """
+    alias ExZk.Wire
+
+    @type t ::
+            {:byte, byte()}
+            | {:boolean, boolean()}
+            | {:int, integer()}
+            | {:long, integer()}
+            | {:float, float()}
+            | {:double, float()}
+            | {:ustring, IO.chardata()}
+            | {:buffer, iodata()}
+            | {{:vector, Wire.type()}, [any()]}
+            | {term(), any()}
   end
 
   ####
@@ -56,11 +75,15 @@ defmodule ExZk.Wire do
       iex> pack({:double, 3.14})
       <<64, 9, 30, 184, 81, 235, 133, 31>>
       iex> pack({:ustring, "hello"})
-      <<0, 0, 0, 5, 104, 101, 108, 108, 111>>
+      "\0\0\0\x05hello"
+      iex> pack({:ustring, ~c"测试"})
+      "\0\0\0\x06测试"
       iex> pack({:ustring, ""})
       <<0, 0, 0, 0>>
       iex> pack({:buffer, "hello"})
-      <<0, 0, 0, 5, 104, 101, 108, 108, 111>>
+      "\0\0\0\x05hello"
+      iex> pack({:buffer, ["hello", "world"]})
+      "\0\0\0\\nhelloworld"
       iex> pack({:buffer, <<>>})
       <<0xff, 0xff, 0xff, 0xff>>
       iex> pack({{:vector, :int}, [1, 2, 3]})
@@ -73,7 +96,7 @@ defmodule ExZk.Wire do
       <<0, 0, 0, 2, ?z, ?k, 0, 0, 0, 4, ?t, ?e, ?s, ?t>>
 
   """
-  @spec pack({type(), value :: any()} | [{type(), value :: any()}] | term()) :: binary()
+  @spec pack(Value.t() | [Value.t()] | any()) :: binary()
   def pack(nil), do: <<>>
   def pack({_type, nil}), do: <<>>
   def pack({:boolean, b}) when is_boolean(b), do: if(b, do: <<1::8>>, else: <<0::8>>)
@@ -83,8 +106,10 @@ defmodule ExZk.Wire do
   def pack({:float, f}) when is_float(f), do: <<f::float-size(32)>>
   def pack({:double, f}) when is_float(f), do: <<f::float-size(64)>>
   def pack({:ustring, s}) when is_binary(s), do: <<byte_size(s)::32, s::binary>>
+  def pack({:ustring, s}) when is_list(s), do: pack({:ustring, IO.chardata_to_string(s)})
   def pack({:buffer, <<>>}), do: <<-1::32>>
   def pack({:buffer, b}) when is_binary(b), do: <<byte_size(b)::32, b::binary>>
+  def pack({:buffer, b}) when is_list(b), do: pack({:buffer, IO.iodata_to_binary(b)})
   def pack({{:vector, _type}, []}), do: <<-1::32>>
 
   def pack({{:vector, type}, v}) when is_list(v) do
@@ -99,7 +124,7 @@ defmodule ExZk.Wire do
     end
   end
 
-  def pack(values) when is_list(values), do: Enum.map_join(values, &pack(&1))
+  def pack(values) when is_list(values), do: values |> Enum.map_join(&pack(&1))
   def pack(value) when is_struct(value), do: Pack.pack(value)
 
   @doc """

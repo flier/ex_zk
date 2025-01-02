@@ -20,6 +20,7 @@ defmodule DocTest do
   doctest ExZk.TypedEnum
   doctest ExZk.URI
   doctest ExZk.Wire
+  doctest ExZk.Wire.Value
 
   doctest ExZk.Data
   doctest ExZk.Proto
