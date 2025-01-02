@@ -213,7 +213,8 @@ defmodule ExZk.Session do
 
   @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
-  def set_data(session, path, data \\ "", version \\ @any_version, timeout \\ @default_timeout) do
+  def set_data(session, path, data \\ "", version \\ @any_version, timeout \\ @default_timeout)
+      when is_integer(version) or is_nil(version) do
     :telemetry.span(
       [:ex_zk, :session, :set_data],
       %{session: session, path: path, data: data, version: version},
@@ -258,9 +259,10 @@ defmodule ExZk.Session do
     )
   end
 
-  @spec delete(session(), Path.t(), version(), timeout()) ::
+  @spec delete(session(), Path.t(), version() | nil, timeout()) ::
           :ok | {:error, Error.t()}
-  def delete(session, path, version \\ @any_version, timeout \\ @default_timeout) do
+  def delete(session, path, version \\ @any_version, timeout \\ @default_timeout)
+      when is_integer(version) or is_nil(version) do
     :telemetry.span(
       [:ex_zk, :session, :delete],
       %{session: session, path: path, version: version},
@@ -326,7 +328,8 @@ defmodule ExZk.Session do
 
   @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
-  def set_acl(session, path, acl, version \\ @any_version, timeout \\ @default_timeout) do
+  def set_acl(session, path, acl, version \\ @any_version, timeout \\ @default_timeout)
+      when is_integer(version) or is_nil(version) do
     :telemetry.span(
       [:ex_zk, :session, :set_acl],
       %{session: session, path: path, acl: acl, version: version},

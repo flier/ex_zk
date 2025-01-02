@@ -31,8 +31,14 @@ defmodule ExZk.Create do
           {OpCode.t(), Frame.request()}
   def new_request(path, data \\ "", opts \\ []) do
     acl = Keyword.get(opts, :acl, [])
-    mode = Keyword.get(opts, :mode, :persistent)
-    ttl = Keyword.get(opts, :ttl, 0)
+    ttl = Keyword.get(opts, :ttl)
+
+    mode =
+      case Keyword.get(opts, :mode, :persistent) do
+        :persistent when ttl != nil -> :persistent_with_ttl
+        :persistent_sequential when ttl != nil -> :persistent_sequential_with_ttl
+        mode -> mode
+      end
 
     opcode =
       cond do
@@ -48,7 +54,7 @@ defmodule ExZk.Create do
           data: IO.iodata_to_binary(data),
           acl: acl,
           flags: Mode.value!(mode),
-          ttl: ttl
+          ttl: ttl || 0
         }
       else
         %CreateRequest{
