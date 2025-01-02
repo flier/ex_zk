@@ -4,6 +4,24 @@ defmodule ExZk.Socket do
   alias ExZk.{Connector, Frame}
 
   defmodule Error do
+    @moduledoc """
+    Error raised when the connection is closed.
+
+    ## Example
+
+        iex> raise %ExZk.Socket.Error{reason: :tcp_closed}
+        ** (ExZk.Socket.Error) TCP connection closed
+
+        iex> raise %ExZk.Socket.Error{reason: :ssl_closed}
+        ** (ExZk.Socket.Error) SSL connection closed
+
+        iex> raise %ExZk.Socket.Error{reason: :closed}
+        ** (ExZk.Socket.Error) the connection to Zookeeper is closed
+
+        iex> raise %ExZk.Socket.Error{reason: :eacces}
+        ** (ExZk.Socket.Error) permission denied
+    """
+
     defexception [:reason]
 
     @type t :: %__MODULE__{reason: atom}

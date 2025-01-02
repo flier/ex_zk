@@ -82,7 +82,9 @@ defmodule ExZk.Defs do
   )
 
   defmodule Perms do
-    @type t :: [Perm.t()]
+    @type t :: [Perm.t()] | :all
+
+    @all 0b0001_1111
 
     @doc """
     Convert an integer to a list of permissions.
@@ -91,7 +93,7 @@ defmodule ExZk.Defs do
 
         iex> alias ExZk.Defs.Perms
         iex> Perms.cast(31)
-        [:all]
+        :all
         iex> Perms.cast(3)
         [:read, :write]
         iex> Perms.cast(0)
@@ -99,7 +101,7 @@ defmodule ExZk.Defs do
 
     """
     @spec cast(integer()) :: t()
-    def cast(31), do: [:all]
+    def cast(@all), do: :all
 
     def cast(perms) when is_integer(perms) do
       <<admin::1, delete::1, create::1, write::1, read::1>> = <<perms::5>>
@@ -119,28 +121,38 @@ defmodule ExZk.Defs do
 
     ## Example
 
-        iex> alias ExZk.Defs.Perms
-        iex> Perms.value!([:read, :write])
+        iex> ExZk.Defs.Perms.value!([])
+        0
+        iex> ExZk.Defs.Perms.value!(:read)
+        1
+        iex> ExZk.Defs.Perms.value!([:read, :write])
         3
+        iex> ExZk.Defs.Perms.value!(:all)
+        31
     """
     @spec value!(t()) :: integer()
-    def value!(perms), do: perms |> Enum.map(&Perm.value!/1) |> Enum.sum()
+    def value!(:all), do: @all
+    def value!(perm) when is_atom(perm), do: value!([perm])
+    def value!(perms) when is_list(perms), do: perms |> Enum.map(&Perm.value!/1) |> Enum.sum()
 
     @doc """
     Parse a string into a list of permissions.
 
     ## Example
 
-        iex> alias ExZk.Defs.Perms
-        iex> Perms.parse("r")
+        iex> ExZk.Defs.Perms.parse("r")
         [:read]
-        iex> Perms.parse("rw")
+
+        iex> ExZk.Defs.Perms.parse("rw")
         [:read, :write]
+
+        iex> ExZk.Defs.Perms.parse("rwcda")
+        [:read, :write, :create, :delete, :admin]
     """
     @spec parse(String.t()) :: t()
     def parse(s), do: parse(s, [])
 
-    defp parse(<<>>, perms), do: perms |> Stream.filter(&(&1 != nil)) |> Enum.reverse()
+    defp parse(<<>>, perms), do: perms |> Enum.reverse()
 
     defp parse(<<c::utf8, rest::binary>>, perms) do
       perm =
@@ -153,8 +165,33 @@ defmodule ExZk.Defs do
           _ -> nil
         end
 
-      parse(rest, [perm | perms])
+      if perm do
+        parse(rest, [perm | perms])
+      else
+        parse(rest, perms)
+      end
     end
+
+    @doc """
+    Convert a list of permissions to a string.
+
+    ## Example
+
+        iex> ExZk.Defs.Perms.to_string(:all)
+        "rwcda"
+
+        iex> ExZk.Defs.Perms.to_string(:read)
+        "r"
+
+        iex> ExZk.Defs.Perms.to_string([:read, :write])
+        "rw"
+
+        iex> ExZk.Defs.Perms.to_string([:read, :write, :create, :delete, :admin])
+        "rwcda"
+    """
+    @spec to_string(Perm.t() | Perms.t()) :: String.t()
+    def to_string(:all), do: "rwcda"
+    def to_string(perm) when is_atom(perm), do: Perms.to_string([perm])
 
     def to_string(perms) do
       perms
@@ -175,6 +212,11 @@ defmodule ExZk.Defs do
 
     @doc """
     This Id represents anyone.
+
+    ## Example
+
+        iex> ExZk.Defs.Id.anyone() |> to_string()
+        "world:anyone"
     """
     @spec anyone :: Id.t()
     def anyone, do: %Id{scheme: "world", id: "anyone"}
@@ -183,12 +225,23 @@ defmodule ExZk.Defs do
     This Id is only usable to set ACLs.
 
     It will get substituted with the Id's the client authenticated with.
+
+    ## Example
+
+        iex> ExZk.Defs.Id.auth() |> to_string()
+        "auth:"
     """
     @spec auth :: Id.t()
     def auth, do: %Id{scheme: "auth"}
 
     @doc """
     Create a new Id.
+
+    ## Example
+
+        iex> ExZk.Defs.Id.new("world", "anyone") |> to_string()
+        "world:anyone"
+
     """
     @spec new(scheme :: String.t(), id :: String.t()) :: t()
     def new(scheme, id), do: %Id{scheme: scheme, id: id}
@@ -209,14 +262,14 @@ defmodule ExZk.Defs do
 
     ## Example
 
-        iex> import ExZk.Defs.Id
-        iex> alias ExZk.Data.{ACL, Id}
-        iex> ExZk.Defs.ACL.new(:all, anyone())
-        %ACL{perms: 31, id: %Id{scheme: "world", id: "anyone"}}
-        iex> ExZk.Defs.ACL.new(7, anyone())
-        %ACL{perms: 7, id: %Id{scheme: "world", id: "anyone"}}
-        iex> ExZk.Defs.ACL.new([:read, :write, :delete], anyone())
-        %ACL{perms: 11, id: %Id{scheme: "world", id: "anyone"}}
+        iex> ExZk.Defs.ACL.new(:all, ExZk.Defs.Id.anyone()) |> to_string()
+        "world:anyone:rwcda"
+
+        iex> ExZk.Defs.ACL.new(3, ExZk.Defs.Id.anyone()) |> to_string()
+        "world:anyone:rw"
+
+        iex> ExZk.Defs.ACL.new([:read, :write, :delete], ExZk.Defs.Id.anyone()) |> to_string()
+        "world:anyone:rwd"
 
     """
     @spec new(Perm.t() | Perms.t(), Id.t()) :: t()
@@ -226,18 +279,35 @@ defmodule ExZk.Defs do
 
     @doc """
     This is a completely open ACL.
+
+    ## Example
+
+        iex> ExZk.Defs.ACL.open() |> to_string()
+        "world:anyone:rwcda"
+
     """
     @spec open :: t()
     def open, do: new(:all, Id.anyone())
 
     @doc """
     This ACL gives the creators authentication id's all permissions.
+
+    ## Example
+
+        iex> ExZk.Defs.ACL.creator_all() |> to_string()
+        "auth::rwcda"
+
     """
     @spec creator_all :: t()
     def creator_all, do: new(:all, Id.auth())
 
     @doc """
     This ACL gives the world the ability to read.
+
+    ## Example
+
+        iex> ExZk.Defs.ACL.read() |> to_string()
+        "world:anyone:r"
     """
     @spec read :: t()
     def read, do: new(:read, Id.anyone())
@@ -255,6 +325,7 @@ defmodule ExZk.Defs do
         [%ACL{perms: 3, id: %Id{scheme: "world", id: "anyone"}}]
         iex> parse_acls("world:anyone:r,auth::rw")
         [%ACL{perms: 1, id: %Id{scheme: "world", id: "anyone"}}, %ACL{perms: 3, id: %Id{scheme: "auth"}}]
+
     """
     @spec parse_acls(String.t()) :: [ACL.t()]
     def parse_acls(s) do
@@ -281,6 +352,7 @@ defmodule ExZk.Defs do
         %ACL{perms: 31, id: %Id{scheme: "world", id: "anyone"}}
         iex> parse("digest:user:pass:rw")
         %ACL{perms: 3, id: %Id{scheme: "digest", id: "user:pass"}}
+
     """
     @spec parse(String.t()) :: ACL.t()
     def parse(s) do

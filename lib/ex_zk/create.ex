@@ -68,9 +68,31 @@ defmodule ExZk.Create do
     {opcode, request}
   end
 
+  @doc """
+  Returns true if the mode is ephemeral
+
+  ## Examples
+
+      iex> ExZk.Create.ephemeral?(:ephemeral)
+      true
+
+      iex> ExZk.Create.ephemeral?(:persistent)
+      false
+  """
   @spec ephemeral?(Mode.t()) :: boolean()
   def ephemeral?(mode), do: mode in [:ephemeral, :ephemeral_sequential]
 
+  @doc """
+  Returns true if the mode is sequential
+
+  ## Examples
+
+      iex> ExZk.Create.sequential?(:persistent_sequential)
+      true
+
+      iex> ExZk.Create.sequential?(:persistent)
+      false
+  """
   @spec sequential?(Mode.t()) :: boolean()
   def sequential?(mode),
     do:
@@ -80,9 +102,31 @@ defmodule ExZk.Create do
         :persistent_sequential_with_ttl
       ]
 
+  @doc """
+  Returns true if the mode is container
+
+  ## Examples
+
+      iex> ExZk.Create.container?(:container)
+      true
+
+      iex> ExZk.Create.container?(:persistent)
+      false
+  """
   @spec container?(Mode.t()) :: boolean()
   def container?(mode), do: mode == :container
 
+  @doc """
+  Returns true if the mode has TTL
+
+  ## Examples
+
+      iex> ExZk.Create.ttl?(:persistent_with_ttl)
+      true
+
+      iex> ExZk.Create.ttl?(:persistent)
+      false
+  """
   @spec ttl?(Mode.t()) :: boolean()
   def ttl?(mode), do: mode in [:persistent_with_ttl, :persistent_sequential_with_ttl]
 end

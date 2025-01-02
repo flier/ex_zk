@@ -4,6 +4,7 @@ defmodule DocTest do
   doctest ExZk
   doctest ExZk.Auth
   doctest ExZk.Connector
+  doctest ExZk.Create
   doctest ExZk.Defs.ACL
   doctest ExZk.Defs.Id
   doctest ExZk.Defs.Perms
@@ -13,6 +14,7 @@ defmodule DocTest do
   doctest ExZk.Jute.Parser
   doctest ExZk.Session
   doctest ExZk.Socket
+  doctest ExZk.Socket.Error
   doctest ExZk.StartOptions
   doctest ExZk.TypedEnum
   doctest ExZk.URI
