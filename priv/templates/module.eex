@@ -8,7 +8,7 @@ defmodule <%= @module_name %> do
 
       defstruct [
           <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
-          <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.default_value(type, @opts) %>,
+          <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.default_value(type, @opts) |> Macro.to_string %>,
           <% end %>
       ]
 
@@ -27,7 +27,7 @@ defmodule <%= @module_name %> do
         }) do
           ExZk.Wire.pack([
             <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
-            {<%= ExZk.Jute.Binding.typename(type, @opts) %>, <%= name |> to_string |> Macro.underscore %>},
+            {<%= ExZk.Jute.Binding.typename(type, @opts) |> Macro.to_string %>, <%= name |> to_string |> Macro.underscore %>},
             <% end %>
           ])
         end
@@ -38,7 +38,7 @@ defmodule <%= @module_name %> do
         def unpack(%<%= name %>{} = value, data) when is_binary(data) do
           with {:ok, fields, rest} <- ExZk.Wire.unpack(data,
             <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
-            <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typename(type, @opts) %>,
+            <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typename(type, @opts) |> Macro.to_string %>,
             <% end %>
           ) do
             {:ok, Map.merge(value, Enum.into(fields, %{})), rest}

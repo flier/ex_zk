@@ -28,6 +28,110 @@ defmodule ExZk.Wire do
     def unpack(value, data)
   end
 
+  defmodule Record do
+    def make_record(name, fields) do
+      struct = make_struct(fields)
+      typespec = make_typespec(fields)
+      pack = make_pack(name, fields)
+      unpack = make_unpack(name, fields)
+
+      quote do
+        defmodule unquote(name) do
+          unquote(struct)
+
+          @type t :: unquote(typespec)
+
+          unquote(pack)
+          unquote(unpack)
+        end
+      end
+    end
+
+    defp make_struct(fields) do
+      fields =
+        fields
+        |> Enum.map(fn {name, type} ->
+          {name, ExZk.Jute.Binding.default_value(type)}
+        end)
+
+      quote do
+        defstruct(unquote(fields))
+      end
+    end
+
+    defp make_typespec(fields) do
+      fields =
+        fields
+        |> Enum.map(fn {name, type} ->
+          {name, ExZk.Jute.Binding.typespec(type)}
+        end)
+
+      quote do
+        %__MODULE__{
+          unquote_splicing(fields)
+        }
+      end
+    end
+
+    defp make_pack(name, fields) do
+      extract_fields =
+        fields
+        |> Enum.map(fn {name, _} ->
+          {name, name}
+        end)
+
+      pack_fields =
+        fields
+        |> Enum.map(fn {name, type} ->
+          {ExZk.Jute.Binding.typename(type), name}
+        end)
+
+      quote do
+        defimpl ExZk.Wire.Pack, for: unquote(name) do
+          @spec pack(value :: unquote(name).t()) :: binary()
+          def pack(%unquote(name){unquote_splicing(extract_fields)} = value) do
+            ExZk.Wire.pack(unquote(pack_fields))
+          end
+        end
+      end
+    end
+
+    defp make_unpack(name, fields) do
+      unpack_fields =
+        fields
+        |> Enum.map(fn {name, type} ->
+          {name, ExZk.Jute.Binding.typename(type)}
+        end)
+
+      quote do
+        defimpl ExZk.Wire.Unpack do
+          @spec unpack(value :: unquote(name).t(), data :: binary()) ::
+                  {:ok, unquote(name).t(), rest :: binary()} | {:error, :nomatch}
+          def unpack(%unquote(name){} = value, data) when is_binary(data) do
+            with {:ok, fields, rest} <- ExZk.Wire.unpack(data, unquote(unpack_fields)) do
+              {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+            end
+          end
+        end
+      end
+    end
+  end
+
+  @doc """
+  Define a record
+
+  ## Examples
+
+      iex> import ExZk.Wire
+      iex> defrecord Test, scheme: :ustring, id: :ustring
+      iex> Test
+      DocTest.Test
+      iex> Test.__info__(:struct)
+      [%{default: "", field: :scheme}, %{default: "", field: :id}]
+
+  """
+  defmacro defrecord(name, fields), do: Record.make_record(name, fields)
+
   defmodule Value do
     @moduledoc """
     Typed value

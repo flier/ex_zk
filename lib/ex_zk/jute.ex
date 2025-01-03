@@ -446,6 +446,8 @@ defmodule ExZk.Jute do
       |> Code.format_string!()
     end
 
+    defp module(fullname, opts), do: String.to_atom("Elixir." <> module_name(fullname, opts))
+
     defp module_name(fullname, opts) do
       [name | rest] =
         fullname
@@ -470,33 +472,29 @@ defmodule ExZk.Jute do
     def typespec(:ustring, _), do: quote(do: String.t())
     def typespec(:buffer, _), do: quote(do: binary())
     def typespec({:vector, type}, opts), do: quote(do: [unquote(typespec(type, opts))])
+    def typespec(type, opts), do: quote(do: unquote(module(type, opts)).t())
 
-    def typespec(type, opts) do
-      mod = String.to_atom("Elixir." <> module_name(type, opts))
+    @spec typename(ExZk.Wire.type(), [option()]) :: term()
+    def typename(type, opts \\ [])
+    def typename(:boolean, _), do: :boolean
+    def typename(:byte, _), do: :byte
+    def typename(:int, _), do: :int
+    def typename(:long, _), do: :long
+    def typename(:float, _), do: :float
+    def typename(:double, _), do: :double
+    def typename(:ustring, _), do: :ustring
+    def typename(:buffer, _), do: :buffer
+    def typename({:vector, type}, opts), do: {:vector, typename(type, opts)}
+    def typename(type, opts), do: module(type, opts)
 
-      quote(do: unquote(mod).t())
-    end
-
-    @spec typename(ExZk.Wire.type(), [option()]) :: String.t()
-    def typename(:boolean, _), do: ":boolean"
-    def typename(:byte, _), do: ":byte"
-    def typename(:int, _), do: ":int"
-    def typename(:long, _), do: ":long"
-    def typename(:float, _), do: ":float"
-    def typename(:double, _), do: ":double"
-    def typename(:ustring, _), do: ":ustring"
-    def typename(:buffer, _), do: ":buffer"
-    def typename({:vector, type}, opts), do: "{:vector, " <> typename(type, opts) <> "}"
-    def typename(type, opts), do: module_name(type, opts)
-
-    @spec default_value(ExZk.Wire.type(), [option()]) :: String.t()
+    @spec default_value(ExZk.Wire.type(), [option()]) :: term()
     def default_value(type, opts \\ [])
-    def default_value(:boolean, _), do: "false"
-    def default_value(type, _) when type in [:byte, :int, :long], do: "0"
-    def default_value(type, _) when type in [:float, :double], do: "0.0"
-    def default_value(:ustring, _), do: "\"\""
-    def default_value(:buffer, _), do: "<<>>"
-    def default_value({:vector, _type}, _), do: "[]"
-    def default_value(type, opts), do: "%" <> module_name(type, opts) <> "{}"
+    def default_value(:boolean, _), do: false
+    def default_value(type, _) when type in [:byte, :int, :long], do: 0
+    def default_value(type, _) when type in [:float, :double], do: 0.0
+    def default_value(:ustring, _), do: ""
+    def default_value(:buffer, _), do: <<>>
+    def default_value({:vector, _type}, _), do: []
+    def default_value(type, opts), do: quote(do: %unquote(module(type, opts)){})
   end
 end

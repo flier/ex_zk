@@ -12,6 +12,7 @@ defmodule ExZk.MixProject do
       app: :ex_zk,
       version: @version,
       elixir: @elixir_requirement,
+      consolidate_protocols: Mix.env() != :test,
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),

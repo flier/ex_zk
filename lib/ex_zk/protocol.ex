@@ -283,7 +283,7 @@ defmodule ExZk.Proto do
               last_zxid_seen: 0,
               time_out: 0,
               session_id: 0,
-              passwd: <<>>,
+              passwd: "",
               read_only: false
 
     @type t :: %__MODULE__{
@@ -339,7 +339,7 @@ defmodule ExZk.Proto do
     defstruct protocol_version: 0,
               time_out: 0,
               session_id: 0,
-              passwd: <<>>,
+              passwd: "",
               read_only: false
 
     @type t :: %__MODULE__{
@@ -573,7 +573,7 @@ defmodule ExZk.Proto do
   defmodule AuthPacket do
     defstruct type: 0,
               scheme: "",
-              auth: <<>>
+              auth: ""
 
     @type t :: %__MODULE__{
             type: integer(),
@@ -693,7 +693,7 @@ defmodule ExZk.Proto do
 
   defmodule SetDataRequest do
     defstruct path: "",
-              data: <<>>,
+              data: "",
               version: 0
 
     @type t :: %__MODULE__{
@@ -813,7 +813,7 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetSASLRequest do
-    defstruct token: <<>>
+    defstruct token: ""
 
     @type t :: %__MODULE__{
             token: binary()
@@ -845,7 +845,7 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetSASLRequest do
-    defstruct token: <<>>
+    defstruct token: ""
 
     @type t :: %__MODULE__{
             token: binary()
@@ -877,7 +877,7 @@ defmodule ExZk.Proto do
   end
 
   defmodule SetSASLResponse do
-    defstruct token: <<>>
+    defstruct token: ""
 
     @type t :: %__MODULE__{
             token: binary()
@@ -910,7 +910,7 @@ defmodule ExZk.Proto do
 
   defmodule CreateRequest do
     defstruct path: "",
-              data: <<>>,
+              data: "",
               acl: [],
               flags: 0
 
@@ -957,7 +957,7 @@ defmodule ExZk.Proto do
 
   defmodule CreateTTLRequest do
     defstruct path: "",
-              data: <<>>,
+              data: "",
               acl: [],
               flags: 0,
               ttl: 0
@@ -1708,7 +1708,7 @@ defmodule ExZk.Proto do
   end
 
   defmodule GetDataResponse do
-    defstruct data: <<>>,
+    defstruct data: "",
               stat: %ExZk.Data.Stat{}
 
     @type t :: %__MODULE__{
@@ -2147,7 +2147,7 @@ defmodule ExZk.Txn do
 
   defmodule CreateTxnV0 do
     defstruct path: "",
-              data: <<>>,
+              data: "",
               acl: [],
               ephemeral: false
 
@@ -2194,7 +2194,7 @@ defmodule ExZk.Txn do
 
   defmodule CreateTxn do
     defstruct path: "",
-              data: <<>>,
+              data: "",
               acl: [],
               ephemeral: false,
               parent_c_version: 0
@@ -2246,7 +2246,7 @@ defmodule ExZk.Txn do
 
   defmodule CreateTTLTxn do
     defstruct path: "",
-              data: <<>>,
+              data: "",
               acl: [],
               parent_c_version: 0,
               ttl: 0
@@ -2298,7 +2298,7 @@ defmodule ExZk.Txn do
 
   defmodule CreateContainerTxn do
     defstruct path: "",
-              data: <<>>,
+              data: "",
               acl: [],
               parent_c_version: 0
 
@@ -2377,7 +2377,7 @@ defmodule ExZk.Txn do
 
   defmodule SetDataTxn do
     defstruct path: "",
-              data: <<>>,
+              data: "",
               version: 0
 
     @type t :: %__MODULE__{
@@ -2631,7 +2631,7 @@ defmodule ExZk.Txn do
 
   defmodule Txn do
     defstruct type: 0,
-              data: <<>>
+              data: ""
 
     @type t :: %__MODULE__{
             type: integer(),
