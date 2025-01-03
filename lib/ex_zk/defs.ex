@@ -297,39 +297,45 @@ defmodule ExZk.Defs do
     def new(perms, id) when is_integer(perms), do: %ACL{perms: perms, id: id}
 
     @doc """
+    The default ACLs to use when creating a node.
+    """
+    @spec default_acls :: [t()]
+    def default_acls, do: [open_acl_unsafe()]
+
+    @doc """
     This is a completely open ACL.
 
     ## Example
 
-        iex> ExZk.Defs.ACL.open() |> to_string()
+        iex> ExZk.Defs.ACL.open_acl_unsafe() |> to_string()
         "world:anyone:rwcda"
 
     """
-    @spec open :: t()
-    def open, do: new(:all, Id.anyone())
+    @spec open_acl_unsafe :: t()
+    def open_acl_unsafe, do: new(:all, Id.anyone())
 
     @doc """
     This ACL gives the creators authentication id's all permissions.
 
     ## Example
 
-        iex> ExZk.Defs.ACL.creator_all() |> to_string()
+        iex> ExZk.Defs.ACL.creator_all_acl() |> to_string()
         "auth::rwcda"
 
     """
-    @spec creator_all :: t()
-    def creator_all, do: new(:all, Id.auth())
+    @spec creator_all_acl :: t()
+    def creator_all_acl, do: new(:all, Id.auth())
 
     @doc """
     This ACL gives the world the ability to read.
 
     ## Example
 
-        iex> ExZk.Defs.ACL.read() |> to_string()
+        iex> ExZk.Defs.ACL.read_acl_unsafe() |> to_string()
         "world:anyone:r"
     """
-    @spec read :: t()
-    def read, do: new(:read, Id.anyone())
+    @spec read_acl_unsafe :: t()
+    def read_acl_unsafe, do: new(:read, Id.anyone())
 
     @doc """
     Parse an ACL string.

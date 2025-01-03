@@ -238,12 +238,22 @@ defmodule ExZk.Multi do
             results: [Result.t()]
           }
 
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(Response.t(), data :: iodata()) ::
+              {:ok, Response.t(), rest :: binary()} | {:error, reason :: term()}
+      def unpack(%Response{} = value, data) do
+        with {:ok, %Response{results: results}, rest} <- Response.unpack(data) do
+          {:ok, %Response{value | results: results}, rest}
+        end
+      end
+    end
+
     @doc """
     Unpacks a multi operation response.
     """
-    @spec unpack(iodata()) :: {:ok, t()} | {:error, :nomatch}
-    def unpack(data) when is_binary(data) do
-      with {:ok, hdr, rest} <- Unpack.unpack(%MultiHeader{}, data),
+    @spec unpack(iodata()) :: {:ok, t(), rest :: binary()} | {:error, reason :: term()}
+    def unpack(data) do
+      with {:ok, hdr, rest} <- Unpack.unpack(%MultiHeader{}, IO.iodata_to_binary(data)),
            {:ok, results, rest} <- unpack_results(hdr, rest, []) do
         {:ok, %__MODULE__{results: results}, rest}
       end

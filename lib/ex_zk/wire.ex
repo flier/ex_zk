@@ -23,7 +23,7 @@ defmodule ExZk.Wire do
 
   defprotocol Unpack do
     @spec unpack(value :: any(), data :: binary()) ::
-            {:ok, any(), rest :: binary()} | {:error, :nomatch}
+            {:ok, any(), rest :: binary()} | {:error, reason :: term()}
     @doc "Unpack a value from a binary"
     def unpack(value, data)
   end
@@ -343,8 +343,8 @@ defmodule ExZk.Wire do
     end
   end
 
-  defp unpack_type({name, _type}, {acc, ""}) do
-    {:cont, {:ok, [{name, nil} | acc], ""}}
+  defp unpack_type({name, _type}, {:ok, acc, ""}) do
+    {:halt, {:ok, [{name, nil} | acc], ""}}
   end
 
   defp unpack_type({name, type}, {:ok, acc, buf}) do

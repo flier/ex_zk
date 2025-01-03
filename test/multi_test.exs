@@ -3,10 +3,11 @@ defmodule MultiTest do
 
   use ExZk.Defs
 
+  import ExZk.Defs.ACL
   import ExZk.Multi.Op
 
   alias ExZk.Data.Stat
-  alias ExZk.Defs.{ACL, ErrCode, OpCode}
+  alias ExZk.Defs.{ErrCode, OpCode}
   alias ExZk.Multi
   alias ExZk.Multi.{Response, Result}
   alias ExZk.Wire
@@ -29,6 +30,7 @@ defmodule MultiTest do
   @path "/foo/bar"
   @data "hello world"
   @version 123
+  @acls [creator_all_acl()]
   @stat %Stat{version: @version, data_length: byte_size(@data)}
   @children ["a", "b", "c"]
   @err :system_error
@@ -39,11 +41,11 @@ defmodule MultiTest do
 
   describe "given a multi op" do
     test "it can be construct" do
-      assert create(@path, @data, acl: [ACL.open()]) ==
-               {:create, @path, @data, [acl: [ACL.open()]]}
+      assert create(@path, @data, acl: @acls) ==
+               {:create, @path, @data, [acl: @acls]}
 
       assert create(@path, @data) == {:create, @path, @data, []}
-      assert create(@path, acl: [ACL.open()]) == {:create, @path, "", [acl: [ACL.open()]]}
+      assert create(@path, acl: @acls) == {:create, @path, "", [acl: @acls]}
 
       assert create(@path) == {:create, @path, "", []}
 
@@ -61,16 +63,17 @@ defmodule MultiTest do
     end
 
     test "it can be converted to a request" do
-      assert create(@path) |> to_request() == {:create, %CreateRequest{path: @path}}
+      assert create(@path) |> to_request() ==
+               {:create, %CreateRequest{path: @path, acl: default_acls()}}
 
       assert create(@path, @data) |> to_request() ==
-               {:create, %CreateRequest{path: @path, data: @data}}
+               {:create, %CreateRequest{path: @path, data: @data, acl: default_acls()}}
 
-      assert create(@path, @data, acl: [ACL.open()]) |> to_request() ==
-               {:create, %CreateRequest{path: @path, data: @data, acl: [ACL.open()]}}
+      assert create(@path, @data, acl: @acls) |> to_request() ==
+               {:create, %CreateRequest{path: @path, data: @data, acl: @acls}}
 
-      assert create(@path, acl: [ACL.open()]) |> to_request() ==
-               {:create, %CreateRequest{path: @path, acl: [ACL.open()]}}
+      assert create(@path, acl: @acls) |> to_request() ==
+               {:create, %CreateRequest{path: @path, acl: @acls}}
 
       assert delete(@path, @version) |> to_request() ==
                {:delete, %DeleteRequest{path: @path, version: @version}}
@@ -134,7 +137,7 @@ defmodule MultiTest do
 
       assert [create(@path, @data)] |> Multi.to_request() == [
                :create |> to_multi_hdr(),
-               %CreateRequest{path: @path, data: @data},
+               %CreateRequest{path: @path, data: @data, acl: default_acls()},
                @done
              ]
 
@@ -171,7 +174,7 @@ defmodule MultiTest do
              ]
              |> Multi.to_request() == [
                :create |> to_multi_hdr(),
-               %CreateRequest{path: @path, data: @data},
+               %CreateRequest{path: @path, data: @data, acl: default_acls()},
                :delete |> to_multi_hdr(),
                %DeleteRequest{path: @path, version: @any_version},
                :get_children |> to_multi_hdr(),

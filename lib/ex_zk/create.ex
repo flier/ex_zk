@@ -1,4 +1,5 @@
 defmodule ExZk.Create do
+  import ExZk.Defs.ACL
   import ExZk.TypedEnum
 
   alias ExZk.{Data.ACL, Defs.OpCode, Frame}
@@ -24,7 +25,7 @@ defmodule ExZk.Create do
   @spec new_request(Path.t(), iodata(), opts :: [option()]) ::
           {OpCode.t(), Frame.request()}
   def new_request(path, data \\ "", opts \\ []) do
-    acl = Keyword.get(opts, :acl, [])
+    acl = Keyword.get(opts, :acl, default_acls())
     ttl = Keyword.get(opts, :ttl)
 
     mode =

@@ -57,7 +57,7 @@ defmodule ExZk.MixProject do
 
   defp aliases do
     [
-      integration_test: ["test --include zookeeper:true test/integration_test.exs"]
+      integration_test: ["test --include external test/integration_test.exs"]
     ]
   end
 
@@ -70,7 +70,7 @@ defmodule ExZk.MixProject do
         "coveralls.html": :test,
         "coveralls.cobertura": :test,
         integration_test: :test,
-        "zk.cli": [:dev, :test]
+        "zk.cli": :dev
       ]
     ]
   end

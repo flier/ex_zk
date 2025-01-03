@@ -26,12 +26,12 @@ defmodule ExZk.Util do
       |> Enum.reduce(:ok, &merge_results(&1, &2))
 
   def delete_recursive(session, path, batch_size, timeout)
-      when batch_size > 0,
-      do:
-        list_subtree(session, path, :cfs)
-        |> Stream.chunk_every(batch_size)
-        |> Stream.map(&delete_in_batch(session, &1, timeout))
-        |> Enum.reduce(:ok, &merge_results(&1, &2))
+      when batch_size > 0 do
+    list_subtree(session, path, :cfs)
+    |> Stream.chunk_every(batch_size)
+    |> Stream.map(&delete_in_batch(session, &1, timeout))
+    |> Enum.reduce(:ok, &merge_results(&1, &2))
+  end
 
   defp delete_in_batch(session, tree, timeout),
     do: Session.multi(session, tree |> Enum.map(&Multi.Op.delete/1), timeout)
@@ -52,9 +52,9 @@ defmodule ExZk.Util do
   def list_subtree(session, dir, strategy \\ :bfs, watch \\ false) do
     with {:ok, _data, _stat} <- Session.get_data(session, dir, watch) do
       case strategy do
-        :bfs -> list_subtree_bfs(session, dir, watch)
-        :dfs -> list_subtree_dfs(session, dir, watch)
-        :cfs -> list_subtree_cfs(session, dir, watch)
+        :bfs -> Stream.concat([dir], list_subtree_bfs(session, dir, watch))
+        :dfs -> Stream.concat([dir], list_subtree_dfs(session, dir, watch))
+        :cfs -> Stream.concat(list_subtree_cfs(session, dir, watch), [dir])
       end
     end
   end

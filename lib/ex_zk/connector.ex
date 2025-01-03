@@ -150,13 +150,13 @@ defmodule ExZk.Connector do
   defp recv_connect_response(transport, socket, timeout, buffered \\ <<>>) do
     with {:ok, data} <- transport.recv(socket, 0, timeout) do
       case buffered <> data do
-        <<sz::32, data::binary-size(sz), rest::binary>> ->
-          if byte_size(rest) == 0 do
-            {:ok, res, _rest} = Unpack.unpack(%ConnectResponse{}, data)
+        <<sz::32, data::binary-size(sz)>> ->
+          with {:ok, res, _rest} <- Unpack.unpack(%ConnectResponse{}, data) do
             {:ok, res}
-          else
-            {:error, :extra_bytes_after_reply}
           end
+
+        <<sz::32, _data::binary-size(sz), _rest::binary>> ->
+          {:error, :extra_bytes_after_reply}
 
         buffered ->
           recv_connect_response(transport, socket, timeout, buffered)

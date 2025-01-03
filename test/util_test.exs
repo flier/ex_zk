@@ -11,6 +11,7 @@ defmodule UtilTest do
   @stat %Stat{}
 
   @bfs_nodes [
+    "/foo",
     "/foo/bar",
     "/foo/baz",
     "/foo/bar/a",
@@ -22,6 +23,7 @@ defmodule UtilTest do
   ]
 
   @dfs_nodes [
+    "/foo",
     "/foo/bar",
     "/foo/bar/a",
     "/foo/bar/b",
@@ -40,7 +42,8 @@ defmodule UtilTest do
     "/foo/baz/x",
     "/foo/baz/y",
     "/foo/baz/z",
-    "/foo/baz"
+    "/foo/baz",
+    "/foo"
   ]
 
   setup_with_mocks([

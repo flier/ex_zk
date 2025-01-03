@@ -1,17 +1,19 @@
 defmodule CreateTest do
   use ExUnit.Case, async: true
 
+  import ExZk.Defs.ACL
+
   alias ExZk.Create
-  alias ExZk.Defs.ACL
   alias ExZk.Proto.{CreateRequest, CreateTTLRequest}
 
   @path "/foo/bar"
   @data "hello world"
+  @acls [creator_all_acl()]
 
   describe "it create a create request for" do
     test "a persistent node" do
       assert Create.new_request(@path, @data) ==
-               {:create, %CreateRequest{path: @path, data: @data}}
+               {:create, %CreateRequest{path: @path, data: @data, acl: default_acls()}}
     end
 
     test "a persistent sequential mode" do
@@ -20,6 +22,7 @@ defmodule CreateTest do
                 %CreateRequest{
                   path: @path,
                   data: @data,
+                  acl: default_acls(),
                   flags: Create.Mode.value!(:persistent_sequential)
                 }}
     end
@@ -30,6 +33,7 @@ defmodule CreateTest do
                 %CreateRequest{
                   path: @path,
                   data: @data,
+                  acl: default_acls(),
                   flags: Create.Mode.value!(:container)
                 }}
     end
@@ -40,14 +44,15 @@ defmodule CreateTest do
                 %CreateTTLRequest{
                   path: @path,
                   data: @data,
+                  acl: default_acls(),
                   flags: Create.Mode.value!(:persistent_with_ttl),
                   ttl: 300
                 }}
     end
 
     test "a node with ACL" do
-      assert Create.new_request(@path, @data, acl: [ACL.open()]) ==
-               {:create, %CreateRequest{path: @path, data: @data, acl: [ACL.open()]}}
+      assert Create.new_request(@path, @data, acl: @acls) ==
+               {:create, %CreateRequest{path: @path, data: @data, acl: @acls}}
     end
   end
 end

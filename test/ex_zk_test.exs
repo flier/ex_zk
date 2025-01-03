@@ -3,9 +3,10 @@ defmodule ExZkTest do
 
   use ExZk.Defs
 
+  import ExZk.Defs.ACL
+
   alias ExZk.{Create, Multi, Proto}
   alias ExZk.Data.{ClientInfo, Stat}
-  alias ExZk.Defs.ACL
 
   @path "/foo/bar"
   @data "hello world"
@@ -13,7 +14,7 @@ defmodule ExZkTest do
   @stat %Stat{}
   @version 123
   @ttl 60
-  @acl [ACL.open()]
+  @acls default_acls()
   @client_info %ClientInfo{auth_scheme: "digest", user: "username"}
   @multi_ops [
     Multi.Op.create(@path, @data),
@@ -54,7 +55,7 @@ defmodule ExZkTest do
     def connected({:call, from}, {:send_request, opcode, request}, data) do
       case data[opcode] do
         {^request, response} ->
-          {:keep_state_and_data, {:reply, from, response}}
+          {:keep_state, %{data | opcode => nil}, {:reply, from, response}}
 
         [{^request, response} | rest] ->
           {:keep_state, %{data | opcode => rest}, {:reply, from, response}}
@@ -157,7 +158,7 @@ defmodule ExZkTest do
       {:ok, session} =
         MockSession.start_link(%{
           create:
-            {%Proto.CreateRequest{path: @path, data: @data},
+            {%Proto.CreateRequest{path: @path, data: @data, acl: default_acls()},
              {:ok, %Proto.CreateResponse{path: @path}}}
         })
 
@@ -171,6 +172,7 @@ defmodule ExZkTest do
             {%Proto.CreateRequest{
                path: @path,
                data: @data,
+               acl: default_acls(),
                flags: Create.Mode.value!(:container)
              }, {:ok, %Proto.CreateResponse{path: @path}}}
         })
@@ -185,6 +187,7 @@ defmodule ExZkTest do
             {%Proto.CreateTTLRequest{
                path: @path,
                data: @data,
+               acl: default_acls(),
                flags: Create.Mode.value!(:persistent_with_ttl),
                ttl: @ttl
              }, {:ok, %Proto.Create2Response{path: @path, stat: @stat}}}
@@ -201,6 +204,7 @@ defmodule ExZkTest do
             {%Proto.CreateRequest{
                path: @path,
                data: @data,
+               acl: default_acls(),
                flags: Create.Mode.value!(:persistent_sequential)
              }, {:ok, %Proto.CreateResponse{path: @path}}}
         })
@@ -233,10 +237,16 @@ defmodule ExZkTest do
             {%Proto.GetDataRequest{path: @path},
              {:ok, %Proto.GetDataResponse{data: @data, stat: @stat}}},
           get_children:
-            Enum.concat([""], @children)
-            |> Enum.map(
-              &{%Proto.GetChildrenRequest{path: Path.join(@path, &1)},
-               {:ok, %Proto.GetChildrenResponse{children: []}}}
+            Enum.concat(
+              [
+                {%Proto.GetChildrenRequest{path: @path},
+                 {:ok, %Proto.GetChildrenResponse{children: @children}}}
+              ],
+              Stream.map(
+                @children,
+                &{%Proto.GetChildrenRequest{path: Path.join(@path, &1)},
+                 {:ok, %Proto.GetChildrenResponse{children: []}}}
+              )
             ),
           delete:
             Enum.concat(@children, [""])
@@ -255,10 +265,16 @@ defmodule ExZkTest do
             {%Proto.GetDataRequest{path: @path},
              {:ok, %Proto.GetDataResponse{data: @data, stat: @stat}}},
           get_children:
-            Enum.concat([""], @children)
-            |> Enum.map(
-              &{%Proto.GetChildrenRequest{path: Path.join(@path, &1)},
-               {:ok, %Proto.GetChildrenResponse{children: []}}}
+            Enum.concat(
+              [
+                {%Proto.GetChildrenRequest{path: @path},
+                 {:ok, %Proto.GetChildrenResponse{children: @children}}}
+              ],
+              Stream.map(
+                @children,
+                &{%Proto.GetChildrenRequest{path: Path.join(@path, &1)},
+                 {:ok, %Proto.GetChildrenResponse{children: []}}}
+              )
             ),
           multi:
             {Multi.to_request(
@@ -297,32 +313,32 @@ defmodule ExZkTest do
         MockSession.start_link(%{
           get_acl:
             {%Proto.GetACLRequest{path: @path},
-             {:ok, %Proto.GetACLResponse{acl: @acl, stat: @stat}}}
+             {:ok, %Proto.GetACLResponse{acl: @acls, stat: @stat}}}
         })
 
-      assert ExZk.get_acl(session, @path) == {:ok, @acl, @stat}
+      assert ExZk.get_acl(session, @path) == {:ok, @acls, @stat}
     end
 
     test "it can set ACL of a node" do
       {:ok, session} =
         MockSession.start_link(%{
           set_acl:
-            {%Proto.SetACLRequest{path: @path, acl: @acl, version: @any_version},
+            {%Proto.SetACLRequest{path: @path, acl: @acls, version: @any_version},
              {:ok, %Proto.SetACLResponse{stat: @stat}}}
         })
 
-      assert ExZk.set_acl(session, @path, @acl) == {:ok, @stat}
+      assert ExZk.set_acl(session, @path, @acls) == {:ok, @stat}
     end
 
     test "it can set ACL of a node with version" do
       {:ok, session} =
         MockSession.start_link(%{
           set_acl:
-            {%Proto.SetACLRequest{path: @path, acl: @acl, version: @version},
+            {%Proto.SetACLRequest{path: @path, acl: @acls, version: @version},
              {:ok, %Proto.SetACLResponse{stat: @stat}}}
         })
 
-      assert ExZk.set_acl(session, @path, @acl, @version) == {:ok, @stat}
+      assert ExZk.set_acl(session, @path, @acls, @version) == {:ok, @stat}
     end
 
     test "it can sync a node" do
