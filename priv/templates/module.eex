@@ -14,7 +14,7 @@ defmodule <%= @module_name %> do
 
       @type t :: %__MODULE__{
           <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
-          <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typespec(type, @opts) %>,
+          <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typespec(type, @opts) |> Macro.to_string %>,
           <% end %>
       }
 

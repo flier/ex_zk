@@ -462,14 +462,20 @@ defmodule ExZk.Jute do
       end
     end
 
-    @spec typespec(ExZk.Wire.type(), [option()]) :: String.t()
-    def typespec(:boolean, _), do: "boolean()"
-    def typespec(type, _) when type in [:byte, :int, :long], do: "integer()"
-    def typespec(type, _) when type in [:float, :double], do: "float()"
-    def typespec(:ustring, _), do: "String.t()"
-    def typespec(:buffer, _), do: "binary()"
-    def typespec({:vector, type}, opts), do: "list(" <> typespec(type, opts) <> ")"
-    def typespec(type, opts), do: module_name(type, opts) <> ".t()"
+    @spec typespec(ExZk.Wire.type(), [option()]) :: term()
+    def typespec(type, opts \\ [])
+    def typespec(:boolean, _), do: quote(do: boolean())
+    def typespec(type, _) when type in [:byte, :int, :long], do: quote(do: integer())
+    def typespec(type, _) when type in [:float, :double], do: quote(do: float())
+    def typespec(:ustring, _), do: quote(do: String.t())
+    def typespec(:buffer, _), do: quote(do: binary())
+    def typespec({:vector, type}, opts), do: quote(do: [unquote(typespec(type, opts))])
+
+    def typespec(type, opts) do
+      mod = String.to_atom("Elixir." <> module_name(type, opts))
+
+      quote(do: unquote(mod).t())
+    end
 
     @spec typename(ExZk.Wire.type(), [option()]) :: String.t()
     def typename(:boolean, _), do: ":boolean"
@@ -483,6 +489,8 @@ defmodule ExZk.Jute do
     def typename({:vector, type}, opts), do: "{:vector, " <> typename(type, opts) <> "}"
     def typename(type, opts), do: module_name(type, opts)
 
+    @spec default_value(ExZk.Wire.type(), [option()]) :: String.t()
+    def default_value(type, opts \\ [])
     def default_value(:boolean, _), do: "false"
     def default_value(type, _) when type in [:byte, :int, :long], do: "0"
     def default_value(type, _) when type in [:float, :double], do: "0.0"

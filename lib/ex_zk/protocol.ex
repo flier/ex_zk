@@ -395,9 +395,9 @@ defmodule ExZk.Proto do
 
     @type t :: %__MODULE__{
             relative_zxid: integer(),
-            data_watches: list(String.t()),
-            exist_watches: list(String.t()),
-            child_watches: list(String.t())
+            data_watches: [String.t()],
+            exist_watches: [String.t()],
+            child_watches: [String.t()]
           }
 
     defimpl ExZk.Wire.Pack do
@@ -444,11 +444,11 @@ defmodule ExZk.Proto do
 
     @type t :: %__MODULE__{
             relative_zxid: integer(),
-            data_watches: list(String.t()),
-            exist_watches: list(String.t()),
-            child_watches: list(String.t()),
-            persistent_watches: list(String.t()),
-            persistent_recursive_watches: list(String.t())
+            data_watches: [String.t()],
+            exist_watches: [String.t()],
+            child_watches: [String.t()],
+            persistent_watches: [String.t()],
+            persistent_recursive_watches: [String.t()]
           }
 
     defimpl ExZk.Wire.Pack do
@@ -917,7 +917,7 @@ defmodule ExZk.Proto do
     @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             flags: integer()
           }
 
@@ -965,7 +965,7 @@ defmodule ExZk.Proto do
     @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             flags: integer(),
             ttl: integer()
           }
@@ -1391,7 +1391,7 @@ defmodule ExZk.Proto do
 
     @type t :: %__MODULE__{
             path: String.t(),
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             version: integer()
           }
 
@@ -1748,7 +1748,7 @@ defmodule ExZk.Proto do
     defstruct children: []
 
     @type t :: %__MODULE__{
-            children: list(String.t())
+            children: [String.t()]
           }
 
     defimpl ExZk.Wire.Pack do
@@ -1813,7 +1813,7 @@ defmodule ExZk.Proto do
               stat: %ExZk.Data.Stat{}
 
     @type t :: %__MODULE__{
-            children: list(String.t()),
+            children: [String.t()],
             stat: ExZk.Data.Stat.t()
           }
 
@@ -1850,7 +1850,7 @@ defmodule ExZk.Proto do
               stat: %ExZk.Data.Stat{}
 
     @type t :: %__MODULE__{
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             stat: ExZk.Data.Stat.t()
           }
 
@@ -1992,7 +1992,7 @@ defmodule ExZk.Proto do
     defstruct ephemerals: []
 
     @type t :: %__MODULE__{
-            ephemerals: list(String.t())
+            ephemerals: [String.t()]
           }
 
     defimpl ExZk.Wire.Pack do
@@ -2024,7 +2024,7 @@ defmodule ExZk.Proto do
     defstruct client_info: []
 
     @type t :: %__MODULE__{
-            client_info: list(ExZk.Data.ClientInfo.t())
+            client_info: [ExZk.Data.ClientInfo.t()]
           }
 
     defimpl ExZk.Wire.Pack do
@@ -2154,7 +2154,7 @@ defmodule ExZk.Txn do
     @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             ephemeral: boolean()
           }
 
@@ -2202,7 +2202,7 @@ defmodule ExZk.Txn do
     @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             ephemeral: boolean(),
             parent_c_version: integer()
           }
@@ -2254,7 +2254,7 @@ defmodule ExZk.Txn do
     @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             parent_c_version: integer(),
             ttl: integer()
           }
@@ -2305,7 +2305,7 @@ defmodule ExZk.Txn do
     @type t :: %__MODULE__{
             path: String.t(),
             data: binary(),
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             parent_c_version: integer()
           }
 
@@ -2461,7 +2461,7 @@ defmodule ExZk.Txn do
 
     @type t :: %__MODULE__{
             path: String.t(),
-            acl: list(ExZk.Data.ACL.t()),
+            acl: [ExZk.Data.ACL.t()],
             version: integer()
           }
 
@@ -2569,7 +2569,7 @@ defmodule ExZk.Txn do
     defstruct paths2_delete: []
 
     @type t :: %__MODULE__{
-            paths2_delete: list(String.t())
+            paths2_delete: [String.t()]
           }
 
     defimpl ExZk.Wire.Pack do
@@ -2670,7 +2670,7 @@ defmodule ExZk.Txn do
     defstruct txns: []
 
     @type t :: %__MODULE__{
-            txns: list(ExZk.Txn.Txn.t())
+            txns: [ExZk.Txn.Txn.t()]
           }
 
     defimpl ExZk.Wire.Pack do
