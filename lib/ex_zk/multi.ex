@@ -3,7 +3,7 @@ defmodule ExZk.Multi do
   A multi-operation transaction.
   """
 
-  alias ExZk.{Create, Proto.MultiHeader, Wire.Unpack}
+  alias ExZk.{Create, Proto.MultiHeader, Session, Wire.Unpack}
   alias ExZk.Defs.{ErrCode, OpCode}
 
   defmodule Op do
@@ -13,6 +13,8 @@ defmodule ExZk.Multi do
     Each operation can be a `create/3`, `set_data/2`, `delete/1`, a version `check/2`
     or just read operations like `get_children/1` or `get_data/1`.
     """
+
+    use ExZk.Defs
 
     alias ExZk.{Data.Stat, Defs.OpCode}
 
@@ -40,7 +42,7 @@ defmodule ExZk.Multi do
             | {:get_data, Path.t()}
             | {:set_data, Path.t(), iodata(), version()}
 
-    @type version :: integer()
+    @type version :: Session.version()
 
     @type request ::
             CreateRequest.t()
@@ -58,8 +60,6 @@ defmodule ExZk.Multi do
             | SetDataResponse.t()
             | GetChildrenResponse.t()
             | GetDataResponse.t()
-
-    @any_version -1
 
     @doc """
     Constructs a create operation with data and options.

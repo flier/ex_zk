@@ -1,6 +1,8 @@
 defmodule FramerTest do
   use ExUnit.Case, async: true
 
+  use ExZk.Defs
+
   import ExZk.Wire
 
   alias ExZk.Proto.{
@@ -18,8 +20,6 @@ defmodule FramerTest do
   @path "/foobar"
   @data "hello world"
   @err ErrCode.value!(:bad_arguments)
-
-  @ping_xid -2
 
   @create_request %CreateRequest{path: @path, data: @data}
   @create_response %CreateResponse{path: @path}

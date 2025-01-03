@@ -1,6 +1,8 @@
 defmodule ExZk.Session do
   require Logger
 
+  use ExZk.Defs
+
   import ExZk.Frame
 
   alias ExZk.{
@@ -61,12 +63,9 @@ defmodule ExZk.Session do
   @type option :: {:session_id, integer()} | Socket.option() | :gen_statem.start_opt()
 
   @type session :: :gen_statem.server_ref()
-  @type version :: integer()
   @type status :: :disconnected | :connecting | :connected
+  @type version :: integer()
   @type zxid :: Frame.zxid()
-
-  @default_timeout 5000
-  @any_version -1
 
   ####
   ## Public API
@@ -609,7 +608,7 @@ defmodule ExZk.Session do
     :telemetry.execute(
       [:ex_zk, :session, :auth, :failed],
       %{system_time: System.system_time()},
-      session_info(data) |> Map.put(:error, ErrCode.cast(err))
+      session_info(data) |> Map.put(:error, ErrCode.cast!(err))
     )
 
     :keep_state_and_data

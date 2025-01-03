@@ -1,6 +1,8 @@
 defmodule ExZkTest do
   use ExUnit.Case, async: true
 
+  use ExZk.Defs
+
   alias ExZk.{Create, Multi, Proto}
   alias ExZk.Data.{ClientInfo, Stat}
   alias ExZk.Defs.ACL
@@ -10,7 +12,6 @@ defmodule ExZkTest do
   @children ["a", "b", "c"]
   @stat %Stat{}
   @version 123
-  @any_version -1
   @ttl 60
   @acl [ACL.open()]
   @client_info %ClientInfo{auth_scheme: "digest", user: "username"}

@@ -1,6 +1,8 @@
 defmodule MultiTest do
   use ExUnit.Case, async: true
 
+  use ExZk.Defs
+
   import ExZk.Multi.Op
 
   alias ExZk.Data.Stat
@@ -29,7 +31,6 @@ defmodule MultiTest do
   @version 123
   @stat %Stat{version: @version, data_length: byte_size(@data)}
   @children ["a", "b", "c"]
-  @any_version -1
   @err :system_error
   @err_code ErrCode.value!(@err)
   @done %MultiHeader{type: -1, done: true, err: -1}

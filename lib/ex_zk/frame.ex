@@ -1,5 +1,8 @@
 defmodule ExZk.Frame do
-  alias ExZk.{Defs.OpCode, Multi, Proto, WatchedEvent, Watcher.Event}
+  use ExZk.Defs
+
+  alias ExZk.Defs.{ErrCode, OpCode}
+  alias ExZk.{Multi, Proto, WatchedEvent, Watcher.Event}
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
   alias ExZk.Wire.{Pack, Unpack}
 
@@ -35,7 +38,7 @@ defmodule ExZk.Frame do
 
   @type response ::
           :pong
-          | {:auth_failed, error()}
+          | {:auth_failed, ErrCode.t()}
           | {:notification, zxid(), WatcherEvent.t()}
           | Proto.ConnectResponse.t()
           | Proto.Create2Response.t()
@@ -51,16 +54,10 @@ defmodule ExZk.Frame do
           | Proto.SetDataResponse.t()
           | Proto.SyncResponse.t()
 
-  @type error :: integer()
-  @type xid :: integer()
   @type zxid :: integer()
-  @type watches :: list(String.t())
+  @type watches :: [String.t()]
 
   @default_protocol_version 0
-
-  @ping_xid -2
-  @auth_packet_xid -4
-  @set_watches_xid -8
 
   ####
   ## Public API
@@ -177,11 +174,9 @@ defmodule ExZk.Frame do
   end
 
   defimpl Unpack do
-    alias ExZk.{Frame, Proto.ReplyHeader, Wire}
+    use ExZk.Defs
 
-    @notification_xid -1
-    @ping_xid -2
-    @auth_packet_xid -4
+    alias ExZk.{Defs.ErrCode, Frame, Proto.ReplyHeader, Wire}
 
     def unpack(%Frame{} = frame, data) when is_binary(data) do
       {:ok, reply_hdr, rest} = Unpack.unpack(%ReplyHeader{}, data)
@@ -192,7 +187,7 @@ defmodule ExZk.Frame do
             {:pong, rest}
 
           %ReplyHeader{xid: @auth_packet_xid, err: err} ->
-            {{:auth_failed, err}, rest}
+            {{:auth_failed, ErrCode.cast!(err)}, rest}
 
           %ReplyHeader{xid: @notification_xid, zxid: zxid} ->
             {:ok,

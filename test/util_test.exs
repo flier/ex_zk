@@ -1,6 +1,8 @@
 defmodule UtilTest do
   use ExUnit.Case, async: true
 
+  use ExZk.Defs
+
   import Mock
 
   alias ExZk.Data.Stat
@@ -40,9 +42,6 @@ defmodule UtilTest do
     "/foo/baz/z",
     "/foo/baz"
   ]
-
-  @any_version -1
-  @default_timeout 5000
 
   setup_with_mocks([
     {Session, [],

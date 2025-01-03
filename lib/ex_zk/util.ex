@@ -1,11 +1,9 @@
 defmodule ExZk.Util do
+  use ExZk.Defs
+
   alias ExZk.{Error, Multi, Session}
 
   @type session :: Session.session()
-
-  @any_version -1
-  @default_timeout 5000
-  @default_batch_size 1000
 
   @doc """
   Recursively delete the node with the given path.

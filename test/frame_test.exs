@@ -1,15 +1,13 @@
 defmodule FrameTest do
   use ExUnit.Case, async: true
 
+  use ExZk.Defs
+
   import ExZk.Wire
 
+  alias ExZk.Defs.ErrCode
   alias ExZk.{Defs.OpCode, Frame, WatchedEvent, Watcher.Event, Wire.Unpack}
   alias ExZk.Proto.{AuthPacket, ReplyHeader, RequestHeader, SetWatches, SetWatches2, WatcherEvent}
-
-  @notification_xid -1
-  @ping_xid -2
-  @auth_packet_xid -4
-  @set_watches_xid -8
 
   @path "/foo/bar"
 
@@ -71,14 +69,17 @@ defmodule FrameTest do
                 }, ""}
     end
 
-    @auth_packet_reply %ReplyHeader{xid: @auth_packet_xid, err: -123}
+    @auth_packet_reply %ReplyHeader{
+      xid: @auth_packet_xid,
+      err: ErrCode.value!(:reconfig_disabled)
+    }
 
     test "with auth fail" do
       assert Unpack.unpack(%Frame{}, pack(@auth_packet_reply)) ==
                {:ok,
                 %Frame{
                   reply_hdr: @auth_packet_reply,
-                  response: {:auth_failed, -123},
+                  response: {:auth_failed, :reconfig_disabled},
                   payload: ""
                 }, ""}
     end

@@ -1,12 +1,11 @@
 defmodule ExZk.StartOptions do
-  @moduledoc false
+  @moduledoc """
+  Options that can be passed to starts a session to Zookeeper (see `ExZk.start_link/1`).
+  """
+
+  use ExZk.Defs
 
   alias ExZk.Auth
-
-  @default_host "localhost"
-  @default_port 2181
-  @default_timeout 5_000
-  @default_session_timeout 18_000
 
   start_link_opts_schema = [
     host: [

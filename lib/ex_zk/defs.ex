@@ -1,6 +1,25 @@
 defmodule ExZk.Defs do
   import ExZk.TypedEnum
 
+  defmacro __using__(_) do
+    quote do
+      @notification_xid -1
+      @ping_xid -2
+      @auth_packet_xid -4
+      @set_watches_xid -8
+
+      @any_version -1
+
+      @default_host "localhost"
+      @default_port 2181
+      @default_server "#{@default_host}:#{@default_port}"
+
+      @default_timeout 5000
+      @default_session_timeout 18_000
+      @default_batch_size 1000
+    end
+  end
+
   defenum(ErrCode,
     ok: 0,
     system_error: -1,

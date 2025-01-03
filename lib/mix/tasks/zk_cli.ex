@@ -4,6 +4,7 @@ defmodule Mix.Tasks.ZkCli do
   """
 
   use Mix.Task
+  use ExZk.Defs
 
   import IO.ANSI
 
@@ -71,9 +72,6 @@ defmodule Mix.Tasks.ZkCli do
   end
 
   @shortdoc "Starts the interactive Zookeeper shell"
-
-  @default_server "localhost:2181"
-  @default_timeout 300_000
 
   @commands """
     help [command]            Print this help.

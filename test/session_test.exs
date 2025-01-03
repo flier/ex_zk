@@ -1,6 +1,8 @@
 defmodule ConnectionTest do
   use ExUnit.Case, async: false
 
+  use ExZk.Defs
+
   import ExUnit.CaptureLog
   import Mock
 
@@ -108,10 +110,6 @@ defmodule ConnectionTest do
       end
     end
 
-    @notification_xid -1
-    @ping_xid -2
-    @auth_packet_xid -4
-
     test "it can handle ping response" do
       # connect to the server
       {:ok, session} = Session.start_link(sync_connect: true)
@@ -144,7 +142,7 @@ defmodule ConnectionTest do
 
                assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
              end) ==
-               "[session: [pid: #{inspect(session)}, id: nil], auth: [error: {:ok, :system_error}]]"
+               "[session: [pid: #{inspect(session)}, id: nil], auth: [error: :system_error]]"
     end
 
     test "it can handle notification" do

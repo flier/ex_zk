@@ -8,6 +8,8 @@ defmodule ExZk do
 
   use Application
 
+  use ExZk.Defs
+
   @typedoc """
   Options that can be passed to starts a session to Zookeeper (see `start_link/1`).
 
@@ -27,10 +29,6 @@ defmodule ExZk do
 
   @type session :: Session.session()
   @type version :: Session.version()
-
-  @default_timeout 5000
-  @default_batch_size 1000
-  @any_version -1
 
   ####
   ## Public API
