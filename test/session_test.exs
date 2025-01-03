@@ -6,11 +6,18 @@ defmodule ConnectionTest do
 
   import ExZk.Wire
 
-  alias ExZk.{Connector, Frame, Session, Socket}
-  alias ExZk.Defs.OpCode
+  alias ExZk.{
+    Connector,
+    Defs.OpCode,
+    Frame,
+    Session,
+    Socket,
+    WatchedEvent,
+    Watcher.Event,
+    Wire.Unpack
+  }
+
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
-  alias ExZk.WatchedEvent
-  alias ExZk.Watcher.Event
 
   @close_session Frame.new_close_session()
 
@@ -113,7 +120,8 @@ defmodule ConnectionTest do
       assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
       assert capture_log([level: :debug, format: "$message"], fn ->
-               frame = Frame.unpack(pack(%ReplyHeader{xid: @ping_xid}))
+               assert {:ok, frame, ""} =
+                        Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @ping_xid}))
 
                send(session, {:frame, socket, frame})
 
@@ -128,7 +136,8 @@ defmodule ConnectionTest do
       # it should be connected
       assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
-      frame = Frame.unpack(pack(%ReplyHeader{xid: @auth_packet_xid, err: -1}))
+      assert {:ok, frame, ""} =
+               Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @auth_packet_xid, err: -1}))
 
       assert capture_log([level: :debug, format: "$message"], fn ->
                send(session, {:frame, socket, frame})
@@ -145,15 +154,16 @@ defmodule ConnectionTest do
       # it should be connected
       assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
-      frame =
-        Frame.unpack(
-          pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
-            pack(%WatcherEvent{
-              type: Event.Type.value!(:node_data_changed),
-              state: Event.KeeperState.value!(:sync_connected),
-              path: "/test"
-            })
-        )
+      assert {:ok, frame, ""} =
+               Unpack.unpack(
+                 %Frame{},
+                 pack(%ReplyHeader{xid: @notification_xid, zxid: 123}) <>
+                   pack(%WatcherEvent{
+                     type: Event.Type.value!(:node_data_changed),
+                     state: Event.KeeperState.value!(:sync_connected),
+                     path: "/test"
+                   })
+               )
 
       evt = %WatchedEvent{
         type: :node_data_changed,
@@ -178,7 +188,7 @@ defmodule ConnectionTest do
       assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
       xid = -123
-      frame = Frame.unpack(pack(%ReplyHeader{xid: xid}))
+      assert {:ok, frame, ""} = Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: xid}))
 
       assert capture_log([level: :debug, format: "$message"], fn ->
                send(session, {:frame, socket, frame})
@@ -202,7 +212,7 @@ defmodule ConnectionTest do
 
         assert_called(:gen_tcp.send(:sock, <<byte_size(frame)::32>> <> frame))
 
-        frame = Frame.unpack(pack(%ReplyHeader{xid: @ping_xid}))
+        assert {:ok, frame, ""} = Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @ping_xid}))
 
         assert String.starts_with?(
                  capture_log([level: :debug, format: "$message"], fn ->

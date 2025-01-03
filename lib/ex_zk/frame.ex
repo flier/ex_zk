@@ -1,9 +1,7 @@
 defmodule ExZk.Frame do
-  alias ExZk.Defs.OpCode
-  alias ExZk.{Multi, Proto}
+  alias ExZk.{Defs.OpCode, Multi, Proto, WatchedEvent, Watcher.Event}
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
-  alias ExZk.WatchedEvent
-  alias ExZk.Watcher.Event
+  alias ExZk.Wire.{Pack, Unpack}
 
   defstruct [:req_hdr, :reply_hdr, :request, :response, :payload]
 
@@ -60,7 +58,6 @@ defmodule ExZk.Frame do
 
   @default_protocol_version 0
 
-  @notification_xid -1
   @ping_xid -2
   @auth_packet_xid -4
   @set_watches_xid -8
@@ -160,53 +157,11 @@ defmodule ExZk.Frame do
   @spec new_close_session :: t()
   def new_close_session, do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
 
-  @spec unpack(data :: binary()) :: t()
-  def unpack(data) when is_binary(data) do
-    {:ok, reply_hdr, rest} = ReplyHeader.unpack(data)
-
-    {response, rest} =
-      case reply_hdr do
-        %ReplyHeader{xid: @ping_xid} ->
-          {:pong, rest}
-
-        %ReplyHeader{xid: @auth_packet_xid, err: err} ->
-          {{:auth_failed, err}, rest}
-
-        %ReplyHeader{xid: @notification_xid, zxid: zxid} ->
-          {:ok,
-           %WatcherEvent{
-             type: type,
-             state: state,
-             path: path
-           }, rest} = WatcherEvent.unpack(rest)
-
-          {{:notification,
-            %WatchedEvent{
-              type: Event.Type.cast!(type),
-              state: Event.KeeperState.cast!(state),
-              path: path,
-              zxid: zxid
-            }}, rest}
-
-        %ReplyHeader{xid: xid} when xid < 0 ->
-          {nil, rest}
-
-        _ ->
-          {nil, rest}
-      end
-
-    %__MODULE__{
-      reply_hdr: reply_hdr,
-      response: response,
-      payload: rest
-    }
-  end
-
   ####
   ## Protocol
   ##
 
-  defimpl ExZk.Wire.Pack do
+  defimpl Pack do
     alias ExZk.{Frame, Wire}
 
     def pack(%Frame{} = frame) do
@@ -218,6 +173,53 @@ defmodule ExZk.Frame do
         end
 
       <<byte_size(buf)::32>> <> buf
+    end
+  end
+
+  defimpl Unpack do
+    alias ExZk.{Frame, Proto.ReplyHeader, Wire}
+
+    @notification_xid -1
+    @ping_xid -2
+    @auth_packet_xid -4
+
+    def unpack(%Frame{} = frame, data) when is_binary(data) do
+      {:ok, reply_hdr, rest} = Unpack.unpack(%ReplyHeader{}, data)
+
+      {response, rest} =
+        case reply_hdr do
+          %ReplyHeader{xid: @ping_xid} ->
+            {:pong, rest}
+
+          %ReplyHeader{xid: @auth_packet_xid, err: err} ->
+            {{:auth_failed, err}, rest}
+
+          %ReplyHeader{xid: @notification_xid, zxid: zxid} ->
+            {:ok,
+             %WatcherEvent{
+               type: type,
+               state: state,
+               path: path
+             }, rest} = Unpack.unpack(%WatcherEvent{}, rest)
+
+            {{:notification,
+              %WatchedEvent{
+                type: Event.Type.cast!(type),
+                state: Event.KeeperState.cast!(state),
+                path: path,
+                zxid: zxid
+              }}, rest}
+
+          %ReplyHeader{xid: xid} when xid < 0 ->
+            {nil, rest}
+
+          _ ->
+            {nil, rest}
+        end
+
+      frame = %{frame | reply_hdr: reply_hdr, response: response, payload: rest}
+
+      {:ok, frame, rest}
     end
   end
 

@@ -23,14 +23,17 @@ defmodule ExZk.Data do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               scheme: :ustring,
-               id: :ustring
-             ) do
-        {:ok, struct!(Id, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(Id.t(), data :: binary()) ::
+              {:ok, Id.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%Id{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 scheme: :ustring,
+                 id: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -57,14 +60,17 @@ defmodule ExZk.Data do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               perms: :int,
-               id: Id
-             ) do
-        {:ok, struct!(ACL, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ACL.t(), data :: binary()) ::
+              {:ok, ACL.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ACL{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 perms: :int,
+                 id: Id
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -131,23 +137,26 @@ defmodule ExZk.Data do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               czxid: :long,
-               mzxid: :long,
-               ctime: :long,
-               mtime: :long,
-               version: :int,
-               cversion: :int,
-               aversion: :int,
-               ephemeral_owner: :long,
-               data_length: :int,
-               num_children: :int,
-               pzxid: :long
-             ) do
-        {:ok, struct!(Stat, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(Stat.t(), data :: binary()) ::
+              {:ok, Stat.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%Stat{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 czxid: :long,
+                 mzxid: :long,
+                 ctime: :long,
+                 mtime: :long,
+                 version: :int,
+                 cversion: :int,
+                 aversion: :int,
+                 ephemeral_owner: :long,
+                 data_length: :int,
+                 num_children: :int,
+                 pzxid: :long
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -206,21 +215,24 @@ defmodule ExZk.Data do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               czxid: :long,
-               mzxid: :long,
-               ctime: :long,
-               mtime: :long,
-               version: :int,
-               cversion: :int,
-               aversion: :int,
-               ephemeral_owner: :long,
-               pzxid: :long
-             ) do
-        {:ok, struct!(StatPersisted, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(StatPersisted.t(), data :: binary()) ::
+              {:ok, StatPersisted.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%StatPersisted{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 czxid: :long,
+                 mzxid: :long,
+                 ctime: :long,
+                 mtime: :long,
+                 version: :int,
+                 cversion: :int,
+                 aversion: :int,
+                 ephemeral_owner: :long,
+                 pzxid: :long
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -247,14 +259,17 @@ defmodule ExZk.Data do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               auth_scheme: :ustring,
-               user: :ustring
-             ) do
-        {:ok, struct!(ClientInfo, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ClientInfo.t(), data :: binary()) ::
+              {:ok, ClientInfo.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ClientInfo{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 auth_scheme: :ustring,
+                 user: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -301,18 +316,21 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               protocol_version: :int,
-               last_zxid_seen: :long,
-               time_out: :int,
-               session_id: :long,
-               passwd: :buffer,
-               read_only: :boolean
-             ) do
-        {:ok, struct!(ConnectRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ConnectRequest.t(), data :: binary()) ::
+              {:ok, ConnectRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ConnectRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 protocol_version: :int,
+                 last_zxid_seen: :long,
+                 time_out: :int,
+                 session_id: :long,
+                 passwd: :buffer,
+                 read_only: :boolean
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -351,17 +369,20 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               protocol_version: :int,
-               time_out: :int,
-               session_id: :long,
-               passwd: :buffer,
-               read_only: :boolean
-             ) do
-        {:ok, struct!(ConnectResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ConnectResponse.t(), data :: binary()) ::
+              {:ok, ConnectResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ConnectResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 protocol_version: :int,
+                 time_out: :int,
+                 session_id: :long,
+                 passwd: :buffer,
+                 read_only: :boolean
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -396,16 +417,19 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               relative_zxid: :long,
-               data_watches: {:vector, :ustring},
-               exist_watches: {:vector, :ustring},
-               child_watches: {:vector, :ustring}
-             ) do
-        {:ok, struct!(SetWatches, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetWatches.t(), data :: binary()) ::
+              {:ok, SetWatches.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetWatches{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 relative_zxid: :long,
+                 data_watches: {:vector, :ustring},
+                 exist_watches: {:vector, :ustring},
+                 child_watches: {:vector, :ustring}
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -448,18 +472,21 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               relative_zxid: :long,
-               data_watches: {:vector, :ustring},
-               exist_watches: {:vector, :ustring},
-               child_watches: {:vector, :ustring},
-               persistent_watches: {:vector, :ustring},
-               persistent_recursive_watches: {:vector, :ustring}
-             ) do
-        {:ok, struct!(SetWatches2, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetWatches2.t(), data :: binary()) ::
+              {:ok, SetWatches2.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetWatches2{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 relative_zxid: :long,
+                 data_watches: {:vector, :ustring},
+                 exist_watches: {:vector, :ustring},
+                 child_watches: {:vector, :ustring},
+                 persistent_watches: {:vector, :ustring},
+                 persistent_recursive_watches: {:vector, :ustring}
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -486,14 +513,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               xid: :int,
-               type: :int
-             ) do
-        {:ok, struct!(RequestHeader, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(RequestHeader.t(), data :: binary()) ::
+              {:ok, RequestHeader.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%RequestHeader{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 xid: :int,
+                 type: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -524,15 +554,18 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               type: :int,
-               done: :boolean,
-               err: :int
-             ) do
-        {:ok, struct!(MultiHeader, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(MultiHeader.t(), data :: binary()) ::
+              {:ok, MultiHeader.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%MultiHeader{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 type: :int,
+                 done: :boolean,
+                 err: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -563,15 +596,18 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               type: :int,
-               scheme: :ustring,
-               auth: :buffer
-             ) do
-        {:ok, struct!(AuthPacket, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(AuthPacket.t(), data :: binary()) ::
+              {:ok, AuthPacket.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%AuthPacket{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 type: :int,
+                 scheme: :ustring,
+                 auth: :buffer
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -602,15 +638,18 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               xid: :int,
-               zxid: :long,
-               err: :int
-             ) do
-        {:ok, struct!(ReplyHeader, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ReplyHeader.t(), data :: binary()) ::
+              {:ok, ReplyHeader.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ReplyHeader{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 xid: :int,
+                 zxid: :long,
+                 err: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -637,14 +676,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               watch: :boolean
-             ) do
-        {:ok, struct!(GetDataRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetDataRequest.t(), data :: binary()) ::
+              {:ok, GetDataRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetDataRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 watch: :boolean
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -675,15 +717,18 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               data: :buffer,
-               version: :int
-             ) do
-        {:ok, struct!(SetDataRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetDataRequest.t(), data :: binary()) ::
+              {:ok, SetDataRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetDataRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 data: :buffer,
+                 version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -718,16 +763,19 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               joining_servers: :ustring,
-               leaving_servers: :ustring,
-               new_members: :ustring,
-               cur_config_id: :long
-             ) do
-        {:ok, struct!(ReconfigRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ReconfigRequest.t(), data :: binary()) ::
+              {:ok, ReconfigRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ReconfigRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 joining_servers: :ustring,
+                 leaving_servers: :ustring,
+                 new_members: :ustring,
+                 cur_config_id: :long
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -750,13 +798,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               stat: ExZk.Data.Stat
-             ) do
-        {:ok, struct!(SetDataResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetDataResponse.t(), data :: binary()) ::
+              {:ok, SetDataResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetDataResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 stat: ExZk.Data.Stat
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -779,13 +830,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               token: :buffer
-             ) do
-        {:ok, struct!(GetSASLRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetSASLRequest.t(), data :: binary()) ::
+              {:ok, GetSASLRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetSASLRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 token: :buffer
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -808,13 +862,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               token: :buffer
-             ) do
-        {:ok, struct!(SetSASLRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetSASLRequest.t(), data :: binary()) ::
+              {:ok, SetSASLRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetSASLRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 token: :buffer
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -837,13 +894,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               token: :buffer
-             ) do
-        {:ok, struct!(SetSASLResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetSASLResponse.t(), data :: binary()) ::
+              {:ok, SetSASLResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetSASLResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 token: :buffer
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -878,16 +938,19 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               data: :buffer,
-               acl: {:vector, ExZk.Data.ACL},
-               flags: :int
-             ) do
-        {:ok, struct!(CreateRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CreateRequest.t(), data :: binary()) ::
+              {:ok, CreateRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CreateRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 data: :buffer,
+                 acl: {:vector, ExZk.Data.ACL},
+                 flags: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -926,17 +989,20 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               data: :buffer,
-               acl: {:vector, ExZk.Data.ACL},
-               flags: :int,
-               ttl: :long
-             ) do
-        {:ok, struct!(CreateTTLRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CreateTTLRequest.t(), data :: binary()) ::
+              {:ok, CreateTTLRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CreateTTLRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 data: :buffer,
+                 acl: {:vector, ExZk.Data.ACL},
+                 flags: :int,
+                 ttl: :long
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -963,14 +1029,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               version: :int
-             ) do
-        {:ok, struct!(DeleteRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(DeleteRequest.t(), data :: binary()) ::
+              {:ok, DeleteRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%DeleteRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -997,14 +1066,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               watch: :boolean
-             ) do
-        {:ok, struct!(GetChildrenRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetChildrenRequest.t(), data :: binary()) ::
+              {:ok, GetChildrenRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetChildrenRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 watch: :boolean
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1027,13 +1099,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring
-             ) do
-        {:ok, struct!(GetAllChildrenNumberRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetAllChildrenNumberRequest.t(), data :: binary()) ::
+              {:ok, GetAllChildrenNumberRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetAllChildrenNumberRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1060,14 +1135,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               watch: :boolean
-             ) do
-        {:ok, struct!(GetChildren2Request, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetChildren2Request.t(), data :: binary()) ::
+              {:ok, GetChildren2Request.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetChildren2Request{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 watch: :boolean
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1094,14 +1172,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               version: :int
-             ) do
-        {:ok, struct!(CheckVersionRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CheckVersionRequest.t(), data :: binary()) ::
+              {:ok, CheckVersionRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CheckVersionRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1124,13 +1205,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring
-             ) do
-        {:ok, struct!(GetMaxChildrenRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetMaxChildrenRequest.t(), data :: binary()) ::
+              {:ok, GetMaxChildrenRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetMaxChildrenRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1153,13 +1237,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               max: :int
-             ) do
-        {:ok, struct!(GetMaxChildrenResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetMaxChildrenResponse.t(), data :: binary()) ::
+              {:ok, GetMaxChildrenResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetMaxChildrenResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 max: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1186,14 +1273,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               max: :int
-             ) do
-        {:ok, struct!(SetMaxChildrenRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetMaxChildrenRequest.t(), data :: binary()) ::
+              {:ok, SetMaxChildrenRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetMaxChildrenRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 max: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1216,13 +1306,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring
-             ) do
-        {:ok, struct!(SyncRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SyncRequest.t(), data :: binary()) ::
+              {:ok, SyncRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SyncRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1245,13 +1338,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring
-             ) do
-        {:ok, struct!(SyncResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SyncResponse.t(), data :: binary()) ::
+              {:ok, SyncResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SyncResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1274,13 +1370,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring
-             ) do
-        {:ok, struct!(GetACLRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetACLRequest.t(), data :: binary()) ::
+              {:ok, GetACLRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetACLRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1311,15 +1410,18 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               acl: {:vector, ExZk.Data.ACL},
-               version: :int
-             ) do
-        {:ok, struct!(SetACLRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetACLRequest.t(), data :: binary()) ::
+              {:ok, SetACLRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetACLRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 acl: {:vector, ExZk.Data.ACL},
+                 version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1342,13 +1444,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               stat: ExZk.Data.Stat
-             ) do
-        {:ok, struct!(SetACLResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetACLResponse.t(), data :: binary()) ::
+              {:ok, SetACLResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetACLResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 stat: ExZk.Data.Stat
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1375,14 +1480,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               mode: :int
-             ) do
-        {:ok, struct!(AddWatchRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(AddWatchRequest.t(), data :: binary()) ::
+              {:ok, AddWatchRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%AddWatchRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 mode: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1413,15 +1521,18 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               type: :int,
-               state: :int,
-               path: :ustring
-             ) do
-        {:ok, struct!(WatcherEvent, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(WatcherEvent.t(), data :: binary()) ::
+              {:ok, WatcherEvent.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%WatcherEvent{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 type: :int,
+                 state: :int,
+                 path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1444,13 +1555,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               err: :int
-             ) do
-        {:ok, struct!(ErrorResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ErrorResponse.t(), data :: binary()) ::
+              {:ok, ErrorResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ErrorResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 err: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1473,13 +1587,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring
-             ) do
-        {:ok, struct!(CreateResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CreateResponse.t(), data :: binary()) ::
+              {:ok, CreateResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CreateResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1506,14 +1623,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               stat: ExZk.Data.Stat
-             ) do
-        {:ok, struct!(Create2Response, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(Create2Response.t(), data :: binary()) ::
+              {:ok, Create2Response.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%Create2Response{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 stat: ExZk.Data.Stat
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1540,14 +1660,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               watch: :boolean
-             ) do
-        {:ok, struct!(ExistsRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ExistsRequest.t(), data :: binary()) ::
+              {:ok, ExistsRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ExistsRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 watch: :boolean
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1570,13 +1693,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               stat: ExZk.Data.Stat
-             ) do
-        {:ok, struct!(ExistsResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ExistsResponse.t(), data :: binary()) ::
+              {:ok, ExistsResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ExistsResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 stat: ExZk.Data.Stat
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1603,14 +1729,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               data: :buffer,
-               stat: ExZk.Data.Stat
-             ) do
-        {:ok, struct!(GetDataResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetDataResponse.t(), data :: binary()) ::
+              {:ok, GetDataResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetDataResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 data: :buffer,
+                 stat: ExZk.Data.Stat
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1633,13 +1762,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               children: {:vector, :ustring}
-             ) do
-        {:ok, struct!(GetChildrenResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetChildrenResponse.t(), data :: binary()) ::
+              {:ok, GetChildrenResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetChildrenResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 children: {:vector, :ustring}
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1662,13 +1794,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               total_number: :int
-             ) do
-        {:ok, struct!(GetAllChildrenNumberResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetAllChildrenNumberResponse.t(), data :: binary()) ::
+              {:ok, GetAllChildrenNumberResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetAllChildrenNumberResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 total_number: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1695,14 +1830,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               children: {:vector, :ustring},
-               stat: ExZk.Data.Stat
-             ) do
-        {:ok, struct!(GetChildren2Response, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetChildren2Response.t(), data :: binary()) ::
+              {:ok, GetChildren2Response.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetChildren2Response{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 children: {:vector, :ustring},
+                 stat: ExZk.Data.Stat
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1729,14 +1867,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               acl: {:vector, ExZk.Data.ACL},
-               stat: ExZk.Data.Stat
-             ) do
-        {:ok, struct!(GetACLResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetACLResponse.t(), data :: binary()) ::
+              {:ok, GetACLResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetACLResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 acl: {:vector, ExZk.Data.ACL},
+                 stat: ExZk.Data.Stat
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1763,14 +1904,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               type: :int
-             ) do
-        {:ok, struct!(CheckWatchesRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CheckWatchesRequest.t(), data :: binary()) ::
+              {:ok, CheckWatchesRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CheckWatchesRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 type: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1797,14 +1941,17 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               type: :int
-             ) do
-        {:ok, struct!(RemoveWatchesRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(RemoveWatchesRequest.t(), data :: binary()) ::
+              {:ok, RemoveWatchesRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%RemoveWatchesRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 type: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1827,13 +1974,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               prefix_path: :ustring
-             ) do
-        {:ok, struct!(GetEphemeralsRequest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetEphemeralsRequest.t(), data :: binary()) ::
+              {:ok, GetEphemeralsRequest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetEphemeralsRequest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 prefix_path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1856,13 +2006,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               ephemerals: {:vector, :ustring}
-             ) do
-        {:ok, struct!(GetEphemeralsResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(GetEphemeralsResponse.t(), data :: binary()) ::
+              {:ok, GetEphemeralsResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%GetEphemeralsResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 ephemerals: {:vector, :ustring}
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1885,13 +2038,16 @@ defmodule ExZk.Proto do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               client_info: {:vector, ExZk.Data.ClientInfo}
-             ) do
-        {:ok, struct!(WhoAmIResponse, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(WhoAmIResponse.t(), data :: binary()) ::
+              {:ok, WhoAmIResponse.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%WhoAmIResponse{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 client_info: {:vector, ExZk.Data.ClientInfo}
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1922,14 +2078,17 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               version: :int,
-               tree_digest: :long
-             ) do
-        {:ok, struct!(TxnDigest, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(TxnDigest.t(), data :: binary()) ::
+              {:ok, TxnDigest.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%TxnDigest{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 version: :int,
+                 tree_digest: :long
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -1968,17 +2127,20 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               client_id: :long,
-               cxid: :int,
-               zxid: :long,
-               time: :long,
-               type: :int
-             ) do
-        {:ok, struct!(TxnHeader, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(TxnHeader.t(), data :: binary()) ::
+              {:ok, TxnHeader.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%TxnHeader{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 client_id: :long,
+                 cxid: :int,
+                 zxid: :long,
+                 time: :long,
+                 type: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2013,16 +2175,19 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               data: :buffer,
-               acl: {:vector, ExZk.Data.ACL},
-               ephemeral: :boolean
-             ) do
-        {:ok, struct!(CreateTxnV0, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CreateTxnV0.t(), data :: binary()) ::
+              {:ok, CreateTxnV0.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CreateTxnV0{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 data: :buffer,
+                 acl: {:vector, ExZk.Data.ACL},
+                 ephemeral: :boolean
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2061,17 +2226,20 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               data: :buffer,
-               acl: {:vector, ExZk.Data.ACL},
-               ephemeral: :boolean,
-               parent_c_version: :int
-             ) do
-        {:ok, struct!(CreateTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CreateTxn.t(), data :: binary()) ::
+              {:ok, CreateTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CreateTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 data: :buffer,
+                 acl: {:vector, ExZk.Data.ACL},
+                 ephemeral: :boolean,
+                 parent_c_version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2110,17 +2278,20 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               data: :buffer,
-               acl: {:vector, ExZk.Data.ACL},
-               parent_c_version: :int,
-               ttl: :long
-             ) do
-        {:ok, struct!(CreateTTLTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CreateTTLTxn.t(), data :: binary()) ::
+              {:ok, CreateTTLTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CreateTTLTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 data: :buffer,
+                 acl: {:vector, ExZk.Data.ACL},
+                 parent_c_version: :int,
+                 ttl: :long
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2155,16 +2326,19 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               data: :buffer,
-               acl: {:vector, ExZk.Data.ACL},
-               parent_c_version: :int
-             ) do
-        {:ok, struct!(CreateContainerTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CreateContainerTxn.t(), data :: binary()) ::
+              {:ok, CreateContainerTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CreateContainerTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 data: :buffer,
+                 acl: {:vector, ExZk.Data.ACL},
+                 parent_c_version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2187,13 +2361,16 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring
-             ) do
-        {:ok, struct!(DeleteTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(DeleteTxn.t(), data :: binary()) ::
+              {:ok, DeleteTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%DeleteTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2224,15 +2401,18 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               data: :buffer,
-               version: :int
-             ) do
-        {:ok, struct!(SetDataTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetDataTxn.t(), data :: binary()) ::
+              {:ok, SetDataTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetDataTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 data: :buffer,
+                 version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2259,14 +2439,17 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               version: :int
-             ) do
-        {:ok, struct!(CheckVersionTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CheckVersionTxn.t(), data :: binary()) ::
+              {:ok, CheckVersionTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CheckVersionTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2297,15 +2480,18 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               acl: {:vector, ExZk.Data.ACL},
-               version: :int
-             ) do
-        {:ok, struct!(SetACLTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetACLTxn.t(), data :: binary()) ::
+              {:ok, SetACLTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetACLTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 acl: {:vector, ExZk.Data.ACL},
+                 version: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2332,14 +2518,17 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               path: :ustring,
-               max: :int
-             ) do
-        {:ok, struct!(SetMaxChildrenTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(SetMaxChildrenTxn.t(), data :: binary()) ::
+              {:ok, SetMaxChildrenTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%SetMaxChildrenTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 path: :ustring,
+                 max: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2362,13 +2551,16 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               time_out: :int
-             ) do
-        {:ok, struct!(CreateSessionTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CreateSessionTxn.t(), data :: binary()) ::
+              {:ok, CreateSessionTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CreateSessionTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 time_out: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2391,13 +2583,16 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               paths2_delete: {:vector, :ustring}
-             ) do
-        {:ok, struct!(CloseSessionTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(CloseSessionTxn.t(), data :: binary()) ::
+              {:ok, CloseSessionTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%CloseSessionTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 paths2_delete: {:vector, :ustring}
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2420,13 +2615,16 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               err: :int
-             ) do
-        {:ok, struct!(ErrorTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(ErrorTxn.t(), data :: binary()) ::
+              {:ok, ErrorTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%ErrorTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 err: :int
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2453,14 +2651,17 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               type: :int,
-               data: :buffer
-             ) do
-        {:ok, struct!(Txn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(Txn.t(), data :: binary()) ::
+              {:ok, Txn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%Txn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 type: :int,
+                 data: :buffer
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end
@@ -2483,13 +2684,16 @@ defmodule ExZk.Txn do
       end
     end
 
-    @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-    def unpack(buf) when is_binary(buf) do
-      with {:ok, fields, rest} <-
-             ExZk.Wire.unpack(buf,
-               txns: {:vector, ExZk.Txn.Txn}
-             ) do
-        {:ok, struct!(MultiTxn, fields), rest}
+    defimpl ExZk.Wire.Unpack do
+      @spec unpack(MultiTxn.t(), data :: binary()) ::
+              {:ok, MultiTxn.t(), rest :: binary()} | {:error, :nomatch}
+      def unpack(%MultiTxn{} = value, data) when is_binary(data) do
+        with {:ok, fields, rest} <-
+               ExZk.Wire.unpack(data,
+                 txns: {:vector, ExZk.Txn.Txn}
+               ) do
+          {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+        end
       end
     end
   end

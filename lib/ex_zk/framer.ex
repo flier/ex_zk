@@ -1,6 +1,5 @@
 defmodule ExZk.Framer do
-  alias ExZk.Defs.OpCode
-  alias ExZk.{Frame, Multi, Proto}
+  alias ExZk.{Defs.OpCode, Frame, Multi, Proto, Wire.Unpack}
   alias ExZk.Proto.{ErrorResponse, ReplyHeader, RequestHeader}
 
   defstruct next_xid: 1,
@@ -56,7 +55,9 @@ defmodule ExZk.Framer do
   @spec parse_frame(t(), data :: binary()) ::
           {:ok, Frame.t(), :gen_statem.from(), t()} | {:error, reason :: term()}
   def parse_frame(%__MODULE__{} = framer, data) do
-    data |> Frame.unpack() |> parse_reply(framer)
+    with {:ok, frame, _rest} <- Unpack.unpack(%Frame{}, data) do
+      parse_reply(frame, framer)
+    end
   end
 
   @spec parse_reply(Frame.t(), t()) ::
@@ -104,5 +105,5 @@ defmodule ExZk.Framer do
   def parse_reply(frame, framer), do: {:ok, frame, nil, framer}
 
   defp parse_response(nil, payload), do: {:ok, nil, payload}
-  defp parse_response(mod, payload), do: mod.unpack(payload)
+  defp parse_response(mod, payload), do: Unpack.unpack(struct!(mod), payload)
 end

@@ -33,14 +33,16 @@ defmodule <%= @module_name %> do
         end
       end
 
-      @spec unpack(buf :: binary()) :: {:ok, t(), rest :: binary()} | {:error, :nomatch}
-      def unpack(buf) when is_binary(buf) do
-        with {:ok, fields, rest} <- ExZk.Wire.unpack(buf,
-          <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
-          <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typename(type, @opts) %>,
-          <% end %>
-        ) do
-          {:ok, struct!(<%= name %>, fields), rest}
+      defimpl ExZk.Wire.Unpack do
+        @spec unpack(<%= name %>.t(), data :: binary()) :: {:ok, <%= name %>.t(), rest :: binary()} | {:error, :nomatch}
+        def unpack(%<%= name %>{} = value, data) when is_binary(data) do
+          with {:ok, fields, rest} <- ExZk.Wire.unpack(data,
+            <%= for %ExZk.Jute.Field{name: name, type: type} <- fields do %>
+            <%= name |> to_string |> Macro.underscore %>: <%= ExZk.Jute.Binding.typename(type, @opts) %>,
+            <% end %>
+          ) do
+            {:ok, Map.merge(value, Enum.into(fields, %{})), rest}
+          end
         end
       end
     end

@@ -1,7 +1,13 @@
 defmodule ExZk.Connector do
   import ExZk.Frame
-  alias ExZk.Proto.ConnectResponse
-  alias ExZk.{Auth, Format, Wire}
+
+  alias ExZk.{
+    Auth,
+    Format,
+    Proto.ConnectResponse,
+    Wire,
+    Wire.Unpack
+  }
 
   defmodule Connected do
     defstruct [:addr, :session_timeout, :session_id, :passwd, :readonly]
@@ -146,7 +152,7 @@ defmodule ExZk.Connector do
       case buffered <> data do
         <<sz::32, data::binary-size(sz), rest::binary>> ->
           if byte_size(rest) == 0 do
-            {:ok, res, _rest} = ConnectResponse.unpack(data)
+            {:ok, res, _rest} = Unpack.unpack(%ConnectResponse{}, data)
             {:ok, res}
           else
             {:error, :extra_bytes_after_reply}

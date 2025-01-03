@@ -1,5 +1,6 @@
 defmodule ExZk.Watcher do
   import ExZk.TypedEnum
+
   alias ExZk.WatchedEvent
 
   defmodule Event do

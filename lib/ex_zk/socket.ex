@@ -1,6 +1,7 @@
 defmodule ExZk.Socket do
   use GenServer
 
+  alias ExZk.Wire.Unpack
   alias ExZk.{Connector, Frame}
 
   defmodule Error do
@@ -188,7 +189,7 @@ defmodule ExZk.Socket do
          %__MODULE__{session: session, buffered: nil} = state,
          <<sz::32, data::binary-size(sz), rest::binary>> = _data
        ) do
-    frame = Frame.unpack(data)
+    {:ok, frame, _rest} = Unpack.unpack(%Frame{}, data)
 
     :telemetry.execute(
       [:ex_zk, :socket, :recv],

@@ -4,21 +4,21 @@ defmodule ExZk.Session do
   import ExZk.Frame
 
   alias ExZk.{
+    Connector.Connected,
     Create,
+    Defs.ErrCode,
     Error,
     Frame,
     Framer,
     Multi,
     Proto,
+    Proto.ReplyHeader,
     Socket,
     WatchedEvent,
     WatchManager
   }
 
-  alias ExZk.Connector.Connected
   alias ExZk.Data.{ACL, ClientInfo, Stat}
-  alias ExZk.Defs.ErrCode
-  alias ExZk.Proto.ReplyHeader
 
   @behaviour :gen_statem
 

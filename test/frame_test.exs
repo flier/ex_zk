@@ -3,20 +3,8 @@ defmodule FrameTest do
 
   import ExZk.Wire
 
-  alias ExZk.Defs.OpCode
-  alias ExZk.WatchedEvent
-  alias ExZk.Watcher.Event
-
-  alias ExZk.Proto.{
-    AuthPacket,
-    ReplyHeader,
-    RequestHeader,
-    SetWatches,
-    SetWatches2,
-    WatcherEvent
-  }
-
-  alias ExZk.Frame
+  alias ExZk.{Defs.OpCode, Frame, WatchedEvent, Watcher.Event, Wire.Unpack}
+  alias ExZk.Proto.{AuthPacket, ReplyHeader, RequestHeader, SetWatches, SetWatches2, WatcherEvent}
 
   @notification_xid -1
   @ping_xid -2
@@ -74,27 +62,32 @@ defmodule FrameTest do
     @ping_reply %ReplyHeader{xid: @ping_xid}
 
     test "with ping response" do
-      assert Frame.unpack(pack(@ping_reply)) == %Frame{
-               reply_hdr: @ping_reply,
-               response: :pong,
-               payload: ""
-             }
+      assert Unpack.unpack(%Frame{}, pack(@ping_reply)) ==
+               {:ok,
+                %Frame{
+                  reply_hdr: @ping_reply,
+                  response: :pong,
+                  payload: ""
+                }, ""}
     end
 
     @auth_packet_reply %ReplyHeader{xid: @auth_packet_xid, err: -123}
 
     test "with auth fail" do
-      assert Frame.unpack(pack(@auth_packet_reply)) == %Frame{
-               reply_hdr: @auth_packet_reply,
-               response: {:auth_failed, -123},
-               payload: ""
-             }
+      assert Unpack.unpack(%Frame{}, pack(@auth_packet_reply)) ==
+               {:ok,
+                %Frame{
+                  reply_hdr: @auth_packet_reply,
+                  response: {:auth_failed, -123},
+                  payload: ""
+                }, ""}
     end
 
     @notification_reply %ReplyHeader{xid: @notification_xid, zxid: 123}
 
     test "with notification" do
-      assert Frame.unpack(
+      assert Unpack.unpack(
+               %Frame{},
                pack([
                  @notification_reply,
                  %WatcherEvent{
@@ -104,18 +97,19 @@ defmodule FrameTest do
                  }
                ])
              ) ==
-               %Frame{
-                 reply_hdr: @notification_reply,
-                 response:
-                   {:notification,
-                    %WatchedEvent{
-                      path: "/foo/bar",
-                      state: :sync_connected,
-                      type: :node_created,
-                      zxid: 123
-                    }},
-                 payload: ""
-               }
+               {:ok,
+                %Frame{
+                  reply_hdr: @notification_reply,
+                  response:
+                    {:notification,
+                     %WatchedEvent{
+                       path: "/foo/bar",
+                       state: :sync_connected,
+                       type: :node_created,
+                       zxid: 123
+                     }},
+                  payload: ""
+                }, ""}
     end
   end
 end

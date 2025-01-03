@@ -1,12 +1,9 @@
 defmodule ExZkTest do
   use ExUnit.Case, async: true
 
-  alias ExZk.Multi
-  alias ExZk.Data.ClientInfo
+  alias ExZk.{Create, Multi, Proto}
+  alias ExZk.Data.{ClientInfo, Stat}
   alias ExZk.Defs.ACL
-  alias ExZk.Create
-  alias ExZk.Data.Stat
-  alias ExZk.Proto
 
   @path "/foo/bar"
   @data "hello world"

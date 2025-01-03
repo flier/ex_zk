@@ -21,6 +21,13 @@ defmodule ExZk.Wire do
     def pack(value)
   end
 
+  defprotocol Unpack do
+    @spec unpack(value :: any(), data :: binary()) ::
+            {:ok, any(), rest :: binary()} | {:error, :nomatch}
+    @doc "Unpack a value from a binary"
+    def unpack(value, data)
+  end
+
   defmodule Value do
     @moduledoc """
     Typed value
@@ -116,7 +123,7 @@ defmodule ExZk.Wire do
     v |> Stream.map(&pack({type, &1})) |> Enum.reduce(<<length(v)::32>>, &(&2 <> &1))
   end
 
-  def pack({mod, value}) do
+  def pack({mod, value}) when is_atom(mod) do
     if Pack.impl_for(value) do
       Pack.pack(value)
     else
@@ -171,6 +178,10 @@ defmodule ExZk.Wire do
       {:ok, [age: 42, name: "hello"], <<>>}
       iex> unpack(<<0, 0, 0, 42, 0, 0, 0, 5, 104, 101, 108, 108, 111>>, [:int, :ustring, :buffer])
       {:error, :nomatch}
+      iex> unpack("\0\0\0\x05world\0\0\0\x06anyone", ExZk.Data.Id)
+      {:ok, %ExZk.Data.Id{scheme: "world", id: "anyone"}, <<>>}
+      iex> unpack("\0\0\0\x05world\0\0\0\x06anyone", %ExZk.Data.Id{})
+      {:ok, %ExZk.Data.Id{scheme: "world", id: "anyone"}, <<>>}
 
   """
   @spec unpack(buf :: binary(), type() | [type()] | Keyword.t()) ::
@@ -203,12 +214,11 @@ defmodule ExZk.Wire do
     end
   end
 
-  def unpack(buf, mod) when is_binary(buf) and is_atom(mod), do: mod.unpack(buf)
+  def unpack(buf, mod) when is_binary(buf) and is_atom(mod), do: Unpack.unpack(struct!(mod), buf)
+  def unpack(buf, value) when is_binary(buf) and is_map(value), do: Unpack.unpack(value, buf)
 
-  def unpack(buf, type) when is_binary(buf) and is_binary(type) do
-    mod = type |> String.to_atom()
-    mod.unpack(buf)
-  end
+  def unpack(buf, type) when is_binary(buf) and is_binary(type),
+    do: unpack(buf, String.to_existing_atom(type))
 
   def unpack(buf, types) when is_binary(buf) and is_list(types) do
     with {:ok, l, rest} <- types |> Enum.reduce_while({:ok, [], buf}, &unpack_type(&1, &2)) do

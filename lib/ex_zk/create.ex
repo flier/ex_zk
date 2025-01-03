@@ -1,14 +1,8 @@
 defmodule ExZk.Create do
   import ExZk.TypedEnum
 
-  alias ExZk.Data.ACL
-  alias ExZk.Defs.OpCode
-  alias ExZk.Frame
-
-  alias ExZk.Proto.{
-    CreateRequest,
-    CreateTTLRequest
-  }
+  alias ExZk.{Data.ACL, Defs.OpCode, Frame}
+  alias ExZk.Proto.{CreateRequest, CreateTTLRequest}
 
   defenum(Mode,
     persistent: 0,

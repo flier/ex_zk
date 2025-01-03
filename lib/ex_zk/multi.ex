@@ -3,9 +3,8 @@ defmodule ExZk.Multi do
   A multi-operation transaction.
   """
 
-  alias ExZk.Create
+  alias ExZk.{Create, Proto.MultiHeader, Wire.Unpack}
   alias ExZk.Defs.{ErrCode, OpCode}
-  alias ExZk.Proto.MultiHeader
 
   defmodule Op do
     @moduledoc """
@@ -15,8 +14,7 @@ defmodule ExZk.Multi do
     or just read operations like `get_children/1` or `get_data/1`.
     """
 
-    alias ExZk.Data.Stat
-    alias ExZk.Defs.OpCode
+    alias ExZk.{Data.Stat, Defs.OpCode}
 
     alias ExZk.Proto.{
       CheckVersionRequest,
@@ -178,13 +176,14 @@ defmodule ExZk.Multi do
     def unpack(opcode, data)
 
     def unpack(:create, data) when is_binary(data) do
-      with {:ok, %CreateResponse{path: path}, rest} <- CreateResponse.unpack(data) do
+      with {:ok, %CreateResponse{path: path}, rest} <- Unpack.unpack(%CreateResponse{}, data) do
         {:ok, {:create, path, nil}, rest}
       end
     end
 
     def unpack(:create2, data) when is_binary(data) do
-      with {:ok, %Create2Response{path: path, stat: stat}, rest} <- Create2Response.unpack(data) do
+      with {:ok, %Create2Response{path: path, stat: stat}, rest} <-
+             Unpack.unpack(%Create2Response{}, data) do
         {:ok, {:create, path, stat}, rest}
       end
     end
@@ -192,7 +191,7 @@ defmodule ExZk.Multi do
     def unpack(:delete, data) when is_binary(data), do: {:ok, {:delete, :ok}, data}
 
     def unpack(:set_data, data) when is_binary(data) do
-      with {:ok, %SetDataResponse{stat: stat}, rest} <- SetDataResponse.unpack(data) do
+      with {:ok, %SetDataResponse{stat: stat}, rest} <- Unpack.unpack(%SetDataResponse{}, data) do
         {:ok, {:set_data, stat}, rest}
       end
     end
@@ -201,19 +200,20 @@ defmodule ExZk.Multi do
 
     def unpack(:get_children, data) when is_binary(data) do
       with {:ok, %GetChildrenResponse{children: children}, rest} <-
-             GetChildrenResponse.unpack(data) do
+             Unpack.unpack(%GetChildrenResponse{}, data) do
         {:ok, {:get_children, children}, rest}
       end
     end
 
     def unpack(:get_data, data) when is_binary(data) do
-      with {:ok, %GetDataResponse{data: data, stat: stat}, rest} <- GetDataResponse.unpack(data) do
+      with {:ok, %GetDataResponse{data: data, stat: stat}, rest} <-
+             Unpack.unpack(%GetDataResponse{}, data) do
         {:ok, {:get_data, data, stat}, rest}
       end
     end
 
     def unpack(:error, data) when is_binary(data) do
-      with {:ok, %ErrorResponse{err: err}, rest} <- ErrorResponse.unpack(data) do
+      with {:ok, %ErrorResponse{err: err}, rest} <- Unpack.unpack(%ErrorResponse{}, data) do
         err =
           case ErrCode.cast(err) do
             {:ok, err} -> err
@@ -243,7 +243,7 @@ defmodule ExZk.Multi do
     """
     @spec unpack(iodata()) :: {:ok, t()} | {:error, :nomatch}
     def unpack(data) when is_binary(data) do
-      with {:ok, hdr, rest} <- MultiHeader.unpack(data),
+      with {:ok, hdr, rest} <- Unpack.unpack(%MultiHeader{}, data),
            {:ok, results, rest} <- unpack_results(hdr, rest, []) do
         {:ok, %__MODULE__{results: results}, rest}
       end
@@ -255,7 +255,7 @@ defmodule ExZk.Multi do
     defp unpack_results(%MultiHeader{type: type, done: false}, rest, results) do
       with {:ok, opcode} <- OpCode.cast(type),
            {:ok, res, rest} <- Result.unpack(opcode, rest),
-           {:ok, hdr, rest} <- MultiHeader.unpack(rest) do
+           {:ok, hdr, rest} <- Unpack.unpack(%MultiHeader{}, rest) do
         unpack_results(hdr, rest, [res | results])
       else
         :error -> {:error, {:unexpected_opcode, type}}
