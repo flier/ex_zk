@@ -101,16 +101,14 @@ defmodule ExZk.Framer do
   end
 
   defp parse_opcode(type) do
-    case OpCode.cast(type) do
-      {:ok, opcode} -> {:ok, opcode}
-      :error -> {:error, {:unexpected_opcode, type}}
+    with :error <- OpCode.cast(type) do
+      {:error, {:unexpected_opcode, type}}
     end
   end
 
   defp get_response_type(opcode) do
-    case Keyword.fetch(@response_types, opcode) do
-      {:ok, mod} -> {:ok, mod}
-      :error -> {:error, {:unexpected_opcode, opcode}}
+    with :error <- Keyword.fetch(@response_types, opcode) do
+      {:error, {:unexpected_opcode, opcode}}
     end
   end
 

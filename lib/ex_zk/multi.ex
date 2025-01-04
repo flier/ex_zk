@@ -263,13 +263,16 @@ defmodule ExZk.Multi do
       do: {:ok, Enum.reverse(results), rest}
 
     defp unpack_results(%MultiHeader{type: type, done: false}, rest, results) do
-      with {:ok, opcode} <- OpCode.cast(type),
+      with {:ok, opcode} <- parse_opcode(type),
            {:ok, res, rest} <- Result.unpack(opcode, rest),
            {:ok, hdr, rest} <- Unpack.unpack(%MultiHeader{}, rest) do
         unpack_results(hdr, rest, [res | results])
-      else
-        :error -> {:error, {:unexpected_opcode, type}}
-        {:error, reason} -> {:error, reason}
+      end
+    end
+
+    defp parse_opcode(type) do
+      with :error <- OpCode.cast(type) do
+        {:error, {:unexpected_opcode, type}}
       end
     end
   end
