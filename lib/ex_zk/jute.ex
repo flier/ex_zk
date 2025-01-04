@@ -2,6 +2,7 @@ defmodule ExZk.Jute do
   defmodule Module do
     alias ExZk.Jute.Class
 
+    @enforce_keys [:name, :classes]
     defstruct [:name, :classes]
 
     @type t :: %__MODULE__{
@@ -17,6 +18,7 @@ defmodule ExZk.Jute do
   defmodule Class do
     alias ExZk.Jute.Field
 
+    @enforce_keys [:name, :fields]
     defstruct [:name, :fields, doc: nil]
 
     @type t :: %__MODULE__{
@@ -31,6 +33,7 @@ defmodule ExZk.Jute do
   end
 
   defmodule Field do
+    @enforce_keys [:name, :type]
     defstruct [:name, :type, doc: nil]
 
     @type t :: %__MODULE__{
@@ -427,7 +430,7 @@ defmodule ExZk.Jute do
     )
 
     @spec generate([Module.t()], [option()]) :: String.t()
-    def generate(modules, opts) do
+    def generate(modules, opts \\ []) do
       skipped_module = Keyword.get(opts, :skip, [])
 
       modules
@@ -464,8 +467,36 @@ defmodule ExZk.Jute do
       end
     end
 
+    @doc """
+    Returns the typespec for the given type
+
+    ## Examples
+
+        iex> ExZk.Jute.Binding.typespec(:boolean) |> Macro.to_string()
+        "boolean()"
+
+        iex> ExZk.Jute.Binding.typespec(:int) |> Macro.to_string()
+        "integer()"
+
+        iex> ExZk.Jute.Binding.typespec(:double) |> Macro.to_string()
+        "float()"
+
+        iex> ExZk.Jute.Binding.typespec(:ustring) |> Macro.to_string()
+        "String.t()"
+
+        iex> ExZk.Jute.Binding.typespec(:buffer) |> Macro.to_string()
+        "binary()"
+
+        iex> ExZk.Jute.Binding.typespec({:vector, :int}) |> Macro.to_string()
+        "[integer()]"
+
+        iex> ExZk.Jute.Binding.typespec("Stat") |> Macro.to_string()
+        "Stat.t()"
+
+    """
     @spec typespec(ExZk.Wire.type(), [option()]) :: term()
     def typespec(type, opts \\ [])
+
     def typespec(:boolean, _), do: quote(do: boolean())
     def typespec(type, _) when type in [:byte, :int, :long], do: quote(do: integer())
     def typespec(type, _) when type in [:float, :double], do: quote(do: float())
@@ -474,21 +505,61 @@ defmodule ExZk.Jute do
     def typespec({:vector, type}, opts), do: quote(do: [unquote(typespec(type, opts))])
     def typespec(type, opts), do: quote(do: unquote(module(type, opts)).t())
 
+    @doc """
+    Returns the typename for the given type
+
+    ## Examples
+
+        iex> ExZk.Jute.Binding.typename(:boolean)
+        :boolean
+
+        iex> ExZk.Jute.Binding.typename({:vector, :int})
+        {:vector, :int}
+
+        iex> ExZk.Jute.Binding.typename("Stat")
+        Stat
+
+    """
     @spec typename(ExZk.Wire.type(), [option()]) :: term()
     def typename(type, opts \\ [])
-    def typename(:boolean, _), do: :boolean
-    def typename(:byte, _), do: :byte
-    def typename(:int, _), do: :int
-    def typename(:long, _), do: :long
-    def typename(:float, _), do: :float
-    def typename(:double, _), do: :double
-    def typename(:ustring, _), do: :ustring
-    def typename(:buffer, _), do: :buffer
+
+    def typename(type, _)
+        when type in [:boolean, :byte, :int, :long, :float, :double, :ustring, :buffer],
+        do: type
+
     def typename({:vector, type}, opts), do: {:vector, typename(type, opts)}
     def typename(type, opts), do: module(type, opts)
 
+    @doc """
+    Returns the default value for the given type
+
+    ## Examples
+
+        iex> ExZk.Jute.Binding.default_value(:boolean)
+        false
+
+        iex> ExZk.Jute.Binding.default_value(:int)
+        0
+
+        iex> ExZk.Jute.Binding.default_value(:double)
+        0.0
+
+        iex> ExZk.Jute.Binding.default_value(:ustring)
+        ""
+
+        iex> ExZk.Jute.Binding.default_value(:buffer)
+        <<>>
+
+        iex> ExZk.Jute.Binding.default_value({:vector, :int})
+        []
+
+        iex> ExZk.Jute.Binding.default_value("Stat") |> Macro.to_string()
+        "%Stat{}"
+
+    """
     @spec default_value(ExZk.Wire.type(), [option()]) :: term()
     def default_value(type, opts \\ [])
+
     def default_value(:boolean, _), do: false
     def default_value(type, _) when type in [:byte, :int, :long], do: 0
     def default_value(type, _) when type in [:float, :double], do: 0.0
