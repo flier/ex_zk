@@ -545,14 +545,8 @@ defmodule ExZk.Session do
     {:keep_state, %{data | framer: framer}}
   end
 
-  def connected(:cast, :send_ping, %__MODULE__{socket: socket} = data) do
-    :ok = Socket.send_frame(socket, new_ping_request())
-
-    {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
-  end
-
-  def connected({:timeout, :send_ping}, %{}, _data),
-    do: {:keep_state_and_data, {:next_event, :cast, :send_ping}}
+  def connected(:cast, :send_ping, data), do: send_ping_request(data)
+  def connected({:timeout, :send_ping}, %{}, data), do: send_ping_request(data)
 
   ####
   ## Private methods
@@ -720,6 +714,12 @@ defmodule ExZk.Session do
          socket: socket,
          addr: addr
        }
+
+  defp send_ping_request(%__MODULE__{socket: socket} = data) do
+    :ok = Socket.send_frame(socket, new_ping_request())
+
+    {:keep_state, %{data | last_ping_sent: Time.utc_now()}}
+  end
 
   defp ping_interval(nil), do: :infinity
 
