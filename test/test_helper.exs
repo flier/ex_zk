@@ -1,2 +1,2 @@
-ExUnit.configure(exclude: [:zookeeper])
+ExUnit.configure(exclude: [:external])
 ExUnit.start()
