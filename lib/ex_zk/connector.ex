@@ -148,19 +148,21 @@ defmodule ExZk.Connector do
     do: [new_auth_packet(scheme, data)]
 
   defp recv_connect_response(transport, socket, timeout, buffered \\ <<>>) do
-    with {:ok, data} <- transport.recv(socket, 0, timeout) do
-      case buffered <> data do
-        <<sz::32, data::binary-size(sz)>> ->
-          with {:ok, res, _rest} <- Unpack.unpack(%ConnectResponse{}, data) do
-            {:ok, res}
-          end
-
-        <<sz::32, _data::binary-size(sz), _rest::binary>> ->
-          {:error, :extra_bytes_after_reply}
-
-        buffered ->
-          recv_connect_response(transport, socket, timeout, buffered)
-      end
+    with {:ok, data} <- transport.recv(socket, 0, timeout),
+         data <- buffered <> data,
+         {:error, :not_enough_data} <- parse_connect_response(data) do
+      recv_connect_response(transport, socket, timeout, data)
     end
   end
+
+  defp parse_connect_response(<<sz::32, data::binary-size(sz)>>) do
+    with {:ok, res, _rest} <- Unpack.unpack(%ConnectResponse{}, data) do
+      {:ok, res}
+    end
+  end
+
+  defp parse_connect_response(<<sz::32, _data::binary-size(sz), _rest::binary>>),
+    do: {:error, :extra_bytes_after_reply}
+
+  defp parse_connect_response(_), do: {:error, :not_enough_data}
 end

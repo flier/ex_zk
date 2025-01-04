@@ -10,6 +10,7 @@ defmodule ConnectionTest do
 
   alias ExZk.{
     Connector,
+    Defs.OpCode,
     Frame,
     Session,
     Socket,
@@ -18,7 +19,7 @@ defmodule ConnectionTest do
     Wire.Unpack
   }
 
-  alias ExZk.Proto.{ReplyHeader, WatcherEvent}
+  alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
 
   @close_session Frame.new_close_session()
 
@@ -205,7 +206,9 @@ defmodule ConnectionTest do
 
         assert {:connected, %{socket: socket}} = Session.status(session)
 
-        assert_called(:gen_tcp.send(:sock, <<0, 0, 0, 8, 255, 255, 255, 254, 0, 0, 0, 11>>))
+        frame = pack(%RequestHeader{xid: @ping_xid, type: OpCode.value!(:ping)})
+
+        assert_called(:gen_tcp.send(:sock, <<byte_size(frame)::32>> <> frame))
 
         assert {:ok, frame, ""} = Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @ping_xid}))
 

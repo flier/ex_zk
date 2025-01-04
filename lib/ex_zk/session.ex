@@ -631,29 +631,15 @@ defmodule ExZk.Session do
        ) do
     case Framer.parse_reply(frame, framer) do
       {:ok, frame, {task, _} = from, framer} ->
-        reply =
-          case frame do
-            %Frame{reply_hdr: %ReplyHeader{err: err}} when err != 0 ->
-              {:error,
-               case ErrCode.cast(err) do
-                 {:ok, code} -> code
-                 :error -> err
-               end}
-
-            %Frame{response: nil} ->
-              :ok
-
-            %Frame{response: response} ->
-              {:ok, response}
-          end
+        res = extract_response(frame)
 
         :telemetry.execute(
           [:ex_zk, :session, :task, :stop],
           %{system_time: System.system_time()},
-          session_info(data) |> Map.merge(%{task: task, frame: frame, reply: reply})
+          session_info(data) |> Map.merge(%{task: task, frame: frame, reply: res})
         )
 
-        :gen_statem.reply(from, reply)
+        :gen_statem.reply(from, res)
 
         {:keep_state, %__MODULE__{data | framer: framer, last_zxid: zxid}}
 
@@ -661,6 +647,17 @@ defmodule ExZk.Session do
         disconnect(data, reason)
     end
   end
+
+  defp extract_response(%Frame{reply_hdr: %ReplyHeader{err: err}}) when err != 0,
+    do:
+      {:error,
+       case ErrCode.cast(err) do
+         {:ok, code} -> code
+         :error -> err
+       end}
+
+  defp extract_response(%Frame{response: nil}), do: :ok
+  defp extract_response(%Frame{response: response}), do: {:ok, response}
 
   defp disconnect(%__MODULE__{opts: opts} = data, error) do
     if opts[:exit_on_disconnection] do

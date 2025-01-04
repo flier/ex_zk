@@ -161,16 +161,19 @@ defmodule ExZk.Frame do
   defimpl Pack do
     alias ExZk.{Frame, Wire}
 
-    def pack(%Frame{} = frame) do
-      buf =
-        if !is_nil(frame.req_hdr) or !is_nil(frame.request) do
-          Wire.pack([frame.req_hdr, frame.request])
-        else
-          Wire.pack([frame.reply_hdr, frame.response])
-        end
+    def pack(frame) do
+      buf = pack_frame(frame)
 
       <<byte_size(buf)::32>> <> buf
     end
+
+    defp pack_frame(%Frame{req_hdr: req_hdr, request: request} = frame)
+         when req_hdr != nil or request != nil,
+         do: Wire.pack([frame.req_hdr, frame.request])
+
+    defp pack_frame(%Frame{reply_hdr: reply_hdr, response: response} = frame)
+         when reply_hdr != nil or response != nil,
+         do: Wire.pack([frame.reply_hdr, frame.response])
   end
 
   defimpl Unpack do
@@ -181,41 +184,36 @@ defmodule ExZk.Frame do
     def unpack(%Frame{} = frame, data) when is_binary(data) do
       {:ok, reply_hdr, rest} = Unpack.unpack(%ReplyHeader{}, data)
 
-      {response, rest} =
-        case reply_hdr do
-          %ReplyHeader{xid: @ping_xid} ->
-            {:pong, rest}
-
-          %ReplyHeader{xid: @auth_packet_xid, err: err} ->
-            {{:auth_failed, ErrCode.cast!(err)}, rest}
-
-          %ReplyHeader{xid: @notification_xid, zxid: zxid} ->
-            {:ok,
-             %WatcherEvent{
-               type: type,
-               state: state,
-               path: path
-             }, rest} = Unpack.unpack(%WatcherEvent{}, rest)
-
-            {{:notification,
-              %WatchedEvent{
-                type: Event.Type.cast!(type),
-                state: Event.KeeperState.cast!(state),
-                path: path,
-                zxid: zxid
-              }}, rest}
-
-          %ReplyHeader{xid: xid} when xid < 0 ->
-            {nil, rest}
-
-          _ ->
-            {nil, rest}
-        end
+      {response, rest} = parse_response(reply_hdr, rest)
 
       frame = %{frame | reply_hdr: reply_hdr, response: response, payload: rest}
 
       {:ok, frame, rest}
     end
+
+    defp parse_response(%ReplyHeader{xid: @ping_xid}, rest), do: {:pong, rest}
+
+    defp parse_response(%ReplyHeader{xid: @auth_packet_xid, err: err}, rest),
+      do: {{:auth_failed, ErrCode.cast!(err)}, rest}
+
+    defp parse_response(%ReplyHeader{xid: @notification_xid, zxid: zxid}, rest) do
+      {:ok,
+       %WatcherEvent{
+         type: type,
+         state: state,
+         path: path
+       }, rest} = Unpack.unpack(%WatcherEvent{}, rest)
+
+      {{:notification,
+        %WatchedEvent{
+          type: Event.Type.cast!(type),
+          state: Event.KeeperState.cast!(state),
+          path: path,
+          zxid: zxid
+        }}, rest}
+    end
+
+    defp parse_response(_reply_hdr, rest), do: {nil, rest}
   end
 
   ####

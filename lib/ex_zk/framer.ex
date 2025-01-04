@@ -64,45 +64,55 @@ defmodule ExZk.Framer do
           {:ok, Frame.t(), :gen_statem.from(), t()} | {:error, reason :: term()}
 
   def parse_reply(
-        %Frame{reply_hdr: %ReplyHeader{xid: xid, err: err}, payload: payload} = frame,
+        %Frame{reply_hdr: %ReplyHeader{xid: xid}} = frame,
         %__MODULE__{requests: requests} = framer
       )
       when xid >= 0 do
     case Map.pop(requests, xid) do
       {nil, _} ->
-        {:error, :unexpected_xid}
+        {:error, {:unexpected_xid, xid}}
 
-      {{%Frame{req_hdr: %RequestHeader{type: type} = req_hdr, request: request}, from}, requests} ->
-        if err != 0 do
-          frame = %{
-            frame
-            | req_hdr: req_hdr,
-              request: request,
-              response: %ErrorResponse{err: err}
-          }
-
+      {{%Frame{req_hdr: req_hdr, request: request}, from}, requests} ->
+        with {:ok, frame} <- handle_reply(%{frame | req_hdr: req_hdr, request: request}) do
           {:ok, frame, from, %{framer | requests: requests}}
-        else
-          with {:ok, op_code} <- OpCode.cast(type),
-               {:ok, res_type} <- Keyword.fetch(@response_types, op_code),
-               {:ok, response, rest} <- parse_response(res_type, payload) do
-            frame = %{
-              frame
-              | req_hdr: req_hdr,
-                request: request,
-                response: response,
-                payload: rest
-            }
-
-            {:ok, frame, from, %{framer | requests: requests}}
-          else
-            :error -> {:error, :unexpected_opcode}
-          end
         end
     end
   end
 
   def parse_reply(frame, framer), do: {:ok, frame, nil, framer}
+
+  defp handle_reply(
+         %Frame{
+           req_hdr: %RequestHeader{type: type},
+           reply_hdr: %ReplyHeader{err: 0},
+           payload: payload
+         } =
+           frame
+       ) do
+    with {:ok, opcode} <- parse_opcode(type),
+         {:ok, res_type} <- get_response_type(opcode),
+         {:ok, res, rest} <- parse_response(res_type, payload) do
+      {:ok, %{frame | response: res, payload: rest}}
+    end
+  end
+
+  defp handle_reply(%Frame{reply_hdr: %ReplyHeader{err: err}} = frame) do
+    {:ok, %{frame | response: %ErrorResponse{err: err}}}
+  end
+
+  defp parse_opcode(type) do
+    case OpCode.cast(type) do
+      {:ok, opcode} -> {:ok, opcode}
+      :error -> {:error, {:unexpected_opcode, type}}
+    end
+  end
+
+  defp get_response_type(opcode) do
+    case Keyword.fetch(@response_types, opcode) do
+      {:ok, mod} -> {:ok, mod}
+      :error -> {:error, {:unexpected_opcode, opcode}}
+    end
+  end
 
   defp parse_response(nil, payload), do: {:ok, nil, payload}
   defp parse_response(mod, payload), do: Unpack.unpack(struct!(mod), payload)

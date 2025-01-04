@@ -91,13 +91,13 @@ defmodule FramerTest do
 
     test "it can handle unexpected xid" do
       assert Framer.parse_frame(%Framer{}, pack([%ReplyHeader{xid: 123}, @create_response])) ==
-               {:error, :unexpected_xid}
+               {:error, {:unexpected_xid, 123}}
 
       assert Framer.parse_frame(
                %Framer{},
                pack([%ReplyHeader{xid: 123, err: @err}, @create_response])
              ) ==
-               {:error, :unexpected_xid}
+               {:error, {:unexpected_xid, 123}}
     end
 
     test "it can handle unexpected opcode" do
@@ -108,7 +108,7 @@ defmodule FramerTest do
                Framer.new_frame(f, :close_session, @create_request)
 
       assert Framer.parse_frame(f1, pack([%ReplyHeader{xid: xid}, @create_response])) ==
-               {:error, :unexpected_opcode}
+               {:error, {:unexpected_opcode, :close_session}}
     end
   end
 end
