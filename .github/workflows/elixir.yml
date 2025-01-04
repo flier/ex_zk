@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        otp: ['21', '26', '27']
+        otp: ['24', '26', '27']
         elixir: ['1.17', '1.18']
 
     steps:
