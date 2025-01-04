@@ -5,7 +5,7 @@ defmodule ExZkTest do
 
   import ExZk.Defs.ACL
 
-  alias ExZk.{Create, Multi, Proto}
+  alias ExZk.{Create, Multi, Proto, Session, Util}
   alias ExZk.Data.{ClientInfo, Stat}
 
   @path "/foo/bar"
@@ -67,14 +67,14 @@ defmodule ExZkTest do
     test "it can be closed" do
       {:ok, session} = MockSession.start_link(%{})
 
-      assert ExZk.close(session) == :ok
+      assert Session.close(session) == :ok
       assert !Process.alive?(session)
     end
 
     test "it can get status" do
       {:ok, session} = MockSession.start_link(%{})
 
-      assert ExZk.status(session) == {:connected, %{}}
+      assert Session.status(session) == {:connected, %{}}
     end
 
     test "it can get children" do
@@ -85,7 +85,7 @@ defmodule ExZkTest do
              {:ok, %Proto.GetChildrenResponse{children: @children}}}
         })
 
-      assert ExZk.get_children(session, @path) == {:ok, @children}
+      assert Session.get_children(session, @path) == {:ok, @children}
     end
 
     test "it can get children with stat" do
@@ -96,7 +96,7 @@ defmodule ExZkTest do
              {:ok, %Proto.GetChildren2Response{children: @children, stat: @stat}}}
         })
 
-      assert ExZk.get_children2(session, @path) == {:ok, @children, @stat}
+      assert Session.get_children2(session, @path) == {:ok, @children, @stat}
     end
 
     test "it can get ephemerals" do
@@ -107,7 +107,7 @@ defmodule ExZkTest do
              {:ok, %Proto.GetEphemeralsResponse{ephemerals: @children}}}
         })
 
-      assert ExZk.get_ephemerals(session, @path) == {:ok, @children}
+      assert Session.get_ephemerals(session, @path) == {:ok, @children}
     end
 
     test "it can get all children number" do
@@ -118,7 +118,7 @@ defmodule ExZkTest do
              {:ok, %Proto.GetAllChildrenNumberResponse{total_number: 123}}}
         })
 
-      assert ExZk.get_all_children_number(session, @path) == {:ok, 123}
+      assert Session.get_all_children_number(session, @path) == {:ok, 123}
     end
 
     test "it can get data" do
@@ -129,7 +129,7 @@ defmodule ExZkTest do
              {:ok, %Proto.GetDataResponse{data: @data, stat: @stat}}}
         })
 
-      assert ExZk.get_data(session, @path) == {:ok, @data, @stat}
+      assert Session.get_data(session, @path) == {:ok, @data, @stat}
     end
 
     test "it can set data" do
@@ -140,7 +140,7 @@ defmodule ExZkTest do
              {:ok, %Proto.SetDataResponse{stat: @stat}}}
         })
 
-      assert ExZk.set_data(session, @path, @data) == {:ok, @stat}
+      assert Session.set_data(session, @path, @data) == {:ok, @stat}
     end
 
     test "it can set data with version" do
@@ -151,7 +151,7 @@ defmodule ExZkTest do
              {:ok, %Proto.SetDataResponse{stat: @stat}}}
         })
 
-      assert ExZk.set_data(session, @path, @data, @version) == {:ok, @stat}
+      assert Session.set_data(session, @path, @data, @version) == {:ok, @stat}
     end
 
     test "it can create a node" do
@@ -162,7 +162,7 @@ defmodule ExZkTest do
              {:ok, %Proto.CreateResponse{path: @path}}}
         })
 
-      assert ExZk.create(session, @path, @data) == {:ok, @path, nil}
+      assert Session.create(session, @path, @data) == {:ok, @path, nil}
     end
 
     test "it can create a container" do
@@ -177,7 +177,7 @@ defmodule ExZkTest do
              }, {:ok, %Proto.CreateResponse{path: @path}}}
         })
 
-      assert ExZk.create(session, @path, @data, mode: :container) == {:ok, @path, nil}
+      assert Session.create(session, @path, @data, mode: :container) == {:ok, @path, nil}
     end
 
     test "it can create a node with TTL" do
@@ -193,7 +193,7 @@ defmodule ExZkTest do
              }, {:ok, %Proto.Create2Response{path: @path, stat: @stat}}}
         })
 
-      assert ExZk.create(session, @path, @data, ttl: @ttl) ==
+      assert Session.create(session, @path, @data, ttl: @ttl) ==
                {:ok, @path, @stat}
     end
 
@@ -209,7 +209,8 @@ defmodule ExZkTest do
              }, {:ok, %Proto.CreateResponse{path: @path}}}
         })
 
-      assert ExZk.create(session, @path, @data, mode: :persistent_sequential) == {:ok, @path, nil}
+      assert Session.create(session, @path, @data, mode: :persistent_sequential) ==
+               {:ok, @path, nil}
     end
 
     test "it can delete a node" do
@@ -218,7 +219,7 @@ defmodule ExZkTest do
           delete: {%Proto.DeleteRequest{path: @path, version: @any_version}, :ok}
         })
 
-      assert ExZk.delete(session, @path) == :ok
+      assert Session.delete(session, @path) == :ok
     end
 
     test "it can delete a node with version" do
@@ -227,7 +228,7 @@ defmodule ExZkTest do
           delete: {%Proto.DeleteRequest{path: @path, version: @version}, :ok}
         })
 
-      assert ExZk.delete(session, @path, @version) == :ok
+      assert Session.delete(session, @path, @version) == :ok
     end
 
     test "it can delete a node recursively" do
@@ -255,7 +256,7 @@ defmodule ExZkTest do
             )
         })
 
-      assert ExZk.delete_recursive(session, @path, 0) == :ok
+      assert Util.delete_recursive(session, @path, 0) == :ok
     end
 
     test "it can delete a node recursively in batch" do
@@ -287,7 +288,7 @@ defmodule ExZkTest do
               }}}
         })
 
-      assert ExZk.delete_recursive(session, @path) == :ok
+      assert Util.delete_recursive(session, @path) == :ok
     end
 
     test "it can check a node is exists" do
@@ -296,7 +297,7 @@ defmodule ExZkTest do
           exists: {%Proto.ExistsRequest{path: @path}, {:ok, %Proto.ExistsResponse{stat: @stat}}}
         })
 
-      assert ExZk.exists(session, @path) == {:ok, true, @stat}
+      assert Session.exists(session, @path) == {:ok, true, @stat}
     end
 
     test "it can check a node is not exists" do
@@ -305,7 +306,7 @@ defmodule ExZkTest do
           exists: {%Proto.ExistsRequest{path: @path}, {:error, :no_node}}
         })
 
-      assert ExZk.exists(session, @path) == {:ok, false, nil}
+      assert Session.exists(session, @path) == {:ok, false, nil}
     end
 
     test "it can get ACL of a node" do
@@ -316,7 +317,7 @@ defmodule ExZkTest do
              {:ok, %Proto.GetACLResponse{acl: @acls, stat: @stat}}}
         })
 
-      assert ExZk.get_acl(session, @path) == {:ok, @acls, @stat}
+      assert Session.get_acl(session, @path) == {:ok, @acls, @stat}
     end
 
     test "it can set ACL of a node" do
@@ -327,7 +328,7 @@ defmodule ExZkTest do
              {:ok, %Proto.SetACLResponse{stat: @stat}}}
         })
 
-      assert ExZk.set_acl(session, @path, @acls) == {:ok, @stat}
+      assert Session.set_acl(session, @path, @acls) == {:ok, @stat}
     end
 
     test "it can set ACL of a node with version" do
@@ -338,7 +339,7 @@ defmodule ExZkTest do
              {:ok, %Proto.SetACLResponse{stat: @stat}}}
         })
 
-      assert ExZk.set_acl(session, @path, @acls, @version) == {:ok, @stat}
+      assert Session.set_acl(session, @path, @acls, @version) == {:ok, @stat}
     end
 
     test "it can sync a node" do
@@ -347,7 +348,7 @@ defmodule ExZkTest do
           sync: {%Proto.SyncRequest{path: @path}, {:ok, %Proto.SyncResponse{path: @path}}}
         })
 
-      assert ExZk.sync(session, @path) == {:ok, @path}
+      assert Session.sync(session, @path) == {:ok, @path}
     end
 
     test "it can check whoami" do
@@ -356,7 +357,7 @@ defmodule ExZkTest do
           who_am_i: {nil, {:ok, %Proto.WhoAmIResponse{client_info: @client_info}}}
         })
 
-      assert ExZk.whoami(session) == {:ok, @client_info}
+      assert Session.whoami(session) == {:ok, @client_info}
     end
 
     test "it can send multi ops" do
@@ -365,7 +366,7 @@ defmodule ExZkTest do
           multi: {Multi.to_request(@multi_ops), {:ok, %Multi.Response{results: @multi_results}}}
         })
 
-      assert ExZk.multi(session, @multi_ops) == {:ok, @multi_results}
+      assert Session.multi(session, @multi_ops) == {:ok, @multi_results}
     end
   end
 end
