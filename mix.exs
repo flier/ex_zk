@@ -57,6 +57,7 @@ defmodule ExZk.MixProject do
 
   defp aliases do
     [
+      doc_test: ["test test/doc_test.exs"],
       integration_test: ["test --include external test/integration_test.exs"]
     ]
   end
