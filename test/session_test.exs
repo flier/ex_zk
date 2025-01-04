@@ -206,10 +206,7 @@ defmodule ConnectionTest do
 
         assert {:connected, %{socket: socket}} = Session.status(session)
 
-        frame = pack(%RequestHeader{xid: @ping_xid, type: OpCode.value!(:ping)})
-        data = <<byte_size(frame)::32>> <> frame
-
-        assert_called(:gen_tcp.send(:sock, data))
+        assert_called(:gen_tcp.send(:sock, <<0, 0, 0, 8, 255, 255, 255, 254, 0, 0, 0, 11>>))
 
         assert {:ok, frame, ""} = Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @ping_xid}))
 
