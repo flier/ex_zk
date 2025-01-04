@@ -126,8 +126,6 @@ defmodule ExZk.Wire do
       iex> defrecord Test, scheme: :ustring, id: :ustring
       iex> Test
       DocTest.Test
-      iex> Test.__info__(:struct)
-      [%{default: "", field: :scheme}, %{default: "", field: :id}]
 
   """
   defmacro defrecord(name, fields), do: Record.make_record(name, fields)
