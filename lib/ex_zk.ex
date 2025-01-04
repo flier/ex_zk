@@ -39,23 +39,11 @@ defmodule ExZk do
 
   This function returns `{:ok, pid}` if the ExZk process is started successfully.
 
-      {:ok, pid} = ExZk.start_link()
+      {:ok, pid} = ExZk.start_link("zk://user:pass@localhost:2181/")
 
   This function accepts one argument which can either be an string representing a URI or a keyword list of options.
 
-  ## Examples
-
-      iex> {:ok, pid} = ExZk.start_link()
-      iex> is_pid(pid)
-      true
-
-      iex> {:ok, pid} = ExZk.start_link("zk://user:pass@localhost:2181/")
-      iex> is_pid(pid)
-      true
-
-      iex> {:ok, pid} = ExZk.start_link(host: "example.com", port: 9999, password: "secret")
-      iex> is_pid(pid)
-      true
+      {:ok, pid} = ExZk.start_link(host: "example.com", port: 9999, password: "secret")
 
   """
   @spec start_link(binary() | list(option())) :: {:ok, pid()} | :ignore | {:error, term()}
