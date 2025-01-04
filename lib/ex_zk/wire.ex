@@ -29,6 +29,8 @@ defmodule ExZk.Wire do
   end
 
   defmodule Record do
+    alias ExZk.Jute.Binding
+
     def make_record(name, fields) do
       struct = make_struct(fields)
       typespec = make_typespec(fields)
@@ -51,7 +53,7 @@ defmodule ExZk.Wire do
       fields =
         fields
         |> Enum.map(fn {name, type} ->
-          {name, ExZk.Jute.Binding.default_value(type)}
+          {name, Binding.default_value(type)}
         end)
 
       quote do
@@ -63,7 +65,7 @@ defmodule ExZk.Wire do
       fields =
         fields
         |> Enum.map(fn {name, type} ->
-          {name, ExZk.Jute.Binding.typespec(type)}
+          {name, Binding.typespec(type)}
         end)
 
       quote do
@@ -83,7 +85,7 @@ defmodule ExZk.Wire do
       pack_fields =
         fields
         |> Enum.map(fn {name, type} ->
-          {ExZk.Jute.Binding.typename(type), name}
+          {Binding.typename(type), name}
         end)
 
       quote do
@@ -100,7 +102,7 @@ defmodule ExZk.Wire do
       unpack_fields =
         fields
         |> Enum.map(fn {name, type} ->
-          {name, ExZk.Jute.Binding.typename(type)}
+          {name, Binding.typename(type)}
         end)
 
       quote do
