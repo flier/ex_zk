@@ -10,7 +10,6 @@ defmodule ConnectionTest do
 
   alias ExZk.{
     Connector,
-    Defs.OpCode,
     Frame,
     Session,
     Socket,
@@ -19,7 +18,7 @@ defmodule ConnectionTest do
     Wire.Unpack
   }
 
-  alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
+  alias ExZk.Proto.{ReplyHeader, WatcherEvent}
 
   @close_session Frame.new_close_session()
 
