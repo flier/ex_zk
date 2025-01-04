@@ -15,8 +15,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        otp: ['24', '26', '27']
-        elixir: ['1.17', '1.18']
+        otp: ['25', '26', '27']
+        elixir: ['1.17', '1.18'] # https://hexdocs.pm/elixir/compatibility-and-deprecations.html
+        include:
+          - otp: '24'
+            elixir: '1.16'
 
     steps:
     - uses: actions/checkout@v4
