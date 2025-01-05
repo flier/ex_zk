@@ -1,8 +1,6 @@
 defmodule WatchTest do
   use ExUnit.Case, async: true
 
-  import Mock
-
   use ExZk.Defs
 
   alias ExZk.{NodeWatcher, StateWatcher}

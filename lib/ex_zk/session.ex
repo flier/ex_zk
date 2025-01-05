@@ -31,6 +31,18 @@ defmodule ExZk.Session do
     @type t :: %__MODULE__{watchers: list(), event: WatchedEvent.t()}
   end
 
+  defmodule Info do
+    defstruct [:id, :timeout, :addr, :readonly, :last_zxid]
+
+    @type t :: %__MODULE__{
+            id: integer(),
+            timeout: timeout(),
+            addr: String.t(),
+            readonly: boolean(),
+            last_zxid: integer()
+          }
+  end
+
   defstruct [
     :opts,
     :socket,
@@ -120,6 +132,19 @@ defmodule ExZk.Session do
       {status, metadata} = :gen_statem.call(session, :status)
 
       {{status, metadata}, %{status: status}}
+    end)
+  end
+
+  @spec info(session()) :: Info.t()
+  def info(session) do
+    :telemetry.span([:ex_zk, :session, :info], %{session: session}, fn ->
+      case :gen_statem.call(session, :info) do
+        {:ok, info} ->
+          {{:ok, info}, %{info: info}}
+
+        {:error, err} ->
+          {{:error, err}, %{error: err}}
+      end
     end)
   end
 
@@ -556,6 +581,26 @@ defmodule ExZk.Session do
 
   def connected(
         {:call, from},
+        :info,
+        %__MODULE__{} = data
+      ) do
+    :gen_statem.reply(
+      from,
+      {:info,
+       %Info{
+         id: data.session_id,
+         timeout: data.session_timeout,
+         addr: data.connected_address,
+         readonly: data.readonly,
+         last_zxid: data.last_zxid
+       }}
+    )
+
+    :keep_state_and_data
+  end
+
+  def connected(
+        {:call, from},
         {:send_request, opcode, request},
         %__MODULE__{socket: socket, framer: framer} = data
       ) do
@@ -763,9 +808,8 @@ defmodule ExZk.Session do
 
   defp ping_latency(%__MODULE__{last_ping_sent: nil}), do: %Duration{}
 
-  defp ping_latency(%__MODULE__{last_ping_sent: last_ping_sent}) do
-    %Duration{microsecond: {Time.diff(Time.utc_now(), last_ping_sent, :microsecond), 6}}
-  end
+  defp ping_latency(%__MODULE__{last_ping_sent: last_ping_sent}),
+    do: %Duration{microsecond: {Time.diff(Time.utc_now(), last_ping_sent, :microsecond), 6}}
 
   defp queue_event(%__MODULE__{waiting_events: nil} = data, event) do
     queue_event(%__MODULE__{data | waiting_events: :queue.new()}, event)
