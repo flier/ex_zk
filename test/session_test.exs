@@ -10,6 +10,7 @@ defmodule ConnectionTest do
 
   alias ExZk.{
     Connector,
+    Connector.Connected,
     Defs.OpCode,
     Frame,
     Session,
@@ -221,6 +222,56 @@ defmodule ConnectionTest do
                  "[session: [pid: #{inspect(session)}, id: nil], ping: [latency: \"PT0."
                )
       end
+    end
+  end
+
+  describe "a session with state watcher" do
+    test "it can be notified when session is connected or disconnected" do
+      with_mocks([
+        {Socket, [],
+         [
+           start_link: fn _pid, _opts -> {:ok, :sock} end,
+           send_frame: fn :sock, _frame -> :ok end
+         ]}
+      ]) do
+        {:ok, session} =
+          Session.start_link(state_watcher: self())
+
+        send(session, {:connected, :sock, %Connected{}})
+        assert_receive({:session_state, :sync_connected})
+
+        send(session, {:disconnected, :sock, %Socket.Error{reason: :reason}})
+        assert_receive({:session_state, :disconnected})
+      end
+    end
+
+    test_with_mock "it can be notified when session is connected to a readonly server", Socket,
+      start_link: fn _pid, _opts -> {:ok, :sock} end do
+      {:ok, session} =
+        Session.start_link(state_watcher: self())
+
+      send(session, {:connected, :sock, %Connected{readonly: true}})
+      assert_receive({:session_state, :connected_readonly})
+    end
+
+    test_with_mock "it can be notified when auth failed", Socket,
+      start_link: fn _pid, _opts -> {:ok, :sock} end do
+      {:ok, session} =
+        Session.start_link(state_watcher: self())
+
+      send(session, {:connected, :sock, %Connected{readonly: true}})
+      assert_receive({:session_state, :connected_readonly})
+
+      send(
+        session,
+        {:frame, :sock,
+         %Frame{
+           reply_hdr: %ReplyHeader{xid: @auth_packet_xid, err: :auth_failed},
+           response: {:auth_failed, :auth_failed}
+         }}
+      )
+
+      assert_receive({:session_state, :auth_failed})
     end
   end
 end

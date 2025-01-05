@@ -64,13 +64,17 @@ defmodule ExZk.TypedEnum.Use do
   alias ExZk.TypedEnum.Typespec
 
   defmacro __using__(opts) do
-    quote bind_quoted: [opts: opts] do
+    module_name = __CALLER__.module |> Module.split() |> List.last() |> Macro.underscore()
+    check_key_guard_name = "is_#{module_name}" |> String.to_atom()
+
+    quote bind_quoted: [opts: opts, check_key_guard_name: check_key_guard_name] do
       typespec = Typespec.make(Keyword.keys(opts))
 
       @type t :: unquote(typespec)
 
       keys = Keyword.keys(opts)
       key_names = Enum.map(keys, &Atom.to_string/1)
+
       @valid_values Enum.uniq(keys ++ key_names ++ Keyword.values(opts))
 
       {_key, value} = opts |> hd()
@@ -138,6 +142,8 @@ defmodule ExZk.TypedEnum.Use do
       def valid_value?(value) do
         Enum.member?(@valid_values, value)
       end
+
+      defguard unquote(check_key_guard_name)(key) when key in unquote(keys)
 
       # # Reflection
       def __enum_map__, do: unquote(opts)

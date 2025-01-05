@@ -13,6 +13,8 @@ defmodule ExZk.Defs do
       @default_host "localhost"
       @default_port 2181
       @default_server "#{@default_host}:#{@default_port}"
+      @default_backoff_initial 500
+      @default_backoff_max 30_000
 
       @default_timeout 5000
       @default_session_timeout 18_000

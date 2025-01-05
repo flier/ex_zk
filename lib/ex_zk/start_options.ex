@@ -75,7 +75,7 @@ defmodule ExZk.StartOptions do
     ],
     backoff_initial: [
       type: :timeout,
-      default: 500,
+      default: @default_backoff_initial,
       doc: """
       the initial backoff time (in milliseconds), which is the time that the Zookeeper process
       will wait before attempting to reconnect to Redis after a disconnection or failed first
@@ -84,7 +84,7 @@ defmodule ExZk.StartOptions do
     ],
     backoff_max: [
       type: :timeout,
-      default: 30_000,
+      default: @default_backoff_max,
       doc: """
       the maximum length (in milliseconds) of the time interval used between reconnection
       attempts. See the "Reconnections" page in the docs for more information.

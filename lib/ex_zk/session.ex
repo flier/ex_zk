@@ -16,6 +16,7 @@ defmodule ExZk.Session do
     Proto,
     Proto.ReplyHeader,
     Socket,
+    StateWatcher,
     WatchedEvent,
     WatchManager
   }
@@ -38,6 +39,7 @@ defmodule ExZk.Session do
     :reconnect_times,
     :session_id,
     :session_timeout,
+    :readonly,
     :framer,
     :last_zxid,
     :last_ping_sent,
@@ -53,6 +55,7 @@ defmodule ExZk.Session do
           reconnect_times: integer(),
           session_id: integer(),
           session_timeout: timeout(),
+          readonly: boolean(),
           framer: Framer.t(),
           last_zxid: zxid(),
           last_ping_sent: Time.t(),
@@ -60,7 +63,11 @@ defmodule ExZk.Session do
           waiting_events: :queue.queue(WatcherSetEvent.t())
         }
 
-  @type option :: {:session_id, integer()} | Socket.option() | :gen_statem.start_opt()
+  @type option ::
+          {:session_id, integer()}
+          | {:state_watcher, StateWatcher.t()}
+          | Socket.option()
+          | :gen_statem.start_opt()
 
   @type session :: :gen_statem.server_ref()
   @type status :: :disconnected | :connecting | :connected
@@ -415,7 +422,7 @@ defmodule ExZk.Session do
   ##
 
   @impl true
-  def callback_mode, do: :state_functions
+  def callback_mode, do: [:state_functions, :state_enter]
 
   @impl true
   def init(opts) do
@@ -448,7 +455,7 @@ defmodule ExZk.Session do
   def terminate(reason, _state, %__MODULE__{socket: socket}) do
     :ok = Socket.send_frame(socket, new_close_session())
 
-    if Process.alive?(socket) and reason == :normal do
+    if is_pid(socket) and Process.alive?(socket) and reason == :normal do
       :ok = Socket.normal_stop(socket)
     end
   end
@@ -458,6 +465,10 @@ defmodule ExZk.Session do
   ##
 
   # "Disconnected" state: the session is close and the socket is not alive.
+
+  def disconnected(:enter, _old_state, %__MODULE__{opts: opts}),
+    do: on_state_changed(:disconnected, opts[:state_watcher])
+
   def disconnected({:timeout, :reconnect}, _timer_info, %__MODULE__{opts: opts} = data) do
     {:ok, socket} = Socket.start_link(self(), opts)
 
@@ -493,6 +504,8 @@ defmodule ExZk.Session do
   end
 
   # "Connecting" state: the session is on going and the socket is not alive.
+  def connecting(:enter, _old_state, %__MODULE__{}), do: :keep_state_and_data
+
   def connecting(
         :info,
         {:connected, socket, %Connected{} = connected},
@@ -515,6 +528,13 @@ defmodule ExZk.Session do
   end
 
   # "Connected" state: the session is up and the socket is alive.
+  def connected(:enter, _old_state, %__MODULE__{opts: opts, readonly: readonly}),
+    do:
+      on_state_changed(
+        if(readonly, do: :connected_readonly, else: :sync_connected),
+        opts[:state_watcher]
+      )
+
   def connected(:info, {:disconnected, socket, error}, %__MODULE__{socket: socket} = data) do
     :telemetry.execute([:ex_zk, :session, :disconnected], %{}, session_info(data))
 
@@ -522,9 +542,8 @@ defmodule ExZk.Session do
     disconnect(data, error)
   end
 
-  def connected(:info, {:frame, socket, frame}, %__MODULE__{socket: socket} = data) do
-    handle_frame(frame, data)
-  end
+  def connected(:info, {:frame, socket, frame}, %__MODULE__{socket: socket} = data),
+    do: handle_frame(frame, data)
 
   def connected(
         {:call, from},
@@ -555,7 +574,12 @@ defmodule ExZk.Session do
   defp on_connected(
          %__MODULE__{opts: opts, last_zxid: last_zxid} = data,
          socket,
-         %Connected{addr: addr, session_timeout: session_timeout, session_id: session_id}
+         %Connected{
+           addr: addr,
+           session_timeout: session_timeout,
+           session_id: session_id,
+           readonly: readonly
+         }
        ) do
     :telemetry.execute(
       [:ex_zk, :session, :connected],
@@ -575,6 +599,7 @@ defmodule ExZk.Session do
         connected_address: addr,
         session_id: session_id,
         session_timeout: session_timeout,
+        readonly: readonly,
         framer: %Framer{},
         backoff_current: nil,
         reconnect_times: nil
@@ -583,6 +608,14 @@ defmodule ExZk.Session do
     action = {{:timeout, :send_ping}, ping_interval(session_timeout), %{}}
 
     {data, action}
+  end
+
+  defp on_state_changed(_state, nil), do: :keep_state_and_data
+
+  defp on_state_changed(state, watcher) do
+    :ok = StateWatcher.state_changed(watcher, state)
+
+    :keep_state_and_data
   end
 
   defp handle_frame(%Frame{response: :pong}, %__MODULE__{session_timeout: session_timeout} = data) do
@@ -598,14 +631,14 @@ defmodule ExZk.Session do
     {:keep_state, data, action}
   end
 
-  defp handle_frame(%Frame{response: {:auth_failed, err}}, %__MODULE__{} = data) do
+  defp handle_frame(%Frame{response: {:auth_failed, err}}, %__MODULE__{opts: opts} = data) do
     :telemetry.execute(
       [:ex_zk, :session, :auth, :failed],
       %{system_time: System.system_time()},
-      session_info(data) |> Map.put(:error, ErrCode.cast!(err))
+      session_info(data) |> Map.put(:error, as_err_code(err))
     )
 
-    :keep_state_and_data
+    on_state_changed(:auth_failed, opts[:state_watcher])
   end
 
   defp handle_frame(%Frame{response: {:notification, evt}}, %__MODULE__{} = data) do
@@ -649,15 +682,17 @@ defmodule ExZk.Session do
   end
 
   defp extract_response(%Frame{reply_hdr: %ReplyHeader{err: err}}) when err != 0,
-    do:
-      {:error,
-       case ErrCode.cast(err) do
-         {:ok, code} -> code
-         :error -> err
-       end}
+    do: {:error, as_err_code(err)}
 
   defp extract_response(%Frame{response: nil}), do: :ok
   defp extract_response(%Frame{response: response}), do: {:ok, response}
+
+  defp as_err_code(err) do
+    case ErrCode.cast(err) do
+      {:ok, code} -> code
+      :error -> err
+    end
+  end
 
   defp disconnect(%__MODULE__{opts: opts} = data, error) do
     if opts[:exit_on_disconnection] do
@@ -674,7 +709,7 @@ defmodule ExZk.Session do
   end
 
   defp next_backoff(%__MODULE__{backoff_current: nil} = data) do
-    backoff_initial = data.opts[:backoff_initial]
+    backoff_initial = data.opts[:backoff_initial] || @default_backoff_initial
     {backoff_initial, %{data | backoff_current: backoff_initial, reconnect_times: 1}}
   end
 
@@ -684,7 +719,7 @@ defmodule ExZk.Session do
     next_exponential_backoff = round(data.backoff_current * @backoff_exponent)
 
     backoff_current =
-      case opts[:backoff_max] do
+      case opts[:backoff_max] || @default_backoff_max do
         :infinity -> next_exponential_backoff
         backoff_max -> min(next_exponential_backoff, backoff_max)
       end
@@ -748,7 +783,7 @@ defmodule ExZk.Session do
     else
       watch_manager
       |> WatchManager.watches()
-      |> Enum.chunk_every(@set_watches_max_length)
+      |> Stream.chunk_every(@set_watches_max_length)
       |> Enum.map(&new_set_watches_request(last_zxid, &1))
     end
   end
