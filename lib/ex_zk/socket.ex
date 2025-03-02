@@ -2,7 +2,7 @@ defmodule ExZk.Socket do
   use GenServer
 
   alias ExZk.Wire.Unpack
-  alias ExZk.{Connector, Frame}
+  alias ExZk.{Connector, Frame, Transport}
 
   defmodule Error do
     @moduledoc """
@@ -45,7 +45,7 @@ defmodule ExZk.Socket do
   defstruct [
     :session,
     :opts,
-    :transport,
+    :transport_module,
     :socket,
     :buffered
   ]
@@ -53,14 +53,12 @@ defmodule ExZk.Socket do
   @type t :: %__MODULE__{
           session: Process.dest(),
           opts: [option()],
-          transport: module(),
-          socket: socket(),
+          transport_module: module(),
+          socket: Transport.socket(),
           buffered: binary()
         }
 
   @type option :: {:ssl, boolean()} | :gen_tcp.option()
-  @type transport :: :gen_tcp | :ssl
-  @type socket :: :gen_tcp.socket() | :ssl.sslsocket()
 
   ####
   ## Public API
@@ -102,16 +100,19 @@ defmodule ExZk.Socket do
     state = %__MODULE__{
       session: session,
       opts: opts,
-      transport: if(opts[:ssl], do: :ssl, else: :gen_tcp)
+      transport_module: if(opts[:ssl], do: ExZk.Transport.SSL, else: ExZk.Transport.TCP)
     }
 
     {:ok, state, {:continue, []}}
   end
 
   @impl true
-  def handle_continue([], %{session: session, opts: opts, transport: transport} = state) do
+  def handle_continue(
+        [],
+        %{session: session, opts: opts, transport_module: transport_module} = state
+      ) do
     with {:ok, socket, connected} <- Connector.connect(session, opts),
-         :ok <- setopts(transport, socket, active: :once) do
+         :ok <- transport_module.setopts(socket, active: :once) do
       send(session, {:connected, self(), connected})
       {:noreply, %{state | socket: socket}}
     else
@@ -124,10 +125,13 @@ defmodule ExZk.Socket do
   def handle_info(msg, state)
 
   # Inbound data from the socket.
-  def handle_info({transport, socket, data}, %__MODULE__{socket: socket} = state)
+  def handle_info(
+        {transport, socket, data},
+        %__MODULE__{transport_module: transport_module, socket: socket} = state
+      )
       when transport in [:tcp, :ssl] do
-    :ok = setopts(transport, socket, active: :once)
-    state = new_data(state, data)
+    :ok = transport_module.setopts(socket, active: :once)
+    state = handle_data(state, data)
     {:noreply, state}
   end
 
@@ -154,24 +158,18 @@ defmodule ExZk.Socket do
   @impl true
   def handle_cast(
         {:send, packet},
-        %__MODULE__{session: session, transport: transport, socket: socket} = state
+        %__MODULE__{session: session, transport_module: transport_module, socket: socket} = state
       ) do
-    case transport.send(socket, packet) do
+    case transport_module.send(socket, packet) do
       :ok ->
         {:noreply, state}
 
       {:error, reason} ->
-        :ok = transport.close(socket)
+        :ok = transport_module.close(socket)
 
         send(session, {:disconnected, self(), %Error{reason: reason}})
 
-        error =
-          case transport do
-            :ssl -> {:ssl_error, :closed}
-            :gen_tcp -> {:tcp_error, :closed}
-          end
-
-        stop(error, state)
+        stop(transport_module.closed(), state)
     end
   end
 
@@ -179,13 +177,9 @@ defmodule ExZk.Socket do
   ## Private methods
   ##
 
-  defp setopts(:tcp, socket, opts), do: :inet.setopts(socket, opts)
-  defp setopts(:gen_tcp, socket, opts), do: :inet.setopts(socket, opts)
-  defp setopts(:ssl, socket, opts), do: :ssl.setopts(socket, opts)
+  defp handle_data(%__MODULE__{} = state, "" = _data), do: state
 
-  defp new_data(%__MODULE__{} = state, "" = _data), do: state
-
-  defp new_data(
+  defp handle_data(
          %__MODULE__{session: session, buffered: nil} = state,
          <<sz::32, data::binary-size(sz), rest::binary>> = _data
        ) do
@@ -203,19 +197,20 @@ defmodule ExZk.Socket do
 
     send(session, {:frame, self(), frame})
 
-    new_data(state, rest)
+    handle_data(state, rest)
   end
 
-  defp new_data(%__MODULE__{buffered: nil} = state, data) do
+  defp handle_data(%__MODULE__{buffered: nil} = state, data) do
     %__MODULE__{state | buffered: data}
   end
 
-  defp new_data(%__MODULE__{buffered: buffered} = state, data) do
-    new_data(%__MODULE__{state | buffered: nil}, buffered <> data)
+  defp handle_data(%__MODULE__{buffered: buffered} = state, data) do
+    handle_data(%__MODULE__{state | buffered: nil}, buffered <> data)
   end
 
   defp stop(reason, %__MODULE__{session: session} = state) do
     send(session, {:disconnected, self(), %Error{reason: reason}})
+
     {:stop, :normal, state}
   end
 end

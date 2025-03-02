@@ -92,36 +92,40 @@ defmodule SocketTest do
     test "it will be stopped when received :tcp_closed" do
       {:ok, sock} = Socket.start_link(self(), [])
 
+      assert_receive {:connected, ^sock, @connected}
+
       send(sock, {:tcp_closed, :sock})
 
-      assert_receive {:connected, ^sock, @connected}
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :tcp_closed}}
     end
 
     test "it will be stopped when received :tcp_error" do
       {:ok, sock} = Socket.start_link(self(), [])
 
+      assert_receive {:connected, ^sock, @connected}
+
       send(sock, {:tcp_error, :sock, :reason})
 
-      assert_receive {:connected, ^sock, @connected}
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
     end
 
     test "it will be stopped when received :ssl_closed" do
       {:ok, sock} = Socket.start_link(self(), [])
 
+      assert_receive {:connected, ^sock, @connected}
+
       send(sock, {:ssl_closed, :sock})
 
-      assert_receive {:connected, ^sock, @connected}
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :ssl_closed}}
     end
 
     test "it will be stopped when received :ssl_error" do
       {:ok, sock} = Socket.start_link(self(), [])
 
+      assert_receive {:connected, ^sock, @connected}
+
       send(sock, {:ssl_error, :sock, :reason})
 
-      assert_receive {:connected, ^sock, @connected}
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
     end
 
