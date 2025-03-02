@@ -5,7 +5,7 @@ defmodule ExZkTest do
 
   import ExZk.Defs.ACL
 
-  alias ExZk.{Create, Multi, Proto, Session, Util}
+  alias ExZk.{Create, Defs.AddWatchMode, Multi, Proto, Session, Util, Watcher}
   alias ExZk.Data.{ClientInfo, Stat}
 
   @path "/foo/bar"
@@ -52,7 +52,11 @@ defmodule ExZkTest do
       {:keep_state_and_data, {:reply, from, {:connected, data}}}
     end
 
-    def connected({:call, from}, {:send_request, opcode, request}, data) do
+    def connected(
+          {:call, from},
+          {:request, opcode, request, _watch_registration, _watch_deregistration},
+          data
+        ) do
       case data[opcode] do
         {^request, response} ->
           {:keep_state, %{data | opcode => nil}, {:reply, from, response}}
@@ -88,6 +92,17 @@ defmodule ExZkTest do
       assert Session.get_children(session, @path) == {:ok, @children}
     end
 
+    test "it can get children with watcher" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          get_children:
+            {%Proto.GetChildrenRequest{path: @path, watch: true},
+             {:ok, %Proto.GetChildrenResponse{children: @children}}}
+        })
+
+      assert Session.get_children(session, @path, self()) == {:ok, @children}
+    end
+
     test "it can get children with stat" do
       {:ok, session} =
         MockSession.start_link(%{
@@ -97,6 +112,17 @@ defmodule ExZkTest do
         })
 
       assert Session.get_children2(session, @path) == {:ok, @children, @stat}
+    end
+
+    test "it can get children with stat and watcher" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          get_children2:
+            {%Proto.GetChildren2Request{path: @path, watch: true},
+             {:ok, %Proto.GetChildren2Response{children: @children, stat: @stat}}}
+        })
+
+      assert Session.get_children2(session, @path, self()) == {:ok, @children, @stat}
     end
 
     test "it can get ephemerals" do
@@ -130,6 +156,17 @@ defmodule ExZkTest do
         })
 
       assert Session.get_data(session, @path) == {:ok, @data, @stat}
+    end
+
+    test "it can get data with watcher" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          get_data:
+            {%Proto.GetDataRequest{path: @path, watch: true},
+             {:ok, %Proto.GetDataResponse{data: @data, stat: @stat}}}
+        })
+
+      assert Session.get_data(session, @path, self()) == {:ok, @data, @stat}
     end
 
     test "it can set data" do
@@ -300,6 +337,17 @@ defmodule ExZkTest do
       assert Session.exists(session, @path) == {:ok, true, @stat}
     end
 
+    test "it can check a node is exists with watcher" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          exists:
+            {%Proto.ExistsRequest{path: @path, watch: true},
+             {:ok, %Proto.ExistsResponse{stat: @stat}}}
+        })
+
+      assert Session.exists(session, @path, self()) == {:ok, true, @stat}
+    end
+
     test "it can check a node is not exists" do
       {:ok, session} =
         MockSession.start_link(%{
@@ -351,6 +399,44 @@ defmodule ExZkTest do
       assert Session.sync(session, @path) == {:ok, @path}
     end
 
+    test "it can add watcher" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          add_watch:
+            {%Proto.AddWatchRequest{path: @path, mode: AddWatchMode.value!(:persistent)}, :ok}
+        })
+
+      assert Session.add_watch(session, @path, self()) == :ok
+    end
+
+    test "it can remove watcher on the given path" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          get_data:
+            {%Proto.GetDataRequest{path: @path, watch: true},
+             {:ok, %Proto.GetDataResponse{data: @data, stat: @stat}}},
+          check_watches:
+            {%Proto.CheckWatchesRequest{path: @path, type: Watcher.Type.value!(:data)}, :ok}
+        })
+
+      assert Session.get_data(session, @path, self()) == {:ok, @data, @stat}
+      assert Session.remove_watch(session, @path, :data, self()) == :ok
+    end
+
+    test "it can remove all watchers on the given path" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          get_data:
+            {%Proto.GetDataRequest{path: @path, watch: true},
+             {:ok, %Proto.GetDataResponse{data: @data, stat: @stat}}},
+          remove_watches:
+            {%Proto.RemoveWatchesRequest{path: @path, type: Watcher.Type.value!(:data)}, :ok}
+        })
+
+      assert Session.get_data(session, @path, self()) == {:ok, @data, @stat}
+      assert Session.remove_all_watches(session, @path, :data) == :ok
+    end
+
     test "it can check whoami" do
       {:ok, session} =
         MockSession.start_link(%{
@@ -367,6 +453,66 @@ defmodule ExZkTest do
         })
 
       assert Session.multi(session, @multi_ops) == {:ok, @multi_results}
+    end
+
+    test "it can add watch" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          add_watch: {
+            %Proto.AddWatchRequest{
+              path: @path,
+              mode: AddWatchMode.value!(:persistent)
+            },
+            :ok
+          }
+        })
+
+      assert :ok = Session.add_watch(session, @path, self())
+    end
+
+    test "it can add watch recursive" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          add_watch: {
+            %Proto.AddWatchRequest{
+              path: @path,
+              mode: AddWatchMode.value!(:persistent_recursive)
+            },
+            :ok
+          }
+        })
+
+      assert :ok = Session.add_watch(session, @path, self(), true)
+    end
+
+    test "it can remove watch" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          check_watches: {
+            %Proto.CheckWatchesRequest{
+              path: @path,
+              type: Watcher.Type.value!(:any)
+            },
+            :ok
+          }
+        })
+
+      assert :ok = Session.remove_watch(session, @path, :any, self())
+    end
+
+    test "it can remove all watches" do
+      {:ok, session} =
+        MockSession.start_link(%{
+          remove_watches: {
+            %Proto.RemoveWatchesRequest{
+              path: @path,
+              type: Watcher.Type.value!(:any)
+            },
+            :ok
+          }
+        })
+
+      assert :ok = Session.remove_all_watches(session, @path, :any)
     end
   end
 end

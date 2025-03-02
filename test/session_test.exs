@@ -22,8 +22,6 @@ defmodule ConnectionTest do
 
   alias ExZk.Proto.{ReplyHeader, RequestHeader, WatcherEvent}
 
-  @close_session Frame.new_close_session()
-
   setup_with_mocks([
     {:inet, [:no_link, :unstick, :passthrough], [setopts: fn _sock, _opts -> :ok end]},
     {:gen_tcp, [:unstick], [send: fn :sock, _data -> :ok end]},
@@ -34,7 +32,7 @@ defmodule ConnectionTest do
     :ok
   end
 
-  describe "Given a Session" do
+  describe "a Session" do
     test "it can be connected" do
       Process.flag(:trap_exit, true)
 
@@ -50,7 +48,7 @@ defmodule ConnectionTest do
       # stop the session
       Session.close(session)
 
-      assert_called_exactly(:gen_tcp.send(:sock, pack(@close_session)), 1)
+      assert_called_exactly(:gen_tcp.send(:sock, pack(Frame.new_close_session_request())), 1)
 
       # it should be terminated
       Process.sleep(100)
@@ -225,7 +223,7 @@ defmodule ConnectionTest do
     end
   end
 
-  describe "a session with state watcher" do
+  describe "with state watcher" do
     test "it can be notified when session is connected or disconnected" do
       with_mocks([
         {Socket, [],

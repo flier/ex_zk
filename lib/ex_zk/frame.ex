@@ -17,8 +17,10 @@ defmodule ExZk.Frame do
         }
 
   @type request ::
-          Proto.ConnectRequest.t()
+          Multi.request()
+          | Proto.AddWatchRequest.t()
           | Proto.AuthPacket.t()
+          | Proto.ConnectRequest.t()
           | Proto.CreateRequest.t()
           | Proto.CreateTTLRequest.t()
           | Proto.DeleteRequest.t()
@@ -29,12 +31,12 @@ defmodule ExZk.Frame do
           | Proto.GetChildrenRequest.t()
           | Proto.GetDataRequest.t()
           | Proto.GetEphemeralsRequest.t()
+          | Proto.RemoveWatchesRequest.t()
           | Proto.SetACLRequest.t()
           | Proto.SetDataRequest.t()
           | Proto.SetWatches.t()
           | Proto.SetWatches2.t()
           | Proto.SyncRequest.t()
-          | Multi.request()
 
   @type response ::
           :pong
@@ -62,6 +64,8 @@ defmodule ExZk.Frame do
   ####
   ## Public API
   ##
+
+  def has_error?(%__MODULE__{reply_hdr: %ReplyHeader{err: err}}), do: err != 0
 
   @spec new_ping_request :: t()
   def new_ping_request do
@@ -151,8 +155,8 @@ defmodule ExZk.Frame do
     }
   end
 
-  @spec new_close_session :: t()
-  def new_close_session, do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
+  @spec new_close_session_request :: t()
+  def new_close_session_request, do: %__MODULE__{req_hdr: new_request_header(0, :close_session)}
 
   ####
   ## Protocol

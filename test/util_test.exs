@@ -88,18 +88,18 @@ defmodule UtilTest do
       assert Util.list_subtree(:session, "/foo", :bfs) |> Enum.to_list() == @bfs_nodes
 
       for path <- @bfs_nodes do
-        assert_called(Session.get_children(:session, path, false))
+        assert_called(Session.get_children(:session, path, nil))
       end
     end
 
     test "it could be list recursively in BFS with watch" do
-      assert Util.list_subtree(:session, "/foo", :bfs, true) |> Enum.to_list() ==
+      assert Util.list_subtree(:session, "/foo", :bfs, :watcher) |> Enum.to_list() ==
                @bfs_nodes
 
-      assert_called(Session.get_data(:session, "/foo", true))
+      assert_called(Session.get_data(:session, "/foo", :watcher))
 
       for path <- @bfs_nodes do
-        assert_called(Session.get_children(:session, path, true))
+        assert_called(Session.get_children(:session, path, :watcher))
       end
     end
 
@@ -107,18 +107,18 @@ defmodule UtilTest do
       assert Util.list_subtree(:session, "/foo", :dfs) |> Enum.to_list() == @dfs_nodes
 
       for path <- @dfs_nodes do
-        assert_called(Session.get_children(:session, path, false))
+        assert_called(Session.get_children(:session, path, nil))
       end
     end
 
     test "it could be list recursively in DFS with watch" do
-      assert Util.list_subtree(:session, "/foo", :dfs, true) |> Enum.to_list() ==
+      assert Util.list_subtree(:session, "/foo", :dfs, :watcher) |> Enum.to_list() ==
                @dfs_nodes
 
-      assert_called(Session.get_data(:session, "/foo", true))
+      assert_called(Session.get_data(:session, "/foo", :watcher))
 
       for path <- @dfs_nodes do
-        assert_called(Session.get_children(:session, path, true))
+        assert_called(Session.get_children(:session, path, :watcher))
       end
     end
 
@@ -126,18 +126,18 @@ defmodule UtilTest do
       assert Util.list_subtree(:session, "/foo", :cfs) |> Enum.to_list() == @cfs_nodes
 
       for path <- @cfs_nodes do
-        assert_called(Session.get_children(:session, path, false))
+        assert_called(Session.get_children(:session, path, nil))
       end
     end
 
     test "it could be list recursively in CFS with watch" do
-      assert Util.list_subtree(:session, "/foo", :cfs, true) |> Enum.to_list() ==
+      assert Util.list_subtree(:session, "/foo", :cfs, :watcher) |> Enum.to_list() ==
                @cfs_nodes
 
-      assert_called(Session.get_data(:session, "/foo", true))
+      assert_called(Session.get_data(:session, "/foo", :watcher))
 
       for path <- @cfs_nodes do
-        assert_called(Session.get_children(:session, path, true))
+        assert_called(Session.get_children(:session, path, :watcher))
       end
     end
 
@@ -145,7 +145,7 @@ defmodule UtilTest do
       assert Util.delete_recursive(:session, "/foo", 0) == :ok
 
       for path <- @cfs_nodes do
-        assert_called(Session.get_children(:session, path, false))
+        assert_called(Session.get_children(:session, path, nil))
         assert_called(Session.delete(:session, path, @any_version, @default_timeout))
       end
     end
@@ -154,7 +154,7 @@ defmodule UtilTest do
       assert Util.delete_recursive(:session, "/foo") == :ok
 
       for path <- @cfs_nodes do
-        assert_called(Session.get_children(:session, path, false))
+        assert_called(Session.get_children(:session, path, nil))
       end
 
       assert_called(

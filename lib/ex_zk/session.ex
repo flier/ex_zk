@@ -3,33 +3,35 @@ defmodule ExZk.Session do
 
   use ExZk.Defs
 
+  import ExZk.Defs.OpCode
   import ExZk.Frame
+  import ExZk.Watcher.Type
+
+  alias ExZk.WatchDeregistration
 
   alias ExZk.{
     Connector.Connected,
     Create,
+    Defs.AddWatchMode,
     Defs.ErrCode,
     Error,
     Frame,
     Framer,
     Multi,
+    NodeWatcher,
     Proto,
     Proto.ReplyHeader,
     Socket,
     StateWatcher,
     WatchedEvent,
-    WatchManager
+    Watcher,
+    WatchManager,
+    WatchRegistration
   }
 
   alias ExZk.Data.{ACL, ClientInfo, Stat}
 
   @behaviour :gen_statem
-
-  defmodule WatcherSetEvent do
-    defstruct [:watchers, :event]
-
-    @type t :: %__MODULE__{watchers: list(), event: WatchedEvent.t()}
-  end
 
   defmodule Info do
     defstruct [:id, :timeout, :addr, :readonly, :last_zxid]
@@ -55,8 +57,7 @@ defmodule ExZk.Session do
     :framer,
     :last_zxid,
     :last_ping_sent,
-    :watch_manager,
-    :waiting_events
+    :watch_manager
   ]
 
   @type t :: %__MODULE__{
@@ -71,13 +72,13 @@ defmodule ExZk.Session do
           framer: Framer.t(),
           last_zxid: zxid(),
           last_ping_sent: Time.t(),
-          watch_manager: WatchManager.t(),
-          waiting_events: :queue.queue(WatcherSetEvent.t())
+          watch_manager: WatchManager.t()
         }
 
   @type option ::
           {:session_id, integer()}
           | {:state_watcher, StateWatcher.t()}
+          | {:default_watcher, NodeWatcher.t()}
           | Socket.option()
           | :gen_statem.start_opt()
 
@@ -150,16 +151,21 @@ defmodule ExZk.Session do
 
   defguard is_version_or_nil(version) when is_integer(version) or is_nil(version)
 
-  @spec get_children(session(), Path.t(), watch :: boolean(), timeout()) ::
+  @spec get_children(session(), Path.t(), NodeWatcher.t(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, Error.t()}
-  def get_children(session, path, watch \\ false, timeout \\ @default_timeout) do
+  def get_children(session, path, watcher \\ nil, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_children], %{session: session, path: path}, fn ->
       request = %Proto.GetChildrenRequest{
         path: IO.chardata_to_string(path),
-        watch: watch || false
+        watch: !is_nil(watcher)
       }
 
-      case send_request(session, :get_children, request, timeout) do
+      watch_registration =
+        if is_nil(watcher),
+          do: nil,
+          else: WatchRegistration.child_watch_registration(path, watcher)
+
+      case send_request(session, :get_children, request, watch_registration, timeout) do
         {:ok, %Proto.GetChildrenResponse{children: children}} ->
           {{:ok, children}, %{children: children}}
 
@@ -169,16 +175,21 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec get_children2(session(), Path.t(), watch :: boolean(), timeout()) ::
+  @spec get_children2(session(), Path.t(), NodeWatcher.t(), timeout()) ::
           {:ok, children :: list(Path.t()), Stat.t()} | {:error, Error.t()}
-  def get_children2(session, path, watch \\ false, timeout \\ @default_timeout) do
+  def get_children2(session, path, watcher \\ nil, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_children2], %{session: session, path: path}, fn ->
       request = %Proto.GetChildren2Request{
         path: IO.chardata_to_string(path),
-        watch: watch || false
+        watch: !is_nil(watcher)
       }
 
-      case send_request(session, :get_children2, request, timeout) do
+      watch_registration =
+        if is_nil(watcher),
+          do: nil,
+          else: WatchRegistration.child_watch_registration(path, watcher)
+
+      case send_request(session, :get_children2, request, watch_registration, timeout) do
         {:ok, %Proto.GetChildren2Response{children: children, stat: stat}} ->
           {{:ok, children, stat}, %{children: children, stat: stat}}
 
@@ -228,13 +239,18 @@ defmodule ExZk.Session do
     )
   end
 
-  @spec get_data(session(), Path.t(), watch :: boolean(), timeout()) ::
+  @spec get_data(session(), Path.t(), NodeWatcher.t(), timeout()) ::
           {:ok, iodata(), Stat.t()} | {:error, Error.t()}
-  def get_data(session, path, watch \\ false, timeout \\ @default_timeout) do
+  def get_data(session, path, watcher \\ nil, timeout \\ @default_timeout) do
     :telemetry.span([:ex_zk, :session, :get_data], %{session: session, path: path}, fn ->
-      request = %Proto.GetDataRequest{path: IO.chardata_to_string(path), watch: watch || false}
+      request = %Proto.GetDataRequest{path: IO.chardata_to_string(path), watch: !is_nil(watcher)}
 
-      case send_request(session, :get_data, request, timeout) do
+      watch_registration =
+        if is_nil(watcher),
+          do: nil,
+          else: WatchRegistration.data_watch_registration(path, watcher)
+
+      case send_request(session, :get_data, request, watch_registration, timeout) do
         {:ok, %Proto.GetDataResponse{data: data, stat: stat}} ->
           {{:ok, data, stat}, %{data: data, stat: stat}}
 
@@ -316,16 +332,21 @@ defmodule ExZk.Session do
     )
   end
 
-  @spec exists(session(), Path.t(), timeout()) ::
+  @spec exists(session(), Path.t(), NodeWatcher.t(), timeout()) ::
           {:ok, boolean(), Stat.t() | nil} | {:error, Error.t()}
-  def exists(session, path, timeout \\ @default_timeout) do
+  def exists(session, path, watcher \\ nil, timeout \\ @default_timeout) do
     :telemetry.span(
       [:ex_zk, :session, :exists],
       %{session: session, path: path},
       fn ->
-        request = %Proto.ExistsRequest{path: IO.chardata_to_string(path)}
+        request = %Proto.ExistsRequest{path: IO.chardata_to_string(path), watch: !is_nil(watcher)}
 
-        case send_request(session, :exists, request, timeout) do
+        watch_registration =
+          if is_nil(watcher),
+            do: nil,
+            else: WatchRegistration.exists_watch_registration(path, watcher)
+
+        case send_request(session, :exists, request, watch_registration, timeout) do
           {:ok, %Proto.ExistsResponse{stat: stat}} ->
             {{:ok, true, stat}, %{stat: stat}}
 
@@ -423,6 +444,77 @@ defmodule ExZk.Session do
     )
   end
 
+  @spec add_watch(session(), Path.t(), NodeWatcher.t(), recursive :: boolean(), timeout()) ::
+          :ok | {:error, Error.t()}
+  def add_watch(session, path, watcher \\ nil, recursive \\ false, timeout \\ @default_timeout) do
+    :telemetry.span([:ex_zk, :session, :add_watch], %{session: session, path: path}, fn ->
+      request = %Proto.AddWatchRequest{
+        path: IO.chardata_to_string(path),
+        mode: AddWatchMode.value!(if recursive, do: :persistent_recursive, else: :persistent)
+      }
+
+      watch_registration =
+        if is_nil(watcher) do
+          {:default_watcher, path, recursive}
+        else
+          WatchRegistration.persistent_watch_registration(path, watcher, recursive: recursive)
+        end
+
+      case send_request(session, :add_watch, request, watch_registration, timeout) do
+        :ok ->
+          {:ok, %{}}
+
+        {:error, err} ->
+          {{:error, Error.new(err, path)}, %{error: err}}
+      end
+    end)
+  end
+
+  @spec remove_watch(session(), Path.t(), Watcher.Type.t(), NodeWatcher.t(), timeout()) ::
+          :ok | {:error, Error.t()}
+  def remove_watch(session, path, type, watcher, timeout \\ @default_timeout)
+      when is_type(type) and watcher != nil do
+    path = IO.chardata_to_string(path)
+
+    :telemetry.span([:ex_zk, :session, :check_watches], %{session: session, path: path}, fn ->
+      request = %Proto.CheckWatchesRequest{
+        path: path,
+        type: Watcher.Type.value!(type)
+      }
+
+      case send_request(session, :check_watches, request, timeout) do
+        :ok ->
+          {:ok, %{}}
+
+        {:error, err} ->
+          {{:error, Error.new(err, path)}, %{error: err}}
+      end
+    end)
+  end
+
+  @spec remove_all_watches(session(), Path.t(), Watcher.Type.t(), timeout()) ::
+          :ok | {:error, Error.t()}
+  def remove_all_watches(session, path, type, timeout \\ @default_timeout) when is_type(type) do
+    path = IO.chardata_to_string(path)
+
+    :telemetry.span([:ex_zk, :session, :remove_watches], %{session: session, path: path}, fn ->
+      request = %Proto.RemoveWatchesRequest{
+        path: path,
+        type: Watcher.Type.value!(type)
+      }
+
+      watch_deregistration = WatchDeregistration.new(type, path)
+
+      case send_request(session, :remove_watches, request, nil, watch_deregistration, timeout) do
+        :ok ->
+          {:ok, %{}}
+
+        {:error, err} ->
+          {{:error, Error.new(err, path)}, %{error: err}}
+      end
+    end)
+  end
+
   @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, Error.t()}
   @spec whoami(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) ::
           {:error, Error.t()} | {:ok, [ClientInfo.t()]}
@@ -451,34 +543,25 @@ defmodule ExZk.Session do
 
   @impl true
   def init(opts) do
-    {:ok, socket} = Socket.start_link(self(), opts)
+    with {:ok, socket} <- Socket.start_link(self(), opts),
+         {:ok, watch_manager} <- WatchManager.new(opts[:default_watcher]) do
+      data = %__MODULE__{
+        opts: opts,
+        socket: socket,
+        watch_manager: watch_manager
+      }
 
-    data = %__MODULE__{
-      opts: opts,
-      socket: socket,
-      watch_manager: %WatchManager{}
-    }
-
-    if opts[:sync_connect] do
-      # We don't need to handle a timeout here because we're using a timeout in
-      # connect/3 down the pipe.
-      receive do
-        {:connected, ^socket, connected} ->
-          {data, action} = on_connected(data, socket, connected)
-
-          {:ok, :connected, data, action}
-
-        {:disconnected, ^socket, error} ->
-          {:stop, error}
+      if opts[:sync_connect] do
+        sync_connect(data)
+      else
+        {:ok, :connecting, data}
       end
-    else
-      {:ok, :connecting, data}
     end
   end
 
   @impl true
   def terminate(reason, _state, %__MODULE__{socket: socket}) do
-    :ok = Socket.send_frame(socket, new_close_session())
+    :ok = Socket.send_frame(socket, new_close_session_request())
 
     if is_pid(socket) and Process.alive?(socket) and reason == :normal do
       :ok = Socket.normal_stop(socket)
@@ -500,29 +583,20 @@ defmodule ExZk.Session do
     {:next_state, :connecting, %{data | socket: socket}}
   end
 
-  def disconnected(
-        :info,
-        {:disconnected, socket, error},
-        %__MODULE__{socket: socket} = data
-      ) do
+  def disconnected(:info, {:disconnected, socket, error}, %__MODULE__{socket: socket} = data) do
     :telemetry.execute(
       [:ex_zk, :session, :disconnected],
       %{system_time: System.system_time()},
       session_info(data)
     )
 
-    data = %{data | connected_address: nil}
-    disconnect(data, error)
+    disconnect(%{data | connected_address: nil}, error)
   end
 
-  def disconnected(
-        {:call, from},
-        :status,
-        %__MODULE__{backoff_current: backoff_current, reconnect_times: reconnect_times} = _data
-      ) do
+  def disconnected({:call, from}, :status, %__MODULE__{} = data) do
     :gen_statem.reply(
       from,
-      {:disconnected, %{backoff_current: backoff_current, reconnect_times: reconnect_times}}
+      {:disconnected, data |> Map.take([:backoff_current, :reconnect_times])}
     )
 
     :keep_state_and_data
@@ -563,51 +637,55 @@ defmodule ExZk.Session do
   def connected(:info, {:disconnected, socket, error}, %__MODULE__{socket: socket} = data) do
     :telemetry.execute([:ex_zk, :session, :disconnected], %{}, session_info(data))
 
-    data = %{data | connected_address: nil}
-    disconnect(data, error)
+    disconnect(%{data | connected_address: nil}, error)
   end
 
   def connected(:info, {:frame, socket, frame}, %__MODULE__{socket: socket} = data),
     do: handle_frame(frame, data)
 
-  def connected(
-        {:call, from},
-        :status,
-        %__MODULE__{socket: socket, connected_address: addr} = _data
-      ) do
+  def connected({:call, from}, :status, %__MODULE__{socket: socket, connected_address: addr}) do
     :gen_statem.reply(from, {:connected, %{socket: socket, addr: addr}})
     :keep_state_and_data
   end
 
-  def connected(
-        {:call, from},
-        :info,
-        %__MODULE__{} = data
-      ) do
-    :gen_statem.reply(
-      from,
-      {:info,
-       %Info{
-         id: data.session_id,
-         timeout: data.session_timeout,
-         addr: data.connected_address,
-         readonly: data.readonly,
-         last_zxid: data.last_zxid
-       }}
-    )
+  def connected({:call, from}, :info, %__MODULE__{} = data) do
+    info = %Info{
+      id: data.session_id,
+      timeout: data.session_timeout,
+      addr: data.connected_address,
+      readonly: data.readonly,
+      last_zxid: data.last_zxid
+    }
 
+    :gen_statem.reply(from, {:info, info})
     :keep_state_and_data
   end
 
   def connected(
         {:call, from},
-        {:send_request, opcode, request},
-        %__MODULE__{socket: socket, framer: framer} = data
-      ) do
-    {:ok, frame, framer} = Framer.new_frame(framer, opcode, request, from)
-    :ok = Socket.send_frame(socket, frame)
-    {:keep_state, %{data | framer: framer}}
+        {:request, :add_watch, request, {:default_watcher, path, recursive},
+         watch_deregistration},
+        %__MODULE__{watch_manager: %WatchManager{default_watcher: default_watcher}} = data
+      )
+      when is_boolean(recursive) do
+    watch_registration =
+      if is_nil(default_watcher) do
+        nil
+      else
+        WatchRegistration.persistent_watch_registration(path, default_watcher,
+          recursive: recursive
+        )
+      end
+
+    send_frame(data, :add_watch, request, watch_registration, watch_deregistration, from)
   end
+
+  def connected(
+        {:call, from},
+        {:request, opcode, request, watch_registration, watch_deregistration},
+        %__MODULE__{} = data
+      ),
+      do: send_frame(data, opcode, request, watch_registration, watch_deregistration, from)
 
   def connected(:cast, :send_ping, data), do: send_ping_request(data)
   def connected({:timeout, :send_ping}, %{}, data), do: send_ping_request(data)
@@ -615,6 +693,18 @@ defmodule ExZk.Session do
   ####
   ## Private methods
   ##
+
+  defp sync_connect(%__MODULE__{socket: socket} = data) do
+    receive do
+      {:connected, ^socket, connected} ->
+        {data, action} = on_connected(data, socket, connected)
+
+        {:ok, :connected, data, action}
+
+      {:disconnected, ^socket, error} ->
+        {:stop, error}
+    end
+  end
 
   defp on_connected(
          %__MODULE__{opts: opts, last_zxid: last_zxid} = data,
@@ -663,6 +753,37 @@ defmodule ExZk.Session do
     :keep_state_and_data
   end
 
+  defp send_request(
+         session,
+         opcode,
+         request,
+         watch_registration \\ nil,
+         watch_deregistration \\ nil,
+         timeout
+       )
+       when is_op_code(opcode) do
+    :gen_statem.call(
+      session,
+      {:request, opcode, request, watch_registration, watch_deregistration},
+      timeout
+    )
+  end
+
+  defp send_frame(
+         %__MODULE__{socket: socket, framer: framer} = data,
+         opcode,
+         request,
+         watch_registration,
+         watch_deregistration,
+         from
+       ) do
+    {:ok, frame, framer} =
+      Framer.new_frame(framer, opcode, request, watch_registration, watch_deregistration, from)
+
+    :ok = Socket.send_frame(socket, frame)
+    {:keep_state, %{data | framer: framer}}
+  end
+
   defp handle_frame(%Frame{response: :pong}, %__MODULE__{session_timeout: session_timeout} = data) do
     :telemetry.execute(
       [:ex_zk, :session, :pong],
@@ -686,14 +807,19 @@ defmodule ExZk.Session do
     on_state_changed(:auth_failed, opts[:state_watcher])
   end
 
-  defp handle_frame(%Frame{response: {:notification, evt}}, %__MODULE__{} = data) do
+  defp handle_frame(
+         %Frame{response: {:notification, %WatchedEvent{} = evt}},
+         %__MODULE__{watch_manager: wm} = data
+       ) do
     :telemetry.execute(
       [:ex_zk, :session, :notification],
       %{system_time: System.system_time()},
       session_info(data) |> Map.put(:event, evt)
     )
 
-    {:keep_state, queue_event(data, evt)}
+    wm = WatchManager.process_event(wm, evt)
+
+    {:keep_state, %{data | watch_manager: wm}}
   end
 
   defp handle_frame(%Frame{reply_hdr: %ReplyHeader{xid: xid}}, %__MODULE__{} = data)
@@ -705,10 +831,10 @@ defmodule ExZk.Session do
 
   defp handle_frame(
          %Frame{reply_hdr: %ReplyHeader{zxid: zxid}} = frame,
-         %__MODULE__{framer: framer} = data
+         %__MODULE__{framer: framer, watch_manager: watch_manager} = data
        ) do
     case Framer.parse_reply(frame, framer) do
-      {:ok, frame, {task, _} = from, framer} ->
+      {:ok, frame, watch_registration, watch_deregistration, {task, _} = from, framer} ->
         res = extract_response(frame)
 
         :telemetry.execute(
@@ -719,7 +845,19 @@ defmodule ExZk.Session do
 
         :gen_statem.reply(from, res)
 
-        {:keep_state, %__MODULE__{data | framer: framer, last_zxid: zxid}}
+        err =
+          case res do
+            {:error, err} -> err
+            _ -> :ok
+          end
+
+        {_watchers, watch_manager} =
+          watch_manager
+          |> WatchManager.register(watch_registration, err)
+          |> WatchManager.unregister(watch_deregistration)
+
+        {:keep_state,
+         %__MODULE__{data | framer: framer, last_zxid: zxid, watch_manager: watch_manager}}
 
       {:error, reason} ->
         disconnect(data, reason)
@@ -811,14 +949,6 @@ defmodule ExZk.Session do
   defp ping_latency(%__MODULE__{last_ping_sent: last_ping_sent}),
     do: %Duration{microsecond: {Time.diff(Time.utc_now(), last_ping_sent, :microsecond), 6}}
 
-  defp queue_event(%__MODULE__{waiting_events: nil} = data, event) do
-    queue_event(%__MODULE__{data | waiting_events: :queue.new()}, event)
-  end
-
-  defp queue_event(%__MODULE__{waiting_events: waiting_events} = data, event) do
-    %__MODULE__{data | waiting_events: :queue.in(%WatcherSetEvent{event: event}, waiting_events)}
-  end
-
   @set_watches_max_length 128 * 1024
 
   defp new_set_watches_request(last_zxid, %WatchManager{} = watch_manager) do
@@ -858,9 +988,5 @@ defmodule ExZk.Session do
         persistent_recursive_watches
       )
     end
-  end
-
-  defp send_request(session, opcode, request, timeout) do
-    :gen_statem.call(session, {:send_request, opcode, request}, timeout)
   end
 end

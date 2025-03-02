@@ -1,5 +1,6 @@
 defmodule ExZk.Framer do
-  alias ExZk.{Defs.OpCode, Frame, Multi, Proto, Wire.Unpack}
+  alias ExZk.WatchDeregistration
+  alias ExZk.{Defs.OpCode, Frame, Multi, Proto, WatchRegistration, Wire.Unpack}
   alias ExZk.Proto.{ErrorResponse, ReplyHeader, RequestHeader}
 
   defstruct next_xid: 1,
@@ -7,12 +8,13 @@ defmodule ExZk.Framer do
 
   @type t :: %__MODULE__{
           next_xid: xid(),
-          requests: %{xid() => {Frame.t(), :gen_statem.from()}}
+          requests: %{xid() => {Frame.t(), WatchRegistration.t() | nil, :gen_statem.from()}}
         }
 
   @type xid :: integer()
 
   @response_types [
+    add_watch: nil,
     create_container: Proto.CreateResponse,
     create_ttl: Proto.Create2Response,
     create: Proto.CreateResponse,
@@ -25,20 +27,29 @@ defmodule ExZk.Framer do
     get_children2: Proto.GetChildren2Response,
     get_data: Proto.GetDataResponse,
     get_ephemerals: Proto.GetEphemeralsResponse,
-    multi: Multi.Response,
     multi_read: Multi.Response,
+    multi: Multi.Response,
+    remove_watches: nil,
     set_acl: Proto.SetACLResponse,
     set_data: Proto.SetDataResponse,
     sync: Proto.SyncResponse,
     who_am_i: Proto.WhoAmIResponse
   ]
 
-  @spec new_frame(t(), OpCode.t(), Frame.request() | nil, from :: :gen_statem.from() | nil) ::
+  @spec new_frame(
+          t(),
+          OpCode.t(),
+          Frame.request(),
+          WatchRegistration.t() | nil,
+          from :: :gen_statem.from() | nil
+        ) ::
           {:ok, Frame.t(), t()} | {:error, reason :: term()}
   def new_frame(
         %__MODULE__{next_xid: next_xid, requests: requests} = framer,
         opcode,
         request,
+        watch_registration \\ nil,
+        watch_deregistration \\ nil,
         from \\ nil
       ) do
     frame = %Frame{
@@ -46,14 +57,17 @@ defmodule ExZk.Framer do
       request: request
     }
 
-    requests = Map.put(requests, next_xid, {frame, from})
+    requests =
+      Map.put(requests, next_xid, {frame, watch_registration, watch_deregistration, from})
+
     framer = %{framer | next_xid: next_xid + 1, requests: requests}
 
     {:ok, frame, framer}
   end
 
   @spec parse_frame(t(), data :: binary()) ::
-          {:ok, Frame.t(), :gen_statem.from(), t()} | {:error, reason :: term()}
+          {:ok, Frame.t(), WatchRegistration.t(), :gen_statem.from(), t()}
+          | {:error, reason :: term()}
   def parse_frame(%__MODULE__{} = framer, data) do
     with {:ok, frame, _rest} <- Unpack.unpack(%Frame{}, data) do
       parse_reply(frame, framer)
@@ -61,7 +75,10 @@ defmodule ExZk.Framer do
   end
 
   @spec parse_reply(Frame.t(), t()) ::
-          {:ok, Frame.t(), :gen_statem.from(), t()} | {:error, reason :: term()}
+          {:ok, Frame.t(), WatchRegistration.t() | nil, WatchDeregistration.t() | nil,
+           :gen_statem.from(), t()}
+          | {:error, reason :: term()}
+  def parse_reply(frame, framer)
 
   def parse_reply(
         %Frame{reply_hdr: %ReplyHeader{xid: xid}} = frame,
@@ -72,14 +89,16 @@ defmodule ExZk.Framer do
       {nil, _} ->
         {:error, {:unexpected_xid, xid}}
 
-      {{%Frame{req_hdr: req_hdr, request: request}, from}, requests} ->
+      {{%Frame{req_hdr: req_hdr, request: request}, watch_registration, watch_deregistration,
+        from}, requests} ->
         with {:ok, frame} <- handle_reply(%{frame | req_hdr: req_hdr, request: request}) do
-          {:ok, frame, from, %{framer | requests: requests}}
+          {:ok, frame, watch_registration, watch_deregistration, from,
+           %{framer | requests: requests}}
         end
     end
   end
 
-  def parse_reply(frame, framer), do: {:ok, frame, nil, framer}
+  def parse_reply(frame, framer), do: {:ok, frame, nil, nil, framer}
 
   defp handle_reply(
          %Frame{

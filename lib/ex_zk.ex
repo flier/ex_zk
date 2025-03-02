@@ -3,12 +3,12 @@ defmodule ExZk do
   This is the documentation for the ExZk project.
   """
 
-  alias ExZk.{Create, Error, Multi, Session, StartOptions, URI, Util}
-  alias ExZk.Data.{ACL, ClientInfo, Stat}
-
   use Application
 
   use ExZk.Defs
+
+  alias ExZk.{Create, Error, Multi, NodeWatcher, Session, StartOptions, URI, Util, Watcher}
+  alias ExZk.Data.{ACL, ClientInfo, Stat}
 
   @typedoc """
   Options that can be passed to starts a session to Zookeeper (see `start_link/1`).
@@ -71,14 +71,14 @@ defmodule ExZk do
   @spec status(session()) :: {Session.status(), metadata :: %{}}
   defdelegate status(session), to: Session
 
-  @spec get_children(session(), Path.t(), watch :: boolean(), timeout()) ::
+  @spec get_children(session(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, Error.t()}
-  defdelegate get_children(session, path, watch \\ false, timeout \\ @default_timeout),
+  defdelegate get_children(session, path, watcher \\ nil, timeout \\ @default_timeout),
     to: Session
 
-  @spec get_children2(session(), Path.t(), watch :: boolean(), timeout()) ::
+  @spec get_children2(session(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
           {:ok, children :: list(Path.t()), Stat.t()} | {:error, Error.t()}
-  defdelegate get_children2(session, path, watch \\ false, timeout \\ @default_timeout),
+  defdelegate get_children2(session, path, watcher \\ nil, timeout \\ @default_timeout),
     to: Session
 
   @spec get_ephemerals(session(), Path.t(), timeout()) ::
@@ -91,9 +91,9 @@ defmodule ExZk do
   defdelegate get_all_children_number(session, path, timeout \\ @default_timeout),
     to: Session
 
-  @spec get_data(session(), Path.t(), watch :: boolean(), timeout()) ::
+  @spec get_data(session(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
           {:ok, iodata(), Stat.t()} | {:error, Error.t()}
-  defdelegate get_data(session, path, watch \\ false, timeout \\ @default_timeout), to: Session
+  defdelegate get_data(session, path, watcher \\ nil, timeout \\ @default_timeout), to: Session
 
   @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
@@ -125,9 +125,9 @@ defmodule ExZk do
               ),
               to: Util
 
-  @spec exists(session(), Path.t(), timeout()) ::
+  @spec exists(session(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
           {:ok, boolean(), Stat.t() | nil} | {:error, Error.t()}
-  defdelegate exists(session, path, timeout \\ @default_timeout), to: Session
+  defdelegate exists(session, path, watcher \\ nil, timeout \\ @default_timeout), to: Session
 
   @spec get_acl(session(), Path.t(), timeout()) ::
           {:ok, list(ACL.t()), Stat.t()} | {:error, Error.t()}
@@ -145,6 +145,27 @@ defmodule ExZk do
   @spec multi(session(), ops :: [Multi.Op.t()], timeout()) ::
           {:ok, [Multi.Result.t()]} | {:error, Error.t()}
   defdelegate multi(session, ops, timeout \\ @default_timeout), to: Session
+
+  @spec add_watch(session(), Path.t(), NodeWatcher.t(), recursive :: boolean(), timeout()) ::
+          :ok | {:error, Error.t()}
+  defdelegate add_watch(
+                session,
+                path,
+                watcher \\ nil,
+                recursive \\ false,
+                timeout \\ @default_timeout
+              ),
+              to: Session
+
+  @spec remove_watch(session(), Path.t(), Watcher.Type.t(), NodeWatcher.t(), timeout()) ::
+          :ok | {:error, Error.t()}
+  defdelegate remove_watch(session, path, type, watcher, timeout \\ @default_timeout),
+    to: Session
+
+  @spec remove_all_watches(session(), Path.t(), Watcher.Type.t(), timeout()) ::
+          :ok | {:error, Error.t()}
+  defdelegate remove_all_watches(session, path, type, timeout \\ @default_timeout),
+    to: Session
 
   @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, Error.t()}
   defdelegate whoami(session, timeout \\ @default_timeout), to: Session

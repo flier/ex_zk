@@ -57,8 +57,9 @@ defmodule ExZk.MixProject do
 
   defp aliases do
     [
-      doc_test: ["test test/doc_test.exs"],
-      integration_test: ["test --include external test/integration_test.exs"]
+      doctest: ["test test/doc_test.exs"],
+      integration_test: ["test --include external test/integration_test.exs"],
+      lint: ["credo --strict"]
     ]
   end
 
@@ -88,13 +89,13 @@ defmodule ExZk.MixProject do
   defp deps do
     [
       {:castore, "~> 1.0", optional: true},
-      {:nimble_options, "~> 1.0"},
-      {:telemetry, "~> 1.0"},
+      {:nimble_options, "~> 1.1"},
+      {:telemetry, "~> 1.3"},
 
       # Dev and test dependencies
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.35", only: [:dev, :doc]},
+      {:ex_doc, "~> 0.37", only: [:dev, :doc]},
       {:excoveralls, "~> 0.18", only: :test},
       {:hexdump, "~> 0.1", only: [:dev, :test]},
       {:mock, "~> 0.3", only: :test},

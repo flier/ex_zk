@@ -93,6 +93,11 @@ defmodule ExZk.Defs do
     error: -1
   )
 
+  defenum(AddWatchMode,
+    persistent: 0,
+    persistent_recursive: 1
+  )
+
   defenum(Perm,
     read: 1,
     write: 2,

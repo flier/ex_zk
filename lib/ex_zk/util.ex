@@ -1,6 +1,7 @@
 defmodule ExZk.Util do
   use ExZk.Defs
 
+  alias ExZk.NodeWatcher
   alias ExZk.{Error, Multi, Session}
 
   @type session :: Session.session()
@@ -47,19 +48,24 @@ defmodule ExZk.Util do
   @doc """
   BFS Traversal of the system under pathRoot, with the entries in the list, in the same order as that of the traversal.
   """
-  @spec list_subtree(session(), Path.t(), strategy :: :bfs | :dfs | :cfs, watch :: boolean()) ::
+  @spec list_subtree(
+          session(),
+          Path.t(),
+          strategy :: :bfs | :dfs | :cfs,
+          watcher :: NodeWatcher.t()
+        ) ::
           Enumerable.t() | {:error, reason :: term()}
-  def list_subtree(session, dir, strategy \\ :bfs, watch \\ false) do
-    with {:ok, _data, _stat} <- Session.get_data(session, dir, watch) do
+  def list_subtree(session, dir, strategy \\ :bfs, watcher \\ nil) do
+    with {:ok, _data, _stat} <- Session.get_data(session, dir, watcher) do
       case strategy do
-        :bfs -> Stream.concat([dir], list_subtree_bfs(session, dir, watch))
-        :dfs -> Stream.concat([dir], list_subtree_dfs(session, dir, watch))
-        :cfs -> Stream.concat(list_subtree_cfs(session, dir, watch), [dir])
+        :bfs -> Stream.concat([dir], list_subtree_bfs(session, dir, watcher))
+        :dfs -> Stream.concat([dir], list_subtree_dfs(session, dir, watcher))
+        :cfs -> Stream.concat(list_subtree_cfs(session, dir, watcher), [dir])
       end
     end
   end
 
-  defp list_subtree_bfs(session, root, watch) do
+  defp list_subtree_bfs(session, root, watcher) do
     Stream.unfold(:queue.from_list([root]), fn
       dirs ->
         case :queue.out(dirs) do
@@ -67,14 +73,14 @@ defmodule ExZk.Util do
             nil
 
           {{:value, dir}, dirs} ->
-            list_subtree_bfs_children(session, dirs, dir, watch)
+            list_subtree_bfs_children(session, dirs, dir, watcher)
         end
     end)
     |> Stream.concat()
   end
 
-  defp list_subtree_bfs_children(session, dirs, dir, watch) do
-    case Session.get_children(session, dir, watch) do
+  defp list_subtree_bfs_children(session, dirs, dir, watcher) do
+    case Session.get_children(session, dir, watcher) do
       {:ok, children} ->
         children = children |> Enum.sort() |> Enum.map(&Path.join(dir, &1))
         dirs = dirs |> :queue.join(:queue.from_list(children))
@@ -86,14 +92,14 @@ defmodule ExZk.Util do
     end
   end
 
-  defp list_subtree_dfs(session, dir, watch) do
-    case Session.get_children(session, dir, watch) do
+  defp list_subtree_dfs(session, dir, watcher) do
+    case Session.get_children(session, dir, watcher) do
       {:ok, children} ->
         children
         |> Enum.sort()
         |> Stream.map(&Path.join(dir, &1))
         |> Stream.flat_map(fn path ->
-          [path] |> Stream.concat(list_subtree_dfs(session, path, watch))
+          [path] |> Stream.concat(list_subtree_dfs(session, path, watcher))
         end)
 
       {:error, _err} ->
@@ -101,14 +107,14 @@ defmodule ExZk.Util do
     end
   end
 
-  defp list_subtree_cfs(session, dir, watch) do
-    case Session.get_children(session, dir, watch) do
+  defp list_subtree_cfs(session, dir, watcher) do
+    case Session.get_children(session, dir, watcher) do
       {:ok, children} ->
         children
         |> Enum.sort()
         |> Stream.map(&Path.join(dir, &1))
         |> Stream.flat_map(fn path ->
-          list_subtree_cfs(session, path, watch) |> Stream.concat([path])
+          list_subtree_cfs(session, path, watcher) |> Stream.concat([path])
         end)
 
       {:error, _err} ->

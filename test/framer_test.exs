@@ -45,7 +45,8 @@ defmodule FramerTest do
               %Framer{} = f1} =
                Framer.new_frame(f, :create_container, @create_request)
 
-      assert {:ok, %Frame{request: @create_request, response: @create_response}, _sender,
+      assert {:ok, %Frame{request: @create_request, response: @create_response},
+              _watch_registration, _watch_deregistration, _sender,
               %Framer{} = f2} =
                Framer.parse_frame(f1, pack([%ReplyHeader{xid: xid}, @create_response]))
 
@@ -60,7 +61,8 @@ defmodule FramerTest do
               %Framer{} = f1} =
                Framer.new_frame(f, :create_container, @create_request)
 
-      assert {:ok, %Frame{request: @create_request, response: @error_response}, _sender,
+      assert {:ok, %Frame{request: @create_request, response: @error_response},
+              _watch_registration, _watch_deregistration, _sender,
               %Framer{} = f2} =
                Framer.parse_frame(f1, pack([%ReplyHeader{xid: xid, err: @err}]))
 
@@ -75,7 +77,8 @@ defmodule FramerTest do
               %Framer{} = f1} =
                Framer.new_frame(f, :delete, @delete_request)
 
-      assert {:ok, %Frame{response: nil}, _sender, %Framer{} = f2} =
+      assert {:ok, %Frame{response: nil}, _watch_registration, _watch_deregistration, _sender,
+              %Framer{} = f2} =
                Framer.parse_frame(f1, pack([%ReplyHeader{xid: xid}]))
 
       assert f2.next_xid == f1.next_xid
@@ -86,7 +89,7 @@ defmodule FramerTest do
       f = %Framer{}
 
       assert Framer.parse_frame(f, pack(@ping_response)) ==
-               {:ok, %Frame{reply_hdr: @ping_response, response: :pong, payload: ""}, nil, f}
+               {:ok, %Frame{reply_hdr: @ping_response, response: :pong, payload: ""}, nil, nil, f}
     end
 
     test "it can handle unexpected xid" do

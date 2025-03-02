@@ -39,25 +39,44 @@ defmodule ExZk.Auth do
   """
   @spec new(info()) :: Info.t()
 
-  def new({:digest, {username, password}}) when is_binary(username) and is_binary(password),
-    do: digest(username, password)
+  def new({:digest, {username, password}}), do: digest(username, password)
+  def new({:x509, subject_principal}), do: x509(subject_principal)
+  def new({:ip, addr}), do: ip(addr)
 
-  def new({:x509, subject_principal}) when is_binary(subject_principal),
-    do: x509(subject_principal)
+  @doc """
+  Create a new digest auth info
 
-  def new({:ip, addr}) when is_binary(addr), do: ip(addr)
-  def new({:ip, addr}) when is_tuple(addr), do: ip(addr)
+  ## Examples
 
+      iex> ExZk.Auth.digest("username", "password")
+      %ExZk.Auth.Info{scheme: "digest", data: "username:password"}
+  """
   @spec digest(username :: String.t(), password :: String.t()) :: Info.t()
   def digest(username, password) when is_binary(username) and is_binary(password) do
     %Info{scheme: @digest_scheme, data: "#{username}:#{password}"}
   end
 
+  @doc """
+  Create a new x509 auth info
+
+  ## Examples
+
+      iex> ExZk.Auth.x509("CN=example.com")
+      %ExZk.Auth.Info{scheme: "x509", data: "CN=example.com"}
+  """
   @spec x509(subject_principal :: String.t()) :: Info.t()
   def x509(subject_principal) when is_binary(subject_principal) do
     %Info{scheme: @x509_scheme, data: subject_principal}
   end
 
+  @doc """
+  Create a new ip auth info
+
+  ## Examples
+
+      iex> ExZk.Auth.ip("127.0.0.1")
+      %ExZk.Auth.Info{scheme: "ip", data: "127.0.0.1"}
+  """
   @spec ip(addr :: String.t() | :inet.ip_address()) :: Info.t()
   def ip(addr) when is_binary(addr), do: %Info{scheme: @ip_scheme, data: addr}
 
