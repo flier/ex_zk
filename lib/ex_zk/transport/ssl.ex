@@ -12,8 +12,8 @@ defmodule ExZk.Transport.SSL do
   defdelegate close(socket), to: :ssl
 
   @impl ExZk.Transport
-  @spec closed() :: ExZk.Transport.on_closed()
-  def closed(), do: {:ssl_error, :closed}
+  @spec closed :: ExZk.Transport.on_closed()
+  def closed, do: {:ssl_error, :closed}
 
   @impl ExZk.Transport
   @spec recv(socket(), non_neg_integer(), timeout()) :: ExZk.Transport.on_recv()

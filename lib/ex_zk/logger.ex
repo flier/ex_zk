@@ -1,224 +1,160 @@
 defmodule ExZk.Logger do
   @moduledoc """
-  Instrumenter to handle logging of various instrumentation events.
+  Logging conveniences for ExZk
 
-  ## Instrumentation
-
-  ExZk uses the `:telemetry` library for instrumentation.
-  The following events are published by ExZk with the following measurements and metadata:
-
-    * `[:ex_zk, :session, :connected]` - dispatched by `ExZk.Session` after the session has been established
-      * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t()}`
-
-    * `[:ex_zk, :session, :disconnected]` - dispatched by `ExZk.Session` after the session has been disconnected
-      * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t()}`
-
-    * `[:ex_zk, :session, :pong]` - dispatched by `ExZk.Session` after a pong has been received
-      * Measurement: `%{latency: Duration.t()}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t()}`
-
-    * `[:ex_zk, :session, :auth, :failed]` - dispatched by `ExZk.Session` after an authentication has failed
-      * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t(), error: ErrCode.t()}`
-
-    * `[:ex_zk, :session, :notification]` - dispatched by `ExZk.Session` after a notification `ExZk.WatchedEvent` event has been received
-      * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), socket: pid(), addr: String.t(), event: WatchedEvent.t()}`
-
-    * `[:ex_zk, :session, :task, :stop]` - dispatched by `ExZk.Session` after a task has been completed
-      * Measurement: `%{system_time: system_time}`
-      * Metadata: `%{session: pid(), name: String.t(), session_id: integer(), task: pid(), frame: Frame.t(), reply: term()}`
-
-    * `[:ex_zk, :socket, :send]` - dispatched by `ExZk.Socket` after a `ExZk.Frame` has been sent
-      * Measurement: `%{system_time: system_time, size: non_neg_integer()}`
-      * Metadata: `%{socket: pid(), frame: Frame.t(), data: binary()}`
-
-    * `[:ex_zk, :socket, :recv]` - dispatched by `ExZk.Socket` after a `ExZk.Frame` has been received
-      * Measurement: `%{system_time: system_time, size: non_neg_integer()}`
-      * Metadata: `%{socket: pid(), frame: Frame.t(), data: binary()}`
-
+  Allows dynamically adding and altering the log level used to trace connections
+  within a ExZk via the use of telemetry hooks.
+  Should you wish to do your own logging or tracking of these events,
+  a complete list of the telemetry events emitted by ExZk is described
+  in the module documentation for `ExZk.Telemetry`.
   """
 
   require Logger
+
+  @typedoc "Supported log levels"
+  @type log_level :: :error | :info | :debug | :trace
 
   ####
   ## Public API
   ##
 
-  @doc false
-  def install(opts \\ []) do
-    handlers = %{
-      [:ex_zk, :session, :connected] => &__MODULE__.session_connected/4,
-      [:ex_zk, :session, :disconnected] => &__MODULE__.session_disconnected/4,
-      [:ex_zk, :session, :pong] => &__MODULE__.session_ping/4,
-      [:ex_zk, :session, :auth, :failed] => &__MODULE__.session_auth_failed/4,
-      [:ex_zk, :session, :notification] => &__MODULE__.session_notification/4,
-      [:ex_zk, :session, :task, :stop] => &__MODULE__.session_task_completed/4,
-      [:ex_zk, :socket, :send] => &__MODULE__.socket_send/4,
-      [:ex_zk, :socket, :recv] => &__MODULE__.socket_recv/4
-    }
+  @doc """
+  Start logging ExZk at the specified log level. Valid values for log
+  level are `:error`, `:info`, `:debug`, and `:trace`.
+  Enabling a given log level implicitly enables all higher log levels as well.
+  """
+  @spec attach_logger(log_level()) :: :ok | {:error, :already_exists}
 
-    for {key, fun} <- handlers do
-      :telemetry.attach({__MODULE__, key}, key, fun, opts)
-    end
+  def attach_logger(:error) do
+    events = [
+      [:ex_zk, :session, :auth_failed],
+      [:ex_zk, :socket, :exception]
+    ]
+
+    :telemetry.attach_many("#{__MODULE__}.error", events, &__MODULE__.log_error/4, nil)
   end
 
-  ####
-  ## Events
-  ##
+  def attach_logger(:info) do
+    _ = attach_logger(:error)
 
-  @doc false
-  def session_connected(
-        _name,
-        _measurements,
-        %{session: session, session_id: session_id, addr: addr, socket: socket} = _metadata,
-        opts
-      ) do
-    case log_level(opts[:log], session) do
-      false ->
-        :ok
+    events = [
+      [:ex_zk, :session, :connected],
+      [:ex_zk, :session, :disconnected]
+    ]
 
-      level ->
-        Logger.log(level,
-          session: [pid: session, id: session_id, state: :connected],
-          socket: [pid: socket, addr: addr]
-        )
-    end
+    :telemetry.attach_many("#{__MODULE__}.info", events, &__MODULE__.log_info/4, nil)
   end
 
-  @doc false
-  def session_disconnected(
-        _name,
-        _measurements,
-        %{session: session, session_id: session_id} = _metadata,
-        opts
-      ) do
-    case log_level(opts[:log], session) do
-      false ->
-        :ok
+  def attach_logger(:debug) do
+    _ = attach_logger(:info)
 
-      level ->
-        Logger.log(level, session: [pid: session, id: session_id], state: :disconnected)
-    end
+    events = [
+      [:ex_zk, :session, :notification],
+      [:ex_zk, :session, :task_stopped]
+    ]
+
+    :telemetry.attach_many("#{__MODULE__}.debug", events, &__MODULE__.log_debug/4, nil)
   end
 
-  @doc false
-  def session_ping(
-        _name,
-        %{latency: latency} = _measurements,
-        %{session: session, session_id: session_id} = _metadata,
-        opts
-      ) do
-    case log_level(opts[:log] || :debug, session) do
-      false ->
-        :ok
+  def attach_logger(:trace) do
+    _ = attach_logger(:debug)
 
-      level ->
-        Logger.log(level,
-          session: [pid: session, id: session_id],
-          ping: [latency: latency |> Duration.to_iso8601()]
-        )
-    end
+    events = [
+      [:ex_zk, :session, :pong],
+      [:ex_zk, :socket, :send],
+      [:ex_zk, :socket, :recv]
+    ]
+
+    :telemetry.attach_many("#{__MODULE__}.trace", events, &__MODULE__.log_trace/4, nil)
   end
 
-  @doc false
-  def session_auth_failed(
-        _name,
-        _measurements,
-        %{session: session, session_id: session_id, error: err} = _metadata,
-        opts
-      ) do
-    case log_level(opts[:log], session) do
-      false ->
-        :ok
+  def attach_logger(level) when level in [:emergency, :alert, :critical, :error],
+    do: attach_logger(:error)
 
-      level ->
-        Logger.log(level,
-          session: [pid: session, id: session_id],
-          auth: [error: err]
-        )
-    end
+  def attach_logger(level) when level in [:warning, :warn, :notice],
+    do: attach_logger(:info)
+
+  def attach_logger(:all), do: attach_logger(:trace)
+
+  @doc """
+  Stop logging ExZk at the specified log level. Disabling a given log
+  level implicitly disables all lower log levels as well.
+  """
+  @spec detach_logger(log_level()) :: :ok | {:error, :not_found}
+  def detach_logger(:error) do
+    _ = detach_logger(:info)
+    :telemetry.detach("#{__MODULE__}.error")
   end
 
-  @doc false
-  def session_notification(
-        _name,
-        _measurements,
-        %{session: session, session_id: session_id, event: evt} = _metadata,
-        opts
-      ) do
-    case log_level(opts[:log], session) do
-      false ->
-        :ok
+  def detach_logger(:info) do
+    _ = detach_logger(:debug)
+    :telemetry.detach("#{__MODULE__}.info")
+  end
 
-      level ->
-        Logger.log(level,
-          session: [pid: session, id: session_id],
-          notification: evt
-        )
-    end
+  def detach_logger(:debug) do
+    _ = detach_logger(:trace)
+    :telemetry.detach("#{__MODULE__}.debug")
+  end
+
+  def detach_logger(:trace) do
+    :telemetry.detach("#{__MODULE__}.trace")
+  end
+
+  def detach_logger(level) when level in [:all, :emergency, :alert, :critical, :error],
+    do: detach_logger(:error)
+
+  def detach_logger(level) when level in [:warning, :warn, :notice],
+    do: detach_logger(:info)
+
+  @doc false
+  @spec log_error(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          :telemetry.handler_config()
+        ) :: :ok
+  def log_error(event, measurements, metadata, _config) do
+    Logger.error(
+      "#{inspect(event)} metadata: #{inspect(metadata)}, measurements: #{inspect(measurements)}"
+    )
   end
 
   @doc false
-  def session_task_completed(
-        _name,
-        _measurements,
-        %{session: session, session_id: session_id, task: task, frame: frame, reply: reply} =
-          _metadata,
-        opts
-      ) do
-    case log_level(opts[:log] || :debug, session) do
-      false ->
-        :ok
-
-      level ->
-        Logger.log(level,
-          session: [pid: session, id: session_id],
-          task: task,
-          frame: frame,
-          reply: reply
-        )
-    end
+  @spec log_info(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          :telemetry.handler_config()
+        ) :: :ok
+  def log_info(event, measurements, metadata, _config) do
+    Logger.info(
+      "#{inspect(event)} metadata: #{inspect(metadata)}, measurements: #{inspect(measurements)}"
+    )
   end
 
   @doc false
-  def socket_send(
-        _name,
-        _measurements,
-        %{socket: socket, frame: frame} = _metadata,
-        opts
-      ) do
-    case log_level(opts[:log] || :debug, socket) do
-      false ->
-        :ok
-
-      level ->
-        Logger.log(level, socket: socket, send: frame)
-    end
+  @spec log_debug(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          :telemetry.handler_config()
+        ) :: :ok
+  def log_debug(event, measurements, metadata, _config) do
+    Logger.debug(
+      "#{inspect(event)} metadata: #{inspect(metadata)}, measurements: #{inspect(measurements)}"
+    )
   end
 
   @doc false
-  def socket_recv(
-        _name,
-        _measurements,
-        %{socket: socket, frame: frame} = _metadata,
-        opts
-      ) do
-    case log_level(opts[:log] || :debug, socket) do
-      false ->
-        :ok
-
-      level ->
-        Logger.log(level, socket: socket, recv: frame)
-    end
+  @spec log_trace(
+          :telemetry.event_name(),
+          :telemetry.event_measurements(),
+          :telemetry.event_metadata(),
+          :telemetry.handler_config()
+        ) :: :ok
+  def log_trace(event, measurements, metadata, _config) do
+    Logger.debug(
+      "#{inspect(event)} metadata: #{inspect(metadata)}, measurements: #{inspect(measurements)}"
+    )
   end
-
-  defp log_level(nil, _session), do: :info
-  defp log_level(level, _session) when is_atom(level), do: level
-
-  defp log_level({mod, fun, args}, session)
-       when is_atom(mod) and is_atom(fun) and is_list(args),
-       do: apply(mod, fun, [session | args])
 end

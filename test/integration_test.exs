@@ -4,9 +4,7 @@ defmodule IntegrationTest do
   @moduletag :external
 
   setup_all do
-    Logger.configure(level: :debug)
-
-    ExZk.Logger.install()
+    ExZk.Logger.attach_logger(Logger.level())
   end
 
   setup_all do

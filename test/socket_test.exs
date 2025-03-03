@@ -6,7 +6,7 @@ defmodule SocketTest do
   import ExZk.Wire
 
   alias ExZk.Proto.{ConnectResponse, ReplyHeader}
-  alias ExZk.{Connector, Frame, Socket}
+  alias ExZk.{Connector, Frame, Socket, Telemetry}
 
   @connect_response %ConnectResponse{
     time_out: 15_000,
@@ -29,11 +29,15 @@ defmodule SocketTest do
     :ok
   end
 
+  setup do
+    {:ok, span: Telemetry.start_span(:socket)}
+  end
+
   describe "Given a ExZk.Socket" do
-    test "it can be connected with TCP" do
+    test "it can be connected with TCP", %{span: span} do
       Process.flag(:trap_exit, true)
 
-      {:ok, sock} = Socket.start_link(self(), [])
+      {:ok, sock} = Socket.start_link(self(), span)
       assert is_pid(sock)
 
       assert_receive {:connected, ^sock, @connected}
@@ -44,10 +48,10 @@ defmodule SocketTest do
       assert_receive {:EXIT, ^sock, :normal}
     end
 
-    test "it can be connected with SSL" do
+    test "it can be connected with SSL", %{span: span} do
       Process.flag(:trap_exit, true)
 
-      {:ok, sock} = Socket.start_link(self(), ssl: true)
+      {:ok, sock} = Socket.start_link(self(), span, ssl: true)
       assert is_pid(sock)
 
       assert_receive {:connected, ^sock, @connected}
@@ -59,12 +63,13 @@ defmodule SocketTest do
     end
 
     test_with_mock "it may be stopped when Connector.connect return {:stop, _}",
+                   %{span: span},
                    Connector,
                    [],
                    connect: fn _pid, _opts -> {:stop, :reason} end do
       Process.flag(:trap_exit, true)
 
-      {:ok, sock} = Socket.start_link(self(), [])
+      {:ok, sock} = Socket.start_link(self(), span)
       assert is_pid(sock)
 
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
@@ -74,12 +79,13 @@ defmodule SocketTest do
     end
 
     test_with_mock "it may be failed when Connector.setopts return {:error, _}",
+                   %{span: span},
                    :ssl,
                    [],
                    setopts: fn _sock, _opts -> {:error, :reason} end do
       Process.flag(:trap_exit, true)
 
-      {:ok, sock} = Socket.start_link(self(), ssl: true)
+      {:ok, sock} = Socket.start_link(self(), span, ssl: true)
       assert is_pid(sock)
 
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
@@ -89,8 +95,8 @@ defmodule SocketTest do
       assert_receive {:EXIT, ^sock, :normal}
     end
 
-    test "it will be stopped when received :tcp_closed" do
-      {:ok, sock} = Socket.start_link(self(), [])
+    test "it will be stopped when received :tcp_closed", %{span: span} do
+      {:ok, sock} = Socket.start_link(self(), span)
 
       assert_receive {:connected, ^sock, @connected}
 
@@ -99,8 +105,8 @@ defmodule SocketTest do
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :tcp_closed}}
     end
 
-    test "it will be stopped when received :tcp_error" do
-      {:ok, sock} = Socket.start_link(self(), [])
+    test "it will be stopped when received :tcp_error", %{span: span} do
+      {:ok, sock} = Socket.start_link(self(), span)
 
       assert_receive {:connected, ^sock, @connected}
 
@@ -109,8 +115,8 @@ defmodule SocketTest do
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
     end
 
-    test "it will be stopped when received :ssl_closed" do
-      {:ok, sock} = Socket.start_link(self(), [])
+    test "it will be stopped when received :ssl_closed", %{span: span} do
+      {:ok, sock} = Socket.start_link(self(), span)
 
       assert_receive {:connected, ^sock, @connected}
 
@@ -119,8 +125,8 @@ defmodule SocketTest do
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :ssl_closed}}
     end
 
-    test "it will be stopped when received :ssl_error" do
-      {:ok, sock} = Socket.start_link(self(), [])
+    test "it will be stopped when received :ssl_error", %{span: span} do
+      {:ok, sock} = Socket.start_link(self(), span)
 
       assert_receive {:connected, ^sock, @connected}
 
@@ -129,8 +135,9 @@ defmodule SocketTest do
       assert_receive {:disconnected, ^sock, %Socket.Error{reason: :reason}}
     end
 
-    test_with_mock "it can send frame", :gen_tcp, [:unstick], send: fn :sock, _data -> :ok end do
-      {:ok, sock} = Socket.start_link(self(), [])
+    test_with_mock "it can send frame", %{span: span}, :gen_tcp, [:unstick],
+      send: fn :sock, _data -> :ok end do
+      {:ok, sock} = Socket.start_link(self(), span)
 
       frame = Frame.new_ping_request()
 
@@ -140,10 +147,13 @@ defmodule SocketTest do
       assert_called(:gen_tcp.send(:sock, pack(frame)))
     end
 
-    test_with_mock "it will be stopped when send frame failed", :gen_tcp, [:unstick],
-      close: fn :sock -> :ok end,
-      send: fn :sock, _data -> {:error, :reason} end do
-      {:ok, sock} = Socket.start_link(self(), [])
+    test_with_mock "it will be stopped when send frame failed",
+                   %{span: span},
+                   :gen_tcp,
+                   [:unstick],
+                   close: fn :sock -> :ok end,
+                   send: fn :sock, _data -> {:error, :reason} end do
+      {:ok, sock} = Socket.start_link(self(), span)
 
       frame = Frame.new_ping_request()
 
@@ -153,8 +163,8 @@ defmodule SocketTest do
       assert_called(:gen_tcp.send(:sock, pack(frame)))
     end
 
-    test "it can receive frame" do
-      {:ok, sock} = Socket.start_link(self(), [])
+    test "it can receive frame", %{span: span} do
+      {:ok, sock} = Socket.start_link(self(), span)
       assert is_pid(sock)
 
       assert_receive {:connected, ^sock, @connected}
@@ -168,8 +178,8 @@ defmodule SocketTest do
       assert_receive {:frame, ^sock, %Frame{reply_hdr: ^reply_hdr, payload: ""}}
     end
 
-    test "it can receive fragmented frame" do
-      {:ok, sock} = Socket.start_link(self(), [])
+    test "it can receive fragmented frame", %{span: span} do
+      {:ok, sock} = Socket.start_link(self(), span)
       assert is_pid(sock)
 
       assert_receive {:connected, ^sock, @connected}

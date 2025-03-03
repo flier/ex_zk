@@ -28,23 +28,14 @@ defmodule ExZk.MixProject do
 
       # Docs
       name: "ExZk",
-      docs: [
-        main: "ExZk",
-        source_ref: "v#{@version}",
-        source_url: @repo_url,
-        extras: [
-          "README.md",
-          "CHANGELOG.md",
-          "LICENSE.txt": [title: "License"]
-        ]
-      ],
+      source_url: "https://github.com/flier/ex_zk",
+      docs: docs(),
 
       # Dialyzer
       dialyzer: [plt_add_apps: [:mix]]
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       mod: {ExZk, []},
@@ -52,6 +43,25 @@ defmodule ExZk.MixProject do
       env: [
         logger: true
       ]
+    ]
+  end
+
+  defp deps do
+    [
+      {:castore, "~> 1.0", optional: true},
+      {:nimble_options, "~> 1.1"},
+      {:telemetry, "~> 1.3"},
+
+      # Dev and test dependencies
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.37", only: [:dev, :doc], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:hexdump, "~> 0.1", only: [:dev, :test]},
+      {:makeup_html, ">= 0.0.0", only: :dev, runtime: false},
+      {:mock, "~> 0.3", only: :test},
+      {:nimble_parsec, "~> 1.4", only: [:dev, :doc, :test]},
+      {:timex, "~> 3.7", only: [:dev, :test]}
     ]
   end
 
@@ -85,22 +95,16 @@ defmodule ExZk.MixProject do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
-  defp deps do
+  defp docs do
     [
-      {:castore, "~> 1.0", optional: true},
-      {:nimble_options, "~> 1.1"},
-      {:telemetry, "~> 1.3"},
-
-      # Dev and test dependencies
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.37", only: [:dev, :doc]},
-      {:excoveralls, "~> 0.18", only: :test},
-      {:hexdump, "~> 0.1", only: [:dev, :test]},
-      {:mock, "~> 0.3", only: :test},
-      {:nimble_parsec, "~> 1.4", only: [:dev, :doc, :test]},
-      {:timex, "~> 3.7", only: [:dev, :test]}
+      main: "ExZk",
+      source_ref: "v#{@version}",
+      source_url: @repo_url,
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE.txt": [title: "License"]
+      ]
     ]
   end
 end

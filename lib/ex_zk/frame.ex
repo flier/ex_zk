@@ -85,7 +85,7 @@ defmodule ExZk.Frame do
   @spec new_connect_request(
           last_zxid :: zxid(),
           session_timeout :: timeout(),
-          session_id :: integer(),
+          session_id :: ExZk.Session.id(),
           passwd :: binary(),
           readonly :: boolean() | nil
         ) :: t()

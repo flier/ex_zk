@@ -15,7 +15,7 @@ defmodule ExZk.Connector do
     @type t :: %__MODULE__{
             addr: String.t(),
             session_timeout: timeout(),
-            session_id: integer(),
+            session_id: ExZk.Session.id(),
             passwd: binary(),
             readonly: boolean() | nil
           }
@@ -36,7 +36,7 @@ defmodule ExZk.Connector do
   ##
 
   @spec connect(session :: Process.dest(), opts :: keyword()) ::
-          {:ok, ExZk.Socket.socket(), Connected.t()}
+          {:ok, ExZk.Transport.socket(), Connected.t()}
           | {:error, term}
           | {:stop, term}
   def connect(session, opts) when is_pid(session) and is_list(opts) do

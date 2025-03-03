@@ -62,8 +62,6 @@ defmodule ConnectionTest do
       with_mocks([
         {Connector, [], [connect: fn _pid, _opts -> {:error, :foobar} end]}
       ]) do
-        Process.flag(:trap_exit, true)
-
         # connect to the server
         {:ok, session} = Session.start_link(backoff_initial: 10, backoff_max: 50)
 
@@ -116,14 +114,23 @@ defmodule ConnectionTest do
       # it should be connected
       assert {:connected, %{socket: socket, addr: :addr}} = Session.status(session)
 
-      assert capture_log([level: :debug, format: "$message"], fn ->
-               assert {:ok, frame, ""} =
-                        Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @ping_xid}))
+      log =
+        capture_log([level: :debug, format: "$message"], fn ->
+          ExZk.Logger.attach_logger(:trace)
 
-               send(session, {:frame, socket, frame})
+          try do
+            assert {:ok, frame, ""} =
+                     Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @ping_xid}))
 
-               assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
-             end) == "[session: [pid: #{inspect(session)}, id: nil], ping: [latency: \"PT0S\"]]"
+            send(session, {:frame, socket, frame})
+
+            assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
+          after
+            ExZk.Logger.detach_logger(:all)
+          end
+        end)
+
+      assert log |> String.starts_with?("[:ex_zk, :session, :pong]")
     end
 
     test "it can handle auth packet response" do
@@ -136,12 +143,23 @@ defmodule ConnectionTest do
       assert {:ok, frame, ""} =
                Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @auth_packet_xid, err: -1}))
 
-      assert capture_log([level: :debug, format: "$message"], fn ->
-               send(session, {:frame, socket, frame})
+      log =
+        capture_log([level: :error, format: "$message"], fn ->
+          ExZk.Logger.attach_logger(:error)
 
-               assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
-             end) ==
-               "[session: [pid: #{inspect(session)}, id: nil], auth: [error: :system_error]]"
+          try do
+            send(session, {:frame, socket, frame})
+
+            assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
+          after
+            ExZk.Logger.detach_logger(:all)
+          end
+        end)
+
+      assert log
+             |> String.starts_with?(
+               "[:ex_zk, :session, :auth_failed] metadata: %{error: :system_error"
+             )
     end
 
     test "it can handle notification" do
@@ -162,19 +180,30 @@ defmodule ConnectionTest do
                    })
                )
 
-      evt = %WatchedEvent{
-        type: :node_data_changed,
-        state: :sync_connected,
-        path: "/test",
-        zxid: 123
-      }
+      log =
+        capture_log([level: :debug, format: "$message"], fn ->
+          ExZk.Logger.attach_logger(:trace)
 
-      assert capture_log([level: :debug, format: "$message"], fn ->
-               send(session, {:frame, socket, frame})
+          try do
+            send(session, {:frame, socket, frame})
 
-               assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
-             end) ==
-               "[session: [pid: #{inspect(session)}, id: nil], notification: #{inspect(evt)}]"
+            assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
+          after
+            ExZk.Logger.detach_logger(:all)
+          end
+        end)
+
+      assert log |> String.starts_with?("[:ex_zk, :session, :notification]")
+
+      assert log
+             |> String.contains?(
+               inspect(%WatchedEvent{
+                 type: :node_data_changed,
+                 state: :sync_connected,
+                 path: "/test",
+                 zxid: 123
+               })
+             )
     end
 
     test "it can handle unknown build-in frame" do
@@ -211,14 +240,20 @@ defmodule ConnectionTest do
 
         assert {:ok, frame, ""} = Unpack.unpack(%Frame{}, pack(%ReplyHeader{xid: @ping_xid}))
 
-        assert String.starts_with?(
-                 capture_log([level: :debug, format: "$message"], fn ->
-                   send(session, {:frame, socket, frame})
+        log =
+          capture_log([level: :debug, format: "$message"], fn ->
+            ExZk.Logger.attach_logger(:trace)
 
-                   assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
-                 end),
-                 "[session: [pid: #{inspect(session)}, id: nil], ping: [latency: \"PT0."
-               )
+            try do
+              send(session, {:frame, socket, frame})
+
+              assert {:connected, %{socket: ^socket, addr: :addr}} = Session.status(session)
+            after
+              ExZk.Logger.detach_logger(:all)
+            end
+          end)
+
+        assert log |> String.starts_with?("[:ex_zk, :session, :pong]")
       end
     end
   end
@@ -228,7 +263,7 @@ defmodule ConnectionTest do
       with_mocks([
         {Socket, [],
          [
-           start_link: fn _pid, _opts -> {:ok, :sock} end,
+           start_link: fn _pid, _span, _opts -> {:ok, :sock} end,
            send_frame: fn :sock, _frame -> :ok end
          ]}
       ]) do
@@ -244,7 +279,7 @@ defmodule ConnectionTest do
     end
 
     test_with_mock "it can be notified when session is connected to a readonly server", Socket,
-      start_link: fn _pid, _opts -> {:ok, :sock} end do
+      start_link: fn _pid, _span, _opts -> {:ok, :sock} end do
       {:ok, session} =
         Session.start_link(state_watcher: self())
 
@@ -253,7 +288,7 @@ defmodule ConnectionTest do
     end
 
     test_with_mock "it can be notified when auth failed", Socket,
-      start_link: fn _pid, _opts -> {:ok, :sock} end do
+      start_link: fn _pid, _span, _opts -> {:ok, :sock} end do
       {:ok, session} =
         Session.start_link(state_watcher: self())
 

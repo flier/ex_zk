@@ -250,7 +250,7 @@ defmodule Mix.Tasks.ZkCli do
 
     Logger.debug(parsed: parsed, args: args, invalid: invalid)
 
-    ExZk.Logger.install()
+    ExZk.Logger.attach_logger(Logger.level())
 
     if parsed[:help] do
       usage()

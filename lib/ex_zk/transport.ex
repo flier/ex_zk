@@ -34,7 +34,7 @@ defmodule ExZk.Transport do
   @doc """
   Returns the closed error.
   """
-  @callback closed() :: on_closed()
+  @callback closed :: on_closed()
 
   @doc """
   Returns available bytes on the given socket. Up to `num_bytes` bytes will be

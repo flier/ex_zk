@@ -176,10 +176,6 @@ defmodule ExZk do
 
   @doc false
   def start(_type, _args) do
-    if Application.fetch_env!(:ex_zk, :logger) do
-      ExZk.Logger.install()
-    end
-
     children = []
 
     Supervisor.start_link(children, strategy: :one_for_one, name: ExZk.Supervisor)

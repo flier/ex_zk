@@ -61,10 +61,8 @@ defmodule ExZk.WatchedEvent do
           state: KeeperState.t(),
           type: Type.t(),
           path: Path.t(),
-          zxid: zxid()
+          zxid: ExZk.Frame.zxid()
         }
-
-  @type zxid :: integer()
 end
 
 defmodule ExZk.StateWatcher do
@@ -159,7 +157,7 @@ defmodule ExZk.NodeWatcher do
 
   @type t :: Process.dest() | module() | function() | {module(), atom()}
 
-  @type zxid :: integer()
+  @type zxid :: ExZk.Frame.zxid()
 
   @moduledoc """
   Callback module for watching node changes

@@ -2,7 +2,7 @@ defmodule ExZk.Socket do
   use GenServer
 
   alias ExZk.Wire.Unpack
-  alias ExZk.{Connector, Frame, Transport}
+  alias ExZk.{Connector, Frame, Telemetry, Transport}
 
   defmodule Error do
     @moduledoc """
@@ -47,7 +47,8 @@ defmodule ExZk.Socket do
     :opts,
     :transport_module,
     :socket,
-    :buffered
+    :buffered,
+    :span
   ]
 
   @type t :: %__MODULE__{
@@ -55,7 +56,8 @@ defmodule ExZk.Socket do
           opts: [option()],
           transport_module: module(),
           socket: Transport.socket(),
-          buffered: binary()
+          buffered: binary(),
+          span: Telemetry.t()
         }
 
   @type option :: {:ssl, boolean()} | :gen_tcp.option()
@@ -64,9 +66,10 @@ defmodule ExZk.Socket do
   ## Public API
   ##
 
-  @spec start_link(session :: Process.dest(), [option()]) :: GenServer.on_start()
-  def start_link(session, opts) do
-    GenServer.start_link(__MODULE__, {session, opts}, [])
+  @spec start_link(session :: Process.dest(), session_span :: Telemetry.t(), [option()]) ::
+          GenServer.on_start()
+  def start_link(session, session_span, opts \\ []) do
+    GenServer.start_link(__MODULE__, {session, session_span, opts}, [])
   end
 
   @spec normal_stop(sock :: GenServer.server()) :: :ok
@@ -76,19 +79,7 @@ defmodule ExZk.Socket do
 
   @spec send_frame(sock :: GenServer.server(), frame :: Frame.t()) :: :ok
   def send_frame(sock, %Frame{} = frame) do
-    data = ExZk.Wire.pack(frame)
-
-    :telemetry.execute(
-      [:ex_zk, :socket, :send],
-      %{system_time: System.system_time(), size: byte_size(data)},
-      %{
-        socket: sock,
-        frame: frame,
-        data: data
-      }
-    )
-
-    GenServer.cast(sock, {:send, data})
+    GenServer.cast(sock, {:send, frame})
   end
 
   ####
@@ -96,11 +87,17 @@ defmodule ExZk.Socket do
   ##
 
   @impl true
-  def init({session, opts}) do
+  def init({session, session_span, opts}) do
+    transport_module = if(opts[:ssl], do: ExZk.Transport.SSL, else: ExZk.Transport.TCP)
+
     state = %__MODULE__{
       session: session,
       opts: opts,
-      transport_module: if(opts[:ssl], do: ExZk.Transport.SSL, else: ExZk.Transport.TCP)
+      transport_module: transport_module,
+      span:
+        Telemetry.start_child_span(session_span, :socket, %{}, %{
+          transport_module: transport_module
+        })
     }
 
     {:ok, state, {:continue, []}}
@@ -109,15 +106,25 @@ defmodule ExZk.Socket do
   @impl true
   def handle_continue(
         [],
-        %{session: session, opts: opts, transport_module: transport_module} = state
+        %{session: session, opts: opts, transport_module: transport_module, span: span} = state
       ) do
     with {:ok, socket, connected} <- Connector.connect(session, opts),
          :ok <- transport_module.setopts(socket, active: :once) do
+      span =
+        span
+        |> Map.put(
+          :metadata,
+          span.metadata |> Map.merge(%{socket: socket, peer_addr: connected.addr})
+        )
+
+      Telemetry.span_event(span, :connected)
+
       send(session, {:connected, self(), connected})
-      {:noreply, %{state | socket: socket}}
+
+      {:noreply, %{state | socket: socket, span: span}}
     else
-      {:error, reason} -> stop(reason, state)
-      {:stop, reason} -> stop(reason, state)
+      {:error, reason} -> stop(:connect_error, reason, state)
+      {:stop, reason} -> stop(:connect_error, reason, state)
     end
   end
 
@@ -131,36 +138,50 @@ defmodule ExZk.Socket do
       )
       when transport in [:tcp, :ssl] do
     :ok = transport_module.setopts(socket, active: :once)
+
     state = handle_data(state, data)
+
     {:noreply, state}
   end
 
   # The socket was closed.
   def handle_info({:tcp_closed, socket}, %__MODULE__{socket: socket} = state) do
-    stop(:tcp_closed, state)
+    stop(:recv_error, :tcp_closed, state)
   end
 
   # A socket error occurred.
   def handle_info({:tcp_error, socket, reason}, %__MODULE__{socket: socket} = state) do
-    stop(reason, state)
+    stop(:recv_error, reason, state)
   end
 
   # The socket was closed.
   def handle_info({:ssl_closed, socket}, %__MODULE__{socket: socket} = state) do
-    stop(:ssl_closed, state)
+    stop(:recv_error, :ssl_closed, state)
   end
 
   # A socket error occurred.
   def handle_info({:ssl_error, socket, reason}, %__MODULE__{socket: socket} = state) do
-    stop(reason, state)
+    stop(:recv_error, reason, state)
   end
 
   @impl true
   def handle_cast(
-        {:send, packet},
-        %__MODULE__{session: session, transport_module: transport_module, socket: socket} = state
+        {:send, frame},
+        %__MODULE__{
+          session: session,
+          transport_module: transport_module,
+          socket: socket,
+          span: span
+        } = state
       ) do
-    case transport_module.send(socket, packet) do
+    data = ExZk.Wire.pack(frame)
+
+    Telemetry.untimed_span_event(span, :send, %{size: byte_size(data)}, %{
+      frame: frame,
+      data: data
+    })
+
+    case transport_module.send(socket, data) do
       :ok ->
         {:noreply, state}
 
@@ -169,8 +190,13 @@ defmodule ExZk.Socket do
 
         send(session, {:disconnected, self(), %Error{reason: reason}})
 
-        stop(transport_module.closed(), state)
+        stop(:send_error, transport_module.closed(), state)
     end
+  end
+
+  @impl true
+  def terminate(reason, %__MODULE__{span: span}) do
+    Telemetry.stop_span(span, %{}, %{reason: reason})
   end
 
   ####
@@ -180,20 +206,15 @@ defmodule ExZk.Socket do
   defp handle_data(%__MODULE__{} = state, "" = _data), do: state
 
   defp handle_data(
-         %__MODULE__{session: session, buffered: nil} = state,
+         %__MODULE__{session: session, buffered: nil, span: span} = state,
          <<sz::32, data::binary-size(sz), rest::binary>> = _data
        ) do
     {:ok, frame, _rest} = Unpack.unpack(%Frame{}, data)
 
-    :telemetry.execute(
-      [:ex_zk, :socket, :recv],
-      %{system_time: System.system_time(), size: byte_size(data)},
-      %{
-        socket: self(),
-        frame: frame,
-        data: data
-      }
-    )
+    Telemetry.untimed_span_event(span, :recv, %{size: byte_size(data)}, %{
+      frame: frame,
+      data: data
+    })
 
     send(session, {:frame, self(), frame})
 
@@ -208,7 +229,9 @@ defmodule ExZk.Socket do
     handle_data(%__MODULE__{state | buffered: nil}, buffered <> data)
   end
 
-  defp stop(reason, %__MODULE__{session: session} = state) do
+  defp stop(event, reason, %__MODULE__{session: session, span: span} = state) do
+    Telemetry.span_event(span, event, %{error: reason})
+
     send(session, {:disconnected, self(), %Error{reason: reason}})
 
     {:stop, :normal, state}

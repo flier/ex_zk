@@ -1,6 +1,10 @@
 defmodule ExZk.Format do
   @moduledoc """
   Used for formatting things to print or log or anything like that.
+  """
+
+  @doc """
+  Returns a string of the form `host:port`
 
   ## Examples
 
@@ -16,7 +20,6 @@ defmodule ExZk.Format do
       iex> format_host_and_port({0}, 2181)
       ** (ArgumentError) invalid host: {0}
   """
-
   @spec format_host_and_port(host, :inet.port_number()) :: String.t()
         when host: charlist() | binary() | :inet.ip_address()
   def format_host_and_port(host, port)
@@ -39,4 +42,21 @@ defmodule ExZk.Format do
         )
     end
   end
+
+  @doc """
+  Returns a string of session identifier
+
+  ## Examples
+
+      iex> import ExZk.Format
+      iex> format_session_id(0)
+      "-"
+      iex> format_session_id(0x123456)
+      "00123456"
+  """
+  @spec format_session_id(session_id :: integer()) :: String.t()
+  def format_session_id(session_id) when session_id in [nil, 0], do: "-"
+
+  def format_session_id(session_id) when is_integer(session_id),
+    do: session_id |> Integer.to_string(16) |> String.pad_leading(8, "0")
 end
