@@ -85,7 +85,7 @@ defmodule ExZk.Session do
           | Socket.option()
           | :gen_statem.start_opt()
 
-  @type session :: :gen_statem.server_ref()
+  @type ref :: :gen_statem.server_ref()
   @type id :: integer()
   @type status :: :disconnected | :connecting | :connected
   @type version :: integer()
@@ -125,23 +125,23 @@ defmodule ExZk.Session do
     end
   end
 
-  @spec close(session(), timeout()) :: :ok
+  @spec close(ref(), timeout()) :: :ok
   def close(session, timeout \\ :infinity) do
     :gen_statem.stop(session, :normal, timeout)
   end
 
-  @spec status(session()) :: {status(), metadata :: %{}}
+  @spec status(ref()) :: {status(), metadata :: %{}}
   def status(session) do
-    :telemetry.span([:ex_zk, :session, :status], %{session: session}, fn ->
+    Telemetry.client_span(:status, %{session: session}, fn ->
       {status, metadata} = :gen_statem.call(session, :status)
 
       {{status, metadata}, %{status: status}}
     end)
   end
 
-  @spec info(session()) :: Info.t()
+  @spec info(ref()) :: Info.t()
   def info(session) do
-    :telemetry.span([:ex_zk, :session, :info], %{session: session}, fn ->
+    Telemetry.client_span(:info, %{session: session}, fn ->
       case :gen_statem.call(session, :info) do
         {:ok, info} ->
           {{:ok, info}, %{info: info}}
@@ -154,10 +154,10 @@ defmodule ExZk.Session do
 
   defguard is_version_or_nil(version) when is_integer(version) or is_nil(version)
 
-  @spec get_children(session(), Path.t(), NodeWatcher.t(), timeout()) ::
+  @spec get_children(ref(), Path.t(), NodeWatcher.t(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, Error.t()}
   def get_children(session, path, watcher \\ nil, timeout \\ @default_timeout) do
-    :telemetry.span([:ex_zk, :session, :get_children], %{session: session, path: path}, fn ->
+    Telemetry.client_span(:get_children, %{session: session, path: path}, fn ->
       request = %Proto.GetChildrenRequest{
         path: IO.chardata_to_string(path),
         watch: !is_nil(watcher)
@@ -178,10 +178,10 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec get_children2(session(), Path.t(), NodeWatcher.t(), timeout()) ::
+  @spec get_children2(ref(), Path.t(), NodeWatcher.t(), timeout()) ::
           {:ok, children :: list(Path.t()), Stat.t()} | {:error, Error.t()}
   def get_children2(session, path, watcher \\ nil, timeout \\ @default_timeout) do
-    :telemetry.span([:ex_zk, :session, :get_children2], %{session: session, path: path}, fn ->
+    Telemetry.client_span(:get_children2, %{session: session, path: path}, fn ->
       request = %Proto.GetChildren2Request{
         path: IO.chardata_to_string(path),
         watch: !is_nil(watcher)
@@ -202,50 +202,42 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec get_ephemerals(session(), Path.t(), timeout()) ::
+  @spec get_ephemerals(ref(), Path.t(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, Error.t()}
   def get_ephemerals(session, prefix_path \\ "/", timeout \\ @default_timeout) do
-    :telemetry.span(
-      [:ex_zk, :session, :get_ephemerals],
-      %{session: session, path: prefix_path},
-      fn ->
-        request = %Proto.GetEphemeralsRequest{prefix_path: IO.chardata_to_string(prefix_path)}
+    Telemetry.client_span(:get_ephemerals, %{session: session, path: prefix_path}, fn ->
+      request = %Proto.GetEphemeralsRequest{prefix_path: IO.chardata_to_string(prefix_path)}
 
-        case send_request(session, :get_ephemerals, request, timeout) do
-          {:ok, %Proto.GetEphemeralsResponse{ephemerals: ephemerals}} ->
-            {{:ok, ephemerals}, %{ephemerals: ephemerals}}
+      case send_request(session, :get_ephemerals, request, timeout) do
+        {:ok, %Proto.GetEphemeralsResponse{ephemerals: ephemerals}} ->
+          {{:ok, ephemerals}, %{ephemerals: ephemerals}}
 
-          {:error, err} ->
-            {{:error, Error.new(err, prefix_path)}, %{error: err}}
-        end
+        {:error, err} ->
+          {{:error, Error.new(err, prefix_path)}, %{error: err}}
       end
-    )
+    end)
   end
 
-  @spec get_all_children_number(session(), Path.t(), timeout()) ::
+  @spec get_all_children_number(ref(), Path.t(), timeout()) ::
           {:ok, total_number :: integer()} | {:error, Error.t()}
   def get_all_children_number(session, path, timeout \\ @default_timeout) do
-    :telemetry.span(
-      [:ex_zk, :session, :get_all_children_number],
-      %{session: session, path: path},
-      fn ->
-        request = %Proto.GetAllChildrenNumberRequest{path: IO.chardata_to_string(path)}
+    Telemetry.client_span(:get_all_children_number, %{session: session, path: path}, fn ->
+      request = %Proto.GetAllChildrenNumberRequest{path: IO.chardata_to_string(path)}
 
-        case send_request(session, :get_all_children_number, request, timeout) do
-          {:ok, %Proto.GetAllChildrenNumberResponse{total_number: total_number}} ->
-            {{:ok, total_number}, %{total_number: total_number}}
+      case send_request(session, :get_all_children_number, request, timeout) do
+        {:ok, %Proto.GetAllChildrenNumberResponse{total_number: total_number}} ->
+          {{:ok, total_number}, %{total_number: total_number}}
 
-          {:error, err} ->
-            {{:error, Error.new(err, path)}, %{error: err}}
-        end
+        {:error, err} ->
+          {{:error, Error.new(err, path)}, %{error: err}}
       end
-    )
+    end)
   end
 
-  @spec get_data(session(), Path.t(), NodeWatcher.t(), timeout()) ::
+  @spec get_data(ref(), Path.t(), NodeWatcher.t(), timeout()) ::
           {:ok, iodata(), Stat.t()} | {:error, Error.t()}
   def get_data(session, path, watcher \\ nil, timeout \\ @default_timeout) do
-    :telemetry.span([:ex_zk, :session, :get_data], %{session: session, path: path}, fn ->
+    Telemetry.client_span(:get_data, %{session: session, path: path}, fn ->
       request = %Proto.GetDataRequest{path: IO.chardata_to_string(path), watch: !is_nil(watcher)}
 
       watch_registration =
@@ -263,12 +255,12 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
+  @spec set_data(ref(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
   def set_data(session, path, data, version \\ @any_version, timeout \\ @default_timeout)
       when is_version_or_nil(version) do
-    :telemetry.span(
-      [:ex_zk, :session, :set_data],
+    Telemetry.client_span(
+      :set_data,
       %{session: session, path: path, data: data, version: version},
       fn ->
         request = %Proto.SetDataRequest{
@@ -288,11 +280,11 @@ defmodule ExZk.Session do
     )
   end
 
-  @spec create(session(), Path.t(), iodata(), opts :: [Create.option()], timeout()) ::
+  @spec create(ref(), Path.t(), iodata(), opts :: [Create.option()], timeout()) ::
           {:ok, Path.t(), Stat.t() | nil} | {:error, Error.t()}
   def create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout) do
-    :telemetry.span(
-      [:ex_zk, :session, :create],
+    Telemetry.client_span(
+      :create,
       %{session: session, path: path, data: data, opts: opts},
       fn ->
         {opcode, request} = Create.new_request(path, data, opts)
@@ -311,84 +303,72 @@ defmodule ExZk.Session do
     )
   end
 
-  @spec delete(session(), Path.t(), version() | nil, timeout()) ::
+  @spec delete(ref(), Path.t(), version() | nil, timeout()) ::
           :ok | {:error, Error.t()}
   def delete(session, path, version \\ @any_version, timeout \\ @default_timeout)
       when is_version_or_nil(version) do
-    :telemetry.span(
-      [:ex_zk, :session, :delete],
-      %{session: session, path: path, version: version},
-      fn ->
-        request = %Proto.DeleteRequest{
-          path: IO.chardata_to_string(path),
-          version: version || @any_version
-        }
+    Telemetry.client_span(:delete, %{session: session, path: path, version: version}, fn ->
+      request = %Proto.DeleteRequest{
+        path: IO.chardata_to_string(path),
+        version: version || @any_version
+      }
 
-        case send_request(session, :delete, request, timeout) do
-          :ok ->
-            {:ok, %{}}
+      case send_request(session, :delete, request, timeout) do
+        :ok ->
+          {:ok, %{}}
 
-          {:error, err} ->
-            {{:error, Error.new(err, path)}, %{error: err}}
-        end
+        {:error, err} ->
+          {{:error, Error.new(err, path)}, %{error: err}}
       end
-    )
+    end)
   end
 
-  @spec exists(session(), Path.t(), NodeWatcher.t(), timeout()) ::
+  @spec exists(ref(), Path.t(), NodeWatcher.t(), timeout()) ::
           {:ok, boolean(), Stat.t() | nil} | {:error, Error.t()}
   def exists(session, path, watcher \\ nil, timeout \\ @default_timeout) do
-    :telemetry.span(
-      [:ex_zk, :session, :exists],
-      %{session: session, path: path},
-      fn ->
-        request = %Proto.ExistsRequest{path: IO.chardata_to_string(path), watch: !is_nil(watcher)}
+    Telemetry.client_span(:exists, %{session: session, path: path}, fn ->
+      request = %Proto.ExistsRequest{path: IO.chardata_to_string(path), watch: !is_nil(watcher)}
 
-        watch_registration =
-          if is_nil(watcher),
-            do: nil,
-            else: WatchRegistration.exists_watch_registration(path, watcher)
+      watch_registration =
+        if is_nil(watcher),
+          do: nil,
+          else: WatchRegistration.exists_watch_registration(path, watcher)
 
-        case send_request(session, :exists, request, watch_registration, timeout) do
-          {:ok, %Proto.ExistsResponse{stat: stat}} ->
-            {{:ok, true, stat}, %{stat: stat}}
+      case send_request(session, :exists, request, watch_registration, timeout) do
+        {:ok, %Proto.ExistsResponse{stat: stat}} ->
+          {{:ok, true, stat}, %{stat: stat}}
 
-          {:error, :no_node} ->
-            {{:ok, false, nil}, %{}}
+        {:error, :no_node} ->
+          {{:ok, false, nil}, %{}}
 
-          {:error, err} ->
-            {{:error, Error.new(err, path)}, %{error: err}}
-        end
+        {:error, err} ->
+          {{:error, Error.new(err, path)}, %{error: err}}
       end
-    )
+    end)
   end
 
-  @spec get_acl(session(), Path.t(), timeout()) ::
+  @spec get_acl(ref(), Path.t(), timeout()) ::
           {:ok, list(ACL.t()), Stat.t()} | {:error, Error.t()}
   def get_acl(session, path, timeout \\ @default_timeout) do
-    :telemetry.span(
-      [:ex_zk, :session, :get_acl],
-      %{session: session, path: path},
-      fn ->
-        request = %Proto.GetACLRequest{path: IO.chardata_to_string(path)}
+    Telemetry.client_span(:get_acl, %{session: session, path: path}, fn ->
+      request = %Proto.GetACLRequest{path: IO.chardata_to_string(path)}
 
-        case send_request(session, :get_acl, request, timeout) do
-          {:ok, %Proto.GetACLResponse{acl: acl, stat: stat}} ->
-            {{:ok, acl, stat}, %{acl: acl, stat: stat}}
+      case send_request(session, :get_acl, request, timeout) do
+        {:ok, %Proto.GetACLResponse{acl: acl, stat: stat}} ->
+          {{:ok, acl, stat}, %{acl: acl, stat: stat}}
 
-          {:error, err} ->
-            {{:error, Error.new(err, path)}, %{error: err}}
-        end
+        {:error, err} ->
+          {{:error, Error.new(err, path)}, %{error: err}}
       end
-    )
+    end)
   end
 
-  @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
+  @spec set_acl(ref(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
   def set_acl(session, path, acl, version \\ @any_version, timeout \\ @default_timeout)
       when is_version_or_nil(version) do
-    :telemetry.span(
-      [:ex_zk, :session, :set_acl],
+    Telemetry.client_span(
+      :set_acl,
       %{session: session, path: path, acl: acl, version: version},
       fn ->
         request = %Proto.SetACLRequest{
@@ -408,49 +388,41 @@ defmodule ExZk.Session do
     )
   end
 
-  @spec sync(session(), Path.t(), timeout()) :: {:ok, Path.t()} | {:error, Error.t()}
+  @spec sync(ref(), Path.t(), timeout()) :: {:ok, Path.t()} | {:error, Error.t()}
   def sync(session, path, timeout \\ @default_timeout) do
-    :telemetry.span(
-      [:ex_zk, :session, :sync],
-      %{session: session, path: path},
-      fn ->
-        request = %Proto.SyncRequest{path: IO.chardata_to_string(path)}
+    Telemetry.client_span(:sync, %{session: session, path: path}, fn ->
+      request = %Proto.SyncRequest{path: IO.chardata_to_string(path)}
 
-        case send_request(session, :sync, request, timeout) do
-          {:ok, %Proto.SyncResponse{path: path}} ->
-            {{:ok, path}, %{path: path}}
+      case send_request(session, :sync, request, timeout) do
+        {:ok, %Proto.SyncResponse{path: path}} ->
+          {{:ok, path}, %{path: path}}
 
-          {:error, err} ->
-            {{:error, Error.new(err, path)}, %{error: err}}
-        end
+        {:error, err} ->
+          {{:error, Error.new(err, path)}, %{error: err}}
       end
-    )
+    end)
   end
 
-  @spec multi(session(), ops :: [Multi.Op.t()], timeout()) ::
+  @spec multi(ref(), ops :: [Multi.Op.t()], timeout()) ::
           {[Multi.Result.t()]} | {:error, Error.t()}
   def multi(session, ops, timeout \\ @default_timeout) do
-    :telemetry.span(
-      [:ex_zk, :session, :exists],
-      %{session: session, ops: ops},
-      fn ->
-        request = Multi.to_request(ops)
+    Telemetry.client_span(:exists, %{session: session, ops: ops}, fn ->
+      request = Multi.to_request(ops)
 
-        case send_request(session, :multi, request, timeout) do
-          {:ok, %Multi.Response{results: results}} ->
-            {{:ok, results}, %{results: results}}
+      case send_request(session, :multi, request, timeout) do
+        {:ok, %Multi.Response{results: results}} ->
+          {{:ok, results}, %{results: results}}
 
-          {:error, err} ->
-            {{:error, Error.new(err)}, %{error: err}}
-        end
+        {:error, err} ->
+          {{:error, Error.new(err)}, %{error: err}}
       end
-    )
+    end)
   end
 
-  @spec add_watch(session(), Path.t(), NodeWatcher.t(), recursive :: boolean(), timeout()) ::
+  @spec add_watch(ref(), Path.t(), NodeWatcher.t(), recursive :: boolean(), timeout()) ::
           :ok | {:error, Error.t()}
   def add_watch(session, path, watcher \\ nil, recursive \\ false, timeout \\ @default_timeout) do
-    :telemetry.span([:ex_zk, :session, :add_watch], %{session: session, path: path}, fn ->
+    Telemetry.client_span(:add_watch, %{session: session, path: path}, fn ->
       request = %Proto.AddWatchRequest{
         path: IO.chardata_to_string(path),
         mode: AddWatchMode.value!(if recursive, do: :persistent_recursive, else: :persistent)
@@ -473,13 +445,13 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec remove_watch(session(), Path.t(), Watcher.Type.t(), NodeWatcher.t(), timeout()) ::
+  @spec remove_watch(ref(), Path.t(), Watcher.Type.t(), NodeWatcher.t(), timeout()) ::
           :ok | {:error, Error.t()}
   def remove_watch(session, path, type, watcher, timeout \\ @default_timeout)
       when is_type(type) and watcher != nil do
     path = IO.chardata_to_string(path)
 
-    :telemetry.span([:ex_zk, :session, :check_watches], %{session: session, path: path}, fn ->
+    Telemetry.client_span(:check_watches, %{session: session, path: path}, fn ->
       request = %Proto.CheckWatchesRequest{
         path: path,
         type: Watcher.Type.value!(type)
@@ -495,12 +467,12 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec remove_all_watches(session(), Path.t(), Watcher.Type.t(), timeout()) ::
+  @spec remove_all_watches(ref(), Path.t(), Watcher.Type.t(), timeout()) ::
           :ok | {:error, Error.t()}
   def remove_all_watches(session, path, type, timeout \\ @default_timeout) when is_type(type) do
     path = IO.chardata_to_string(path)
 
-    :telemetry.span([:ex_zk, :session, :remove_watches], %{session: session, path: path}, fn ->
+    Telemetry.client_span(:remove_watches, %{session: session, path: path}, fn ->
       request = %Proto.RemoveWatchesRequest{
         path: path,
         type: Watcher.Type.value!(type)
@@ -518,23 +490,19 @@ defmodule ExZk.Session do
     end)
   end
 
-  @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, Error.t()}
+  @spec whoami(ref(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, Error.t()}
   @spec whoami(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) ::
           {:error, Error.t()} | {:ok, [ClientInfo.t()]}
   def whoami(session, timeout \\ @default_timeout) do
-    :telemetry.span(
-      [:ex_zk, :session, :who_am_i],
-      %{session: session},
-      fn ->
-        case(send_request(session, :who_am_i, nil, timeout)) do
-          {:ok, %Proto.WhoAmIResponse{client_info: client_info}} ->
-            {{:ok, client_info}, %{client_info: client_info}}
+    Telemetry.client_span(:who_am_i, %{session: session}, fn ->
+      case(send_request(session, :who_am_i, nil, timeout)) do
+        {:ok, %Proto.WhoAmIResponse{client_info: client_info}} ->
+          {{:ok, client_info}, %{client_info: client_info}}
 
-          {:error, err} ->
-            {{:error, Error.new(err)}, %{error: err}}
-        end
+        {:error, err} ->
+          {{:error, Error.new(err)}, %{error: err}}
       end
-    )
+    end)
   end
 
   ####

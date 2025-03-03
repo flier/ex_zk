@@ -107,6 +107,12 @@ defmodule ExZk.StartOptions do
       type_doc: "`t:ExZk.name/0`",
       type_spec: quote(do: ExZk.name())
     ],
+    transport_module: [
+      type: :mod_arg,
+      doc: """
+      `ExZk.Socket` use the transport module for network communication.
+      """
+    ],
     socket_opts: [
       type: {:list, :any},
       default: [],

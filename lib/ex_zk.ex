@@ -27,7 +27,6 @@ defmodule ExZk do
   """
   @type name :: atom() | {:global, name :: term()} | {:via, mod :: module(), name :: term()}
 
-  @type session :: Session.session()
   @type version :: Session.version()
 
   ####
@@ -65,47 +64,47 @@ defmodule ExZk do
     |> start_link()
   end
 
-  @spec close(session(), timeout()) :: :ok
+  @spec close(Session.ref(), timeout()) :: :ok
   defdelegate close(session, timeout \\ :infinity), to: Session
 
-  @spec status(session()) :: {Session.status(), metadata :: %{}}
+  @spec status(Session.ref()) :: {Session.status(), metadata :: %{}}
   defdelegate status(session), to: Session
 
-  @spec get_children(session(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
+  @spec get_children(Session.ref(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, Error.t()}
   defdelegate get_children(session, path, watcher \\ nil, timeout \\ @default_timeout),
     to: Session
 
-  @spec get_children2(session(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
+  @spec get_children2(Session.ref(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
           {:ok, children :: list(Path.t()), Stat.t()} | {:error, Error.t()}
   defdelegate get_children2(session, path, watcher \\ nil, timeout \\ @default_timeout),
     to: Session
 
-  @spec get_ephemerals(session(), Path.t(), timeout()) ::
+  @spec get_ephemerals(Session.ref(), Path.t(), timeout()) ::
           {:ok, children :: list(Path.t())} | {:error, Error.t()}
   defdelegate get_ephemerals(session, prefix_path, timeout \\ @default_timeout),
     to: Session
 
-  @spec get_all_children_number(session(), Path.t(), timeout()) ::
+  @spec get_all_children_number(Session.ref(), Path.t(), timeout()) ::
           {:ok, total_number :: integer()} | {:error, Error.t()}
   defdelegate get_all_children_number(session, path, timeout \\ @default_timeout),
     to: Session
 
-  @spec get_data(session(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
+  @spec get_data(Session.ref(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
           {:ok, iodata(), Stat.t()} | {:error, Error.t()}
   defdelegate get_data(session, path, watcher \\ nil, timeout \\ @default_timeout), to: Session
 
-  @spec set_data(session(), Path.t(), iodata(), version(), timeout()) ::
+  @spec set_data(Session.ref(), Path.t(), iodata(), version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
   defdelegate set_data(session, path, data, version \\ @any_version, timeout \\ @default_timeout),
     to: Session
 
-  @spec create(session(), Path.t(), iodata(), opts :: [Create.option()], timeout()) ::
+  @spec create(Session.ref(), Path.t(), iodata(), opts :: [Create.option()], timeout()) ::
           {:ok, Path.t(), Stat.t() | nil} | {:error, Error.t()}
   defdelegate create(session, path, data \\ "", opts \\ [], timeout \\ @default_timeout),
     to: Session
 
-  @spec delete(session(), Path.t(), version(), timeout()) ::
+  @spec delete(Session.ref(), Path.t(), version(), timeout()) ::
           :ok | {:error, Error.t()}
   defdelegate delete(session, path, version \\ @any_version, timeout \\ @default_timeout),
     to: Session
@@ -115,7 +114,7 @@ defmodule ExZk do
 
   Important: All versions, of all nodes, under the given node are deleted.
   """
-  @spec delete_recursive(session(), Path.t(), batch_size :: non_neg_integer(), timeout()) ::
+  @spec delete_recursive(Session.ref(), Path.t(), batch_size :: non_neg_integer(), timeout()) ::
           :ok | {:error, Error.t()}
   defdelegate delete_recursive(
                 session,
@@ -125,28 +124,28 @@ defmodule ExZk do
               ),
               to: Util
 
-  @spec exists(session(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
+  @spec exists(Session.ref(), Path.t(), watcher :: NodeWatcher.t(), timeout()) ::
           {:ok, boolean(), Stat.t() | nil} | {:error, Error.t()}
   defdelegate exists(session, path, watcher \\ nil, timeout \\ @default_timeout), to: Session
 
-  @spec get_acl(session(), Path.t(), timeout()) ::
+  @spec get_acl(Session.ref(), Path.t(), timeout()) ::
           {:ok, list(ACL.t()), Stat.t()} | {:error, Error.t()}
   defdelegate get_acl(session, path, timeout \\ @default_timeout), to: Session
 
-  @spec set_acl(session(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
+  @spec set_acl(Session.ref(), Path.t(), acl :: [ACL.t()], version(), timeout()) ::
           {:ok, Stat.t()} | {:error, Error.t()}
   defdelegate set_acl(session, path, acl, version \\ @any_version, timeout \\ @default_timeout),
     to: Session
 
-  @spec sync(session(), Path.t(), timeout()) ::
+  @spec sync(Session.ref(), Path.t(), timeout()) ::
           {:ok, Path.t()} | {:error, Error.t()}
   defdelegate sync(session, path, timeout \\ @default_timeout), to: Session
 
-  @spec multi(session(), ops :: [Multi.Op.t()], timeout()) ::
+  @spec multi(Session.ref(), ops :: [Multi.Op.t()], timeout()) ::
           {:ok, [Multi.Result.t()]} | {:error, Error.t()}
   defdelegate multi(session, ops, timeout \\ @default_timeout), to: Session
 
-  @spec add_watch(session(), Path.t(), NodeWatcher.t(), recursive :: boolean(), timeout()) ::
+  @spec add_watch(Session.ref(), Path.t(), NodeWatcher.t(), recursive :: boolean(), timeout()) ::
           :ok | {:error, Error.t()}
   defdelegate add_watch(
                 session,
@@ -157,17 +156,17 @@ defmodule ExZk do
               ),
               to: Session
 
-  @spec remove_watch(session(), Path.t(), Watcher.Type.t(), NodeWatcher.t(), timeout()) ::
+  @spec remove_watch(Session.ref(), Path.t(), Watcher.Type.t(), NodeWatcher.t(), timeout()) ::
           :ok | {:error, Error.t()}
   defdelegate remove_watch(session, path, type, watcher, timeout \\ @default_timeout),
     to: Session
 
-  @spec remove_all_watches(session(), Path.t(), Watcher.Type.t(), timeout()) ::
+  @spec remove_all_watches(Session.ref(), Path.t(), Watcher.Type.t(), timeout()) ::
           :ok | {:error, Error.t()}
   defdelegate remove_all_watches(session, path, type, timeout \\ @default_timeout),
     to: Session
 
-  @spec whoami(session(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, Error.t()}
+  @spec whoami(Session.ref(), timeout()) :: {:ok, [ClientInfo.t()]} | {:error, Error.t()}
   defdelegate whoami(session, timeout \\ @default_timeout), to: Session
 
   ####

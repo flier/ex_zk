@@ -228,7 +228,7 @@ defmodule ExZk.Telemetry do
 
   @app_name :ex_zk
 
-  @type span_name :: :session | :socket
+  @type span_name :: :client | :session | :socket
 
   @typedoc false
   @type event_name ::
@@ -247,6 +247,13 @@ defmodule ExZk.Telemetry do
 
   @type metadata :: :telemetry.event_metadata()
   @type measurements :: :telemetry.event_measurements()
+  @type span_function :: :telemetry.span_function()
+  @type span_result :: :telemetry.span_result()
+
+  @spec client_span(api :: term(), metadata(), span_function()) :: span_result()
+  def client_span(api, metadata, f) do
+    :telemetry.span([@app_name, :client, api], metadata, f)
+  end
 
   @doc false
   @spec start_span(span_name(), measurements(), metadata()) :: t()

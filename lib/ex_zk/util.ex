@@ -4,14 +4,17 @@ defmodule ExZk.Util do
   alias ExZk.NodeWatcher
   alias ExZk.{Error, Multi, Session}
 
-  @type session :: Session.session()
-
   @doc """
   Recursively delete the node with the given path.
 
   Important: All versions, of all nodes, under the given node are deleted.
   """
-  @spec delete_recursive(session(), Path.t(), batch_size :: non_neg_integer(), timeout() | nil) ::
+  @spec delete_recursive(
+          Session.ref(),
+          Path.t(),
+          batch_size :: non_neg_integer(),
+          timeout() | nil
+        ) ::
           :ok | {:error, Error.t() | [Error.t()]}
   def delete_recursive(
         session,
@@ -49,7 +52,7 @@ defmodule ExZk.Util do
   BFS Traversal of the system under pathRoot, with the entries in the list, in the same order as that of the traversal.
   """
   @spec list_subtree(
-          session(),
+          Session.ref(),
           Path.t(),
           strategy :: :bfs | :dfs | :cfs,
           watcher :: NodeWatcher.t()

@@ -88,16 +88,23 @@ defmodule ExZk.Socket do
 
   @impl true
   def init({session, session_span, opts}) do
-    transport_module = if(opts[:ssl], do: ExZk.Transport.SSL, else: ExZk.Transport.TCP)
+    {transport_module, _args} =
+      Keyword.get(
+        opts,
+        :transport_module,
+        {if(opts[:ssl], do: ExZk.Transport.SSL, else: ExZk.Transport.TCP), []}
+      )
+
+    span =
+      Telemetry.start_child_span(session_span, :socket, %{}, %{
+        transport_module: transport_module
+      })
 
     state = %__MODULE__{
       session: session,
       opts: opts,
       transport_module: transport_module,
-      span:
-        Telemetry.start_child_span(session_span, :socket, %{}, %{
-          transport_module: transport_module
-        })
+      span: span
     }
 
     {:ok, state, {:continue, []}}

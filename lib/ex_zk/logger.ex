@@ -11,6 +11,8 @@ defmodule ExZk.Logger do
 
   require Logger
 
+  @app_name :ex_zk
+
   @typedoc "Supported log levels"
   @type log_level :: :error | :info | :debug | :trace
 
@@ -27,8 +29,10 @@ defmodule ExZk.Logger do
 
   def attach_logger(:error) do
     events = [
-      [:ex_zk, :session, :auth_failed],
-      [:ex_zk, :socket, :exception]
+      [@app_name, :session, :auth_failed],
+      [@app_name, :socket, :connect_error],
+      [@app_name, :socket, :recv_error],
+      [@app_name, :socket, :send_error]
     ]
 
     :telemetry.attach_many("#{__MODULE__}.error", events, &__MODULE__.log_error/4, nil)
@@ -38,8 +42,8 @@ defmodule ExZk.Logger do
     _ = attach_logger(:error)
 
     events = [
-      [:ex_zk, :session, :connected],
-      [:ex_zk, :session, :disconnected]
+      [@app_name, :session, :connected],
+      [@app_name, :session, :disconnected]
     ]
 
     :telemetry.attach_many("#{__MODULE__}.info", events, &__MODULE__.log_info/4, nil)
@@ -49,8 +53,8 @@ defmodule ExZk.Logger do
     _ = attach_logger(:info)
 
     events = [
-      [:ex_zk, :session, :notification],
-      [:ex_zk, :session, :task_stopped]
+      [@app_name, :session, :notification],
+      [@app_name, :session, :task_stopped]
     ]
 
     :telemetry.attach_many("#{__MODULE__}.debug", events, &__MODULE__.log_debug/4, nil)
@@ -60,9 +64,9 @@ defmodule ExZk.Logger do
     _ = attach_logger(:debug)
 
     events = [
-      [:ex_zk, :session, :pong],
-      [:ex_zk, :socket, :send],
-      [:ex_zk, :socket, :recv]
+      [@app_name, :session, :pong],
+      [@app_name, :socket, :send],
+      [@app_name, :socket, :recv]
     ]
 
     :telemetry.attach_many("#{__MODULE__}.trace", events, &__MODULE__.log_trace/4, nil)
