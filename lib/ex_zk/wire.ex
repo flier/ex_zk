@@ -288,7 +288,7 @@ defmodule ExZk.Wire do
       {:ok, %ExZk.Data.Id{scheme: "world", id: "anyone"}, <<>>}
 
   """
-  @spec unpack(buf :: binary(), type() | [type()] | Keyword.t()) ::
+  @spec unpack(buf :: binary(), type() | [type()] | keyword()) ::
           {:ok, value :: any(), rest :: binary()} | {:error, :nomatch}
   def unpack(<<>>, _type), do: {:error, :nomatch}
 

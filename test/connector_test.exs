@@ -7,7 +7,7 @@ defmodule ConnectorTest do
   alias ExZk.Proto.ConnectResponse
   alias ExZk.{Connector, Frame, Wire}
 
-  @host "localhost"
+  @host String.to_charlist("localhost")
   @port 2181
   @timeout 5000
   @bufsize 10_240
@@ -61,7 +61,7 @@ defmodule ConnectorTest do
     test "it can connect to a server" do
       assert Connector.connect(self(), @connect_opts) == {:ok, :sock, @connected}
 
-      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.connect(@host, @port, @inet_opts, @timeout))
       assert_called(:inet.getopts(:sock, [:sndbuf, :recbuf, :buffer]))
       assert_called(:inet.setopts(:sock, buffer: @bufsize))
       assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
@@ -84,7 +84,7 @@ defmodule ConnectorTest do
                    ] do
       assert Connector.connect(self(), @connect_opts) == {:ok, :sock, @connected}
 
-      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.connect(@host, @port, @inet_opts, @timeout))
       assert_called(:inet.getopts(:sock, [:sndbuf, :recbuf, :buffer]))
       assert_called(:inet.setopts(:sock, buffer: @bufsize))
       assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
@@ -94,7 +94,7 @@ defmodule ConnectorTest do
     test "it can connect to a server with SSL" do
       assert Connector.connect(self(), @connect_opts ++ [ssl: true]) == {:ok, :ssl, @connected}
 
-      assert_called(:ssl.connect(String.to_charlist(@host), @port, @ssl_opts, @timeout))
+      assert_called(:ssl.connect(@host, @port, @ssl_opts, @timeout))
       assert_called(:ssl.getopts(:ssl, [:sndbuf, :recbuf, :buffer]))
       assert_called(:ssl.setopts(:ssl, buffer: @bufsize))
       assert_called(:ssl.send(:ssl, Wire.pack(new_connect_request())))
@@ -105,7 +105,7 @@ defmodule ConnectorTest do
       connect: fn _addr, _port, _opts, _timeout -> {:error, :foobar} end do
       assert Connector.connect(self(), @connect_opts) == {:error, :foobar}
 
-      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.connect(@host, @port, @inet_opts, @timeout))
     end
 
     test_with_mock "it may be failed when send connect request", :gen_tcp, [:unstick],
@@ -113,7 +113,7 @@ defmodule ConnectorTest do
       send: fn :sock, _data -> {:error, :foobar} end do
       assert Connector.connect(self(), @connect_opts) == {:error, :foobar}
 
-      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.connect(@host, @port, @inet_opts, @timeout))
       assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
     end
 
@@ -123,7 +123,7 @@ defmodule ConnectorTest do
                @connect_opts ++ [auth_info: {:digest, {"username", "password"}}]
              ) == {:ok, :sock, @connected}
 
-      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.connect(@host, @port, @inet_opts, @timeout))
       assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
 
       assert_called_exactly(
@@ -144,7 +144,7 @@ defmodule ConnectorTest do
 
       assert Connector.connect(self(), @connect_opts ++ auth_info) == {:ok, :sock, @connected}
 
-      assert_called(:gen_tcp.connect(String.to_charlist(@host), @port, @inet_opts, @timeout))
+      assert_called(:gen_tcp.connect(@host, @port, @inet_opts, @timeout))
       assert_called(:gen_tcp.send(:sock, Wire.pack(new_connect_request())))
 
       auth_packets =

@@ -2,11 +2,20 @@ defmodule ExZk.Transport do
   @typedoc "A socket representing a client connection"
   @type socket :: :gen_tcp.socket() | :ssl.sslsocket()
 
+  @typedoc "A socket address"
+  @type addr :: :inet.socket_address() | :inet.hostname() | :inet.ip_address()
+
+  @typedoc "Options which can be set on a socket via connect/4"
+  @type socket_connect_options() :: keyword()
+
   @typedoc "Options which can be set on a socket via setopts/2 (or returned from getopts/1)"
   @type socket_get_options() :: [:inet.socket_getopt()]
 
   @typedoc "Options which can be set on a socket via setopts/2 (or returned from getopts/1)"
   @type socket_set_options() :: [:inet.socket_setopt()]
+
+  @typedoc "The return value from a connect/4 call"
+  @type on_connect() :: {:ok, socket()} | {:error, any()}
 
   @typedoc "The return value from a close/1 call"
   @type on_close() :: :ok | {:error, any()}
@@ -27,6 +36,12 @@ defmodule ExZk.Transport do
   @type on_setopts() :: :ok | {:error, :inet.posix()}
 
   @doc """
+  Connects to the given address and port.
+  """
+  @callback connect(addr(), port :: :inet.port_number(), socket_connect_options(), timeout()) ::
+              on_connect()
+
+  @doc """
   Closes the given socket.
   """
   @callback close(socket()) :: on_close()
@@ -42,7 +57,7 @@ defmodule ExZk.Transport do
   next packet). If insufficient bytes are available, the function can wait `timeout`
   milliseconds for data to arrive.
   """
-  @callback recv(socket(), length :: non_neg_integer(), timeout :: timeout()) :: on_recv()
+  @callback recv(socket(), length :: non_neg_integer(), timeout()) :: on_recv()
 
   @doc """
   Sends the given data (specified as a binary or an IO list) on the given socket.

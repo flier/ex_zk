@@ -36,7 +36,7 @@ defmodule ExZk.URI do
 
 
   """
-  @spec to_start_options(binary()) :: Keyword.t()
+  @spec to_start_options(binary()) :: keyword()
   def to_start_options(uri) when is_binary(uri) do
     %URI{host: host, port: port, scheme: scheme} = uri = URI.parse(uri)
 
